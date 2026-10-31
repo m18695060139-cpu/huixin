@@ -264,6 +264,7 @@
     return `<main class="page">
       <div class="head">
         <div class="head-l"><span class="eyebrow">${cn(t)} 星期${wd(t)}</span><h1>今天</h1></div>
+        ${letterCount()}
       </div>
       ${offlineLine()}
       <div class="cols">
@@ -279,6 +280,14 @@
         </div>
       </div>
     </main>`;
+  }
+
+  // 右上角的编号：一共写了几封信（没写的日子不涨），寄出一封马上 +1
+  function letterCount() {
+    const n = Object.values(S.letters).filter(l => l.text && l.text.trim() && S.letters[l.date] === l).length;
+    const total = Math.max(n, S.stats.letters || 0);
+    if (!total) return `<div class="count"><b><small>No.</small>1</b><span>第一封信，等你来写</span></div>`;
+    return `<div class="count" aria-label="已经写了 ${total} 封信"><b><small>No.</small>${total}</b><span>已经写了 ${total} 封信</span></div>`;
   }
 
   // 每日一句：大多数日子是诗，偶尔（约三天一次）换成「很久以前的你写过的一句话」

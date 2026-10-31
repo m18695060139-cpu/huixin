@@ -356,3 +356,9 @@ textarea.input { line-height: 1.6; resize: vertical; }
 }
 
 @media (prefers-reduced-motion: reduce) { .sheet, .pulse { animation: none; } }
+
+/* ── 首页右上角：第几封信 ── */
+.count { display: flex; flex-direction: column; align-items: flex-end; padding-bottom: 4px; flex: none; }
+.count b { font-size: 30px; font-weight: 600; color: var(--ink); line-height: 1; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
+.count b small { font-size: 15px; font-weight: 600; margin-right: 2px; }
+.count span { font-size: 11px; color: var(--sub); margin-top: 5px; }
