@@ -1,0 +1,165 @@
+// 回信 · AI
+// 模型走 OpenAI 兼容网关（默认沿用 Life OS 的 TokenHub），Key 只存在 Worker 的加密变量里
+import { parseJSON } from './util.js';
+
+export const MOODS = ['平静', '专注', '振奋', '疲惫', '焦虑', '低落', '烦躁', '感激'];
+
+export const DEFAULT_QUESTIONS = [
+  '今天哪一件事让我感到真正有活力？',
+  '今天我回避了什么？为什么？',
+  '什么让我离我的价值观更近了？',
+  '我是否对某人不够诚实？',
+  '今天最大的干扰是什么？我如何应对的？',
+  '如果重新来一次，我会做什么不同的事？',
+  '今天的我比昨天进步了哪里？',
+];
+
+async function callOnce(env, messages, maxTokens, temperature) {
+  const url = env.AI_BASE_URL || 'https://tokenhub.tencentmaas.com/v1/chat/completions';
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.AI_API_KEY },
+    body: JSON.stringify({
+      model: env.AI_MODEL || 'deepseek/deepseek-flash',
+      messages, temperature, max_tokens: maxTokens, stream: false,
+      // 关掉「先思考再回答」：思考会吃掉 max_tokens，正文被截断（Life OS 里踩过）
+      thinking: { type: 'disabled' },
+    }),
+  });
+  const text = await res.text();
+  const j = parseJSON(text, {});
+  if (!res.ok) throw new Error('模型返回 ' + res.status + '：' + String((j.error && j.error.message) || text).slice(0, 200));
+  const ch = j.choices && j.choices[0];
+  return { txt: String((ch && ch.message && ch.message.content) || '').trim(), finish: (ch && ch.finish_reason) || '' };
+}
+
+async function callModel(env, messages, { maxTokens = 3000, temperature = 0.6 } = {}) {
+  if (!env.AI_API_KEY) throw new Error('还没有配置 AI 的 Key');
+  let r = await callOnce(env, messages, maxTokens, temperature);
+  if (r.finish === 'length') {   // 被截断就放大预算再来一次
+    try {
+      const r2 = await callOnce(env, messages, Math.min(maxTokens * 2, 8000), temperature);
+      if (r2.txt.length > r.txt.length) r = r2;
+    } catch { /* 沿用第一次 */ }
+  }
+  if (!r.txt) throw new Error('模型没有返回内容');
+  return r.txt;
+}
+
+function extractJSON(txt) {
+  const s = txt.replace(/^```(?:json)?/i, '').replace(/```$/, '');
+  const a = s.indexOf('{'), b = s.lastIndexOf('}');
+  const j = a >= 0 && b > a ? parseJSON(s.slice(a, b + 1)) : null;
+  if (!j) throw new Error('AI 返回的格式不对，请重试');
+  return j;
+}
+
+// ───────────── 每日回信 ─────────────
+
+const REPLY_SYSTEM = `你是「回信」：一个人每晚给自己写一封信，你替未来的他回信。你要把这封信拆成他以后回看时需要的东西。
+只输出 JSON，严格照这个结构：
+{"summary":"…","energy":3,"mood":"平静","highlight":"晚上","answers":["…","…","…","…","…","…","…"],
+ "lenses":{"health":"…","energy":"…","career":"…","relation":"…"},
+ "tasks":[{"text":"…","dueDays":3}],"ideas":[{"text":"…"}]}
+
+规则：
+1. summary：给他的回信正文。中文、第二人称"你"，开头用他的名字称呼（没给名字就直接说），120 字以内。先梳理今天做了什么、在想什么，再点一句整体状态（精力、情绪、节奏）。只梳理，不评价、不建议、不说教、不喊口号。用词尽量沿用原文，不要换成近义词。
+2. energy：今天的精力，1-5 的整数（1 很累、3 一般、5 很充沛），按信里的描述判断；完全没线索就给 3。
+3. mood：今天的主导情绪，只能是这八个词之一：${MOODS.join('、')}。
+4. highlight：今天精力或状态最好的时段，只能是 "早上"、"上午"、"中午"、"下午"、"晚上"、"" 之一，没线索就给 ""。
+5. answers：固定 7 项，按顺序回答给出的 7 个问题，第一人称，一到两句，像他自己随手记的。
+   a) 信里直接写了的 —— 提炼成一句，保留原文关键词（人名、时间、数字、物件不换说法）。
+   b) 没直说但细节能推出来的 —— 写出来，贴着那个细节，不要加"可能""也许"。
+   c) 连线索都没有 —— 给 ""。
+   绝不引入信里没有的人、事、数字，不写"今天很充实"这种放之四海皆准的话。
+6. lenses：从人生系统的四个角度各看一眼，每条 30 字以内，第二人称，只陈述信里能找到依据的事实或规律：
+   health 身体（睡眠、运动、饮食、不适）；energy 精力（高低、被什么消耗）；career 事业（做成了什么、卡在哪）；relation 关系（和谁有连接、质量如何）。没线索的给 ""。
+7. tasks：信里真正"要去做"的事。不要感想、状态描述、已经做完的事。每条脱离信也看得懂：动词 + 具体对象，宾语不能是空壳词（内容、事情、项目、工作），原文具体就照抄具体说法，不要向上概括。
+   "把 X 加到待办""提醒我 X""明天记得 X" → 还原成要做的动作 X 本身。
+   已经出现在【还没完成的待办】里的，不要重复给。dueDays 是 1-14 的整数：有时间线索按线索换算，没有就小事 1-2、正常 3、大工程 7。
+8. ideas：信里冒出来的点子、灵感、选题、"也许可以…"的想法 —— 还没决定要不要做的。不是待办，也不是感想。每条一句话说清楚是什么点子。已经在【点子库】里的不要重复给。没有就给 []。
+9. 只输出 JSON，不要任何解释。`;
+
+export async function writeReply(env, ctx) {
+  const lines = [];
+  lines.push(`【他的名字】${ctx.name || '（未设置）'}`);
+  lines.push(`【这封信属于】${ctx.date}${ctx.backfill ? `（补写于 ${ctx.today}：文中的"今天"指 ${ctx.today}）` : ''}`);
+  lines.push(`【信的内容】\n${ctx.text}`);
+  lines.push(`【7 个问题】\n${ctx.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}`);
+  lines.push(`【还没完成的待办】\n${ctx.openTodos.length ? ctx.openTodos.map(t => '- ' + t).join('\n') : '（无）'}`);
+  lines.push(`【点子库】\n${ctx.ideas.length ? ctx.ideas.map(t => '- ' + t).join('\n') : '（无）'}`);
+  if (ctx.yesterday) lines.push(`【前一天的回信摘要，只用来理解对比，不要把昨天的事写成今天】\n${ctx.yesterday}`);
+
+  if (env.MOCK_AI) return mockReply(ctx);
+  const txt = await callModel(env, [
+    { role: 'system', content: REPLY_SYSTEM },
+    { role: 'user', content: lines.join('\n\n') },
+  ], { maxTokens: 3000, temperature: 0.5 });
+  const j = extractJSON(txt);
+
+  const clampStr = (s, n) => String(s || '').trim().slice(0, n);
+  const answers = Array.from({ length: ctx.questions.length }, (_, i) => clampStr((j.answers || [])[i], 300));
+  const L = j.lenses || {};
+  return {
+    summary: clampStr(j.summary, 600),
+    energy: Math.min(5, Math.max(1, Math.round(Number(j.energy) || 3))),
+    mood: MOODS.includes(j.mood) ? j.mood : '平静',
+    highlight: ['早上', '上午', '中午', '下午', '晚上'].includes(j.highlight) ? j.highlight : '',
+    answers,
+    lenses: { health: clampStr(L.health, 120), energy: clampStr(L.energy, 120), career: clampStr(L.career, 120), relation: clampStr(L.relation, 120) },
+    tasks: (Array.isArray(j.tasks) ? j.tasks : []).filter(t => t && t.text).slice(0, 8)
+      .map(t => ({ text: clampStr(t.text, 60), dueDays: Math.min(14, Math.max(1, Math.round(Number(t.dueDays) || 3))) })),
+    ideas: (Array.isArray(j.ideas) ? j.ideas : []).filter(t => t && t.text).slice(0, 5).map(t => ({ text: clampStr(t.text, 80) })),
+  };
+}
+
+// ───────────── 周信 / 季信 / 年信 ─────────────
+
+const DIGEST_SYSTEM = {
+  week: `你收到一个人这一周每天写给自己的信（或信的摘要）、精力分、完成的待办、习惯打卡和还没动的点子。替他写一封"周信"。
+只输出 JSON：{"title":"…","letter":"…","energy_note":"…","forgotten":["…"],"next":"…"}
+规则：
+1. title：这一周的一句话标题，12 字以内，具体，不要"充实的一周"这种空话。
+2. letter：周信正文，第二人称"你"，250 字以内。先说这周实际做成了什么、精力主要花在哪，再说这周的状态起伏。素材太少就直说"这周的信不多，看不出趋势"，不要硬编。不说教、不喊口号、不堆排比。
+3. energy_note：一句话说这周精力的规律（比如哪个时段低、被什么消耗），没规律就 ""。
+4. forgotten：这周信里提过、但看起来没跟进的事或点子，最多 3 条，没有就 []。
+5. next：下周最值得做的一件事，15-30 字，必须能在信里找到依据，找不到就 ""。
+只输出 JSON。`,
+  quarter: `你收到一个人这一季度每天写给自己的信的摘要、精力分和完成情况。他有一套"人生系统"：健康打底 → 精力当引擎 → 驱动"事业成就"和"关系连接"两条燃料线 → 两条线的正反馈再滋养健康和精力。每季度梳理一次，四块各出一条小规划，并行推进。替他写一封"季信"。
+只输出 JSON：{"title":"…","letter":"…","lenses":{"health":"…","energy":"…","career":"…","relation":"…"},"plans":{"health":"…","energy":"…","career":"…","relation":"…"}}
+规则：
+1. title：这一季的一句话标题，12 字以内。
+2. letter：季信正文，第二人称，350 字以内，说清这一季的主线、转折和整体状态，只用信里有依据的事实。
+3. lenses：四块各一段 60 字以内的梳理：现阶段怎么样 + 卡在哪。
+4. plans：四块下个季度各一条小规划，具体、可执行、30 字以内，必须从梳理里来。
+只输出 JSON。`,
+  year: `你收到一个人这一年每天写给自己的信的摘要和他的季信。替他写一封"年信"。
+只输出 JSON：{"title":"…","letter":"…","themes":["…"],"lenses":{"health":"…","energy":"…","career":"…","relation":"…"}}
+规则：title 一句话 12 字以内；letter 第二人称 500 字以内，这一年的主线、做成的事、变化；themes 3-5 个这一年反复出现的主题词；lenses 健康/精力/事业/关系四块各一句年度回看。只用有依据的事实，不说教。只输出 JSON。`,
+};
+
+export async function writeDigest(env, kind, material) {
+  if (env.MOCK_AI) return mockDigest(kind, material);
+  const txt = await callModel(env, [
+    { role: 'system', content: DIGEST_SYSTEM[kind] },
+    { role: 'user', content: material },
+  ], { maxTokens: kind === 'week' ? 2000 : 3500, temperature: 0.6 });
+  return extractJSON(txt);
+}
+
+// ───────────── 本地测试用的假 AI（MOCK_AI=1 时启用） ─────────────
+
+function mockReply(ctx) {
+  const first = ctx.text.split(/[。！？\n]/)[0];
+  return {
+    summary: `${ctx.name ? ctx.name + '，' : ''}今天你写到：${first}。（这是本地测试用的假回信）`,
+    energy: 3, mood: '平静', highlight: '晚上',
+    answers: ctx.questions.map((_, i) => (i === 0 ? first : '')),
+    lenses: { health: '今天没有提到运动。', energy: '下午偏低，晚上回升。', career: first.slice(0, 20), relation: '' },
+    tasks: /确认|要|得/.test(ctx.text) ? [{ text: '确认两位嘉宾', dueDays: 2 }] : [],
+    ideas: /想到|可以/.test(ctx.text) ? [{ text: '微度假 × 读书会外出' }] : [],
+  };
+}
+function mockDigest(kind) {
+  return { title: '测试用的' + ({ week: '周信', quarter: '季信', year: '年信' }[kind]), letter: '这是本地测试生成的假内容。', energy_note: '下午偏低', forgotten: [], next: '', lenses: {}, plans: {}, themes: [] };
+}

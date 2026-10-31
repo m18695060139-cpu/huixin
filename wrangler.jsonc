@@ -1,0 +1,26 @@
+{
+  // 回信 · Cloudflare 配置
+  "name": "huixin",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-09-01",
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "huixin",
+      "database_id": "92ba5636-67f9-4746-a71b-9f7faee653f1",
+      "migrations_dir": "migrations"
+    }
+  ],
+  // 每天 UTC 23:00 = 北京时间 7:00，周一送周信、季初送季信、元旦送年信
+  "triggers": { "crons": ["0 23 * * *"] },
+  "vars": {
+    "AI_MODEL": "deepseek/deepseek-flash"
+  },
+  "observability": { "enabled": true }
+}
