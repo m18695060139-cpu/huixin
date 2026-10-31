@@ -6,7 +6,7 @@
 //   - 不拆待办：旧信里提到的事早就过去了，拆出来只会把做完的事又塞回待办
 //   - 点子照常收进点子库
 //   - 你自己答过的问题原样保留，只补空着的
-import { writeReply, writeDigest } from '../src/ai.js';
+import { writeReply, DEFAULT_QUESTIONS } from '../src/ai.js';
 import { makeDigest } from '../src/worker.js';
 import { norm, uid, nowIso, addDays } from '../src/util.js';
 
@@ -49,7 +49,7 @@ const user = (await q('SELECT id, username, name FROM users WHERE username = ?',
 if (!user) throw new Error('没有这个用户');
 const U = user.id;
 const settings = JSON.parse(((await q('SELECT json FROM settings WHERE user_id = ?', [U]))[0] || { json: '{}' }).json);
-const questions = settings.questions;
+const questions = Array.isArray(settings.questions) && settings.questions.length ? settings.questions : DEFAULT_QUESTIONS;
 
 const letters = await q("SELECT date, text, reply FROM letters WHERE user_id = ? AND text != '' ORDER BY date", [U]);
 const todo = letters.filter(l => { const r = JSON.parse(l.reply || 'null'); return !r || r.imported; });

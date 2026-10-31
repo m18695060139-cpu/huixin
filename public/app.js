@@ -264,7 +264,6 @@
     return `<main class="page">
       <div class="head">
         <div class="head-l"><span class="eyebrow">${cn(t)} 星期${wd(t)}</span><h1>今天</h1></div>
-        <span class="mark" aria-hidden="true">Re:</span>
       </div>
       ${offlineLine()}
       <div class="cols">
@@ -719,9 +718,6 @@
           <form id="habit-form" style="display:flex;gap:8px"><input class="input" id="habit-new" placeholder="新习惯，比如：运动 30 分钟" aria-label="新习惯"><button class="btn sm" style="height:48px" type="submit">添加</button></form></div>
         <div class="field"><label for="set-q">回信每天替你回答的问题（一行一个）</label><textarea class="input" id="set-q" rows="8">${esc((S.settings.questions || []).join('\n'))}</textarea>
           <button class="btn sm ghost" style="align-self:flex-start" data-act="save-q">保存问题</button></div>
-        <div class="field"><span class="lab">搬家</span><p class="note" style="margin:0">在旧版 Life OS 的「设置 → 导出备份」得到一个 .json 文件，选它就能把以前的日记、待办、习惯、周复盘都搬过来。已有的不会被覆盖。</p>
-          <label class="btn sm ghost" style="align-self:flex-start;display:inline-flex;align-items:center">选择备份文件<input type="file" id="import-file" accept=".json,application/json" hidden></label>
-          <span class="note" id="import-msg" style="margin:0"></span></div>
         <div class="field"><span class="lab">账号</span><div class="muted small">当前登录：${esc(S.user.username)}</div>
           <button class="btn sm ghost" style="align-self:flex-start" data-act="logout">退出登录</button></div>
         <p class="note" style="margin-top:40px;text-align:center">回信 Re: · 你只写信，其余交给回信</p>`;
@@ -789,21 +785,6 @@
       if (!name) return;
       const h = { id: uid('h'), name, sort: S.habits.length };
       S.habits.push(h); queue('PUT', '/habits/' + h.id, h); toCache(); render();
-    });
-    const imp = $('#import-file');
-    if (imp) imp.addEventListener('change', async () => {
-      const f = imp.files[0];
-      if (!f) return;
-      const msg = $('#import-msg');
-      msg.textContent = '正在搬家…';
-      try {
-        const data = JSON.parse(await f.text());
-        const r = await api('POST', '/import', data);
-        const n = r.imported;
-        await refresh();
-        msg.textContent = `搬好了：${n.letters} 封信、${n.todos} 件待办、${n.habits} 个习惯（${n.habitLogs} 次打卡）、${n.weekly} 篇周复盘、${n.ideas} 个点子。`;
-        toast('搬家完成');
-      } catch (e) { msg.textContent = '没搬成：' + e.message; }
     });
   }
 
