@@ -77,36 +77,38 @@ function extractJSON(txt) {
 
 // ───────────── 每日回信 ─────────────
 
-const REPLY_SYSTEM = `你是「回信」：一个人每晚给自己写一封信，你替未来的他回信。你要把这封信拆成他以后回看时需要的东西。
+const REPLY_SYSTEM = `你是「回信」：一个人每晚给自己写一封信，你替未来的他回一封信，同时把信里以后回看时需要的东西整理出来。
 只输出 JSON，严格照这个结构：
-{"summary":"…","energy":3,"mood":"平静","highlight":"晚上","answers":["…","…","…","…","…","…","…"],
+{"summary":"…","energy":3,"mood":"平静","highlight":"晚上",
  "lenses":{"health":"…","energy":"…","career":"…","relation":"…"},
  "tasks":[{"text":"…","dueDays":3}],"ideas":[{"text":"…"}]}
 
 规则：
-1. summary：给他的回信正文。中文、第二人称"你"，开头用他的名字称呼（没给名字就直接说），120 字以内。先梳理今天做了什么、在想什么，再点一句整体状态（精力、情绪、节奏）。只梳理，不评价、不建议、不说教、不喊口号。用词尽量沿用原文，不要换成近义词。
+1. summary：回信正文，是一封真正的信，不是摘要，也不是问答。
+   - 中文、第二人称"你"，开头用他的名字称呼（没给名字就直接开始），200 到 350 字，分 2 到 3 段，段与段之间用 \n\n。
+   - 写的时候心里装着【7 个问题】，把信里能找到答案的那几个角度自然地写进段落里：今天让他有活力的事、他回避了什么、什么让他离自己看重的东西更近、最大的干扰和他怎么应对、他自己说过想换种做法的地方、比之前进步在哪。
+   - 绝对不要出现问题原文，不要逐条回答，不要用"关于第几个问题""你回避的是"这类问答腔；读起来要像一个了解他的朋友写来的信。
+   - 每一句都必须能在信里找到对应的原话：信里没写上午，就不要写上午怎样；信里没说感受，就不要替他说感受；不要把小事拔高成「价值观」「意义」。
+   - 信里没线索的角度直接跳过，不要硬凑；"是否对谁不够诚实"只有信里明确写到才提。
+   - 只梳理和映照，不说教、不提建议、不喊口号、不堆排比；用词尽量沿用原文，人名、时间、数字、物件照抄，绝不引入信里没有的人和事，不写"今天很充实"这种放之四海皆准的话。
+   - 最后一句点一下今天的整体状态（精力、情绪、节奏）。
 2. energy：今天的精力，1-5 的整数（1 很累、3 一般、5 很充沛），按信里的描述判断；完全没线索就给 3。
 3. mood：今天的主导情绪，只能是这八个词之一：${MOODS.join('、')}。
 4. highlight：今天精力或状态最好的时段，只能是 "早上"、"上午"、"中午"、"下午"、"晚上"、"" 之一，没线索就给 ""。
-5. answers：固定 7 项，按顺序回答给出的 7 个问题，第一人称，一到两句，像他自己随手记的。
-   a) 信里直接写了的 —— 提炼成一句，保留原文关键词（人名、时间、数字、物件不换说法）。
-   b) 没直说但细节能推出来的 —— 写出来，贴着那个细节，不要加"可能""也许"。
-   c) 连线索都没有 —— 给 ""。
-   绝不引入信里没有的人、事、数字，不写"今天很充实"这种放之四海皆准的话。
-6. lenses：从人生系统的四个角度各看一眼，每条 30 字以内，第二人称，只陈述信里能找到依据的事实或规律：
+5. lenses：从人生系统的四个角度各看一眼，每条 30 字以内，第二人称，只陈述信里能找到依据的事实或规律：
    health 身体（睡眠、运动、饮食、不适）；energy 精力（高低、被什么消耗）；career 事业（做成了什么、卡在哪）；relation 关系（和谁有连接、质量如何）。没线索的给 ""。
-7. tasks：信里真正"要去做"的事。不要感想、状态描述、已经做完的事。每条脱离信也看得懂：动词 + 具体对象，宾语不能是空壳词（内容、事情、项目、工作），原文具体就照抄具体说法，不要向上概括。
+6. tasks：信里真正"要去做"的事。不要感想、状态描述、已经做完的事。每条脱离信也看得懂：动词 + 具体对象，宾语不能是空壳词（内容、事情、项目、工作），原文具体就照抄具体说法，不要向上概括。
    "把 X 加到待办""提醒我 X""明天记得 X" → 还原成要做的动作 X 本身。
    已经出现在【还没完成的待办】里的，不要重复给。dueDays 是 1-14 的整数：有时间线索按线索换算，没有就小事 1-2、正常 3、大工程 7。
-8. ideas：信里冒出来的点子、灵感、选题、"也许可以…"的想法 —— 还没决定要不要做的。不是待办，也不是感想。每条一句话说清楚是什么点子。已经在【点子库】里的不要重复给。没有就给 []。
-9. 只输出 JSON，不要任何解释。`;
+7. ideas：信里冒出来的点子、灵感、选题、"也许可以…"的想法 —— 还没决定要不要做的。不是待办，也不是感想。每条一句话说清楚是什么点子。已经在【点子库】里的不要重复给。没有就给 []。
+8. 只输出 JSON，不要任何解释。`;
 
 export async function writeReply(env, ctx) {
   const lines = [];
   lines.push(`【他的名字】${ctx.name || '（未设置）'}`);
   lines.push(`【这封信属于】${ctx.date}${ctx.backfill ? `（补写于 ${ctx.today}：文中的"今天"指 ${ctx.today}）` : ''}`);
   lines.push(`【信的内容】\n${ctx.text}`);
-  lines.push(`【7 个问题】\n${ctx.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}`);
+  lines.push(`【7 个问题（写回信时心里装着，不要逐条回答）】\n${ctx.questions.map((q, i) => `${i + 1}. ${q}`).join('\n')}`);
   lines.push(`【还没完成的待办】\n${ctx.openTodos.length ? ctx.openTodos.map(t => '- ' + t).join('\n') : '（无）'}`);
   lines.push(`【点子库】\n${ctx.ideas.length ? ctx.ideas.map(t => '- ' + t).join('\n') : '（无）'}`);
   if (ctx.yesterday) lines.push(`【前一天的回信摘要，只用来理解对比，不要把昨天的事写成今天】\n${ctx.yesterday}`);
@@ -118,14 +120,12 @@ export async function writeReply(env, ctx) {
   ], { maxTokens: 4000, temperature: 0.5 });
 
   const clampStr = (s, n) => String(s || '').trim().slice(0, n);
-  const answers = Array.from({ length: ctx.questions.length }, (_, i) => clampStr((j.answers || [])[i], 300));
   const L = j.lenses || {};
   return {
-    summary: clampStr(j.summary, 600),
+    summary: clampStr(j.summary, 1200),
     energy: Math.min(5, Math.max(1, Math.round(Number(j.energy) || 3))),
     mood: MOODS.includes(j.mood) ? j.mood : '平静',
     highlight: ['早上', '上午', '中午', '下午', '晚上'].includes(j.highlight) ? j.highlight : '',
-    answers,
     lenses: { health: clampStr(L.health, 120), energy: clampStr(L.energy, 120), career: clampStr(L.career, 120), relation: clampStr(L.relation, 120) },
     tasks: (Array.isArray(j.tasks) ? j.tasks : []).filter(t => t && t.text).slice(0, 8)
       .map(t => ({ text: clampStr(t.text, 60), dueDays: Math.min(14, Math.max(1, Math.round(Number(t.dueDays) || 3))) })),

@@ -549,14 +549,6 @@
         .map(([k, n]) => `<b>${n}</b><span>${L[k] ? esc(L[k]) : '<span class="muted">信里没提到</span>'}</span>`).join('');
       html += `<div class="blk"><span class="blk-h">四个角度 <span class="tag line">实验</span></span><div class="lenses">${ln}</div>${fb('lenses')}</div>`;
     }
-    const qs = r.questions && r.questions.length ? r.questions : (S.settings.questions || []);
-    const ans = r.answers || [];
-    if (ans.some(Boolean)) {
-      const n = ans.filter(Boolean).length;
-      html += `<details class="qa"><summary><span>${r.imported ? '当时回答的问题' : (qs.length + ' 个问题的回答')}<small>${r.imported ? `答了 ${n} 题` : `回信从信里找到了 ${n} 题的答案`}</small></span>${ICON.chev}</summary>
-        <div class="qa-list">${qs.map((q, i) => `<div><div class="qa-q">${esc(q)}</div><div class="qa-a ${ans[i] ? '' : 'none'}">${ans[i] ? esc(ans[i]) : '信里没有线索'}</div></div>`).join('')}
-        ${r.imported ? '' : fb('answers')}</div></details>`;
-    }
     html += `</div>`;
     return html;
   }
@@ -725,7 +717,7 @@
         <div class="field"><span class="lab">外观</span><div class="themes">${themes}</div></div>
         <div class="field"><span class="lab">要打卡的习惯</span><div class="group">${habits || '<div class="empty" style="padding:14px">还没有习惯</div>'}</div>
           <form id="habit-form" style="display:flex;gap:8px"><input class="input" id="habit-new" placeholder="新习惯，比如：运动 30 分钟" aria-label="新习惯"><button class="btn sm" style="height:48px" type="submit">添加</button></form></div>
-        <div class="field"><label for="set-q">回信每天替你回答的问题（一行一个）</label><textarea class="input" id="set-q" rows="8">${esc((S.settings.questions || []).join('\n'))}</textarea>
+        <div class="field"><label for="set-q">回信写信时会想着的问题（一行一个）</label><textarea class="input" id="set-q" rows="8">${esc((S.settings.questions || []).join('\n'))}</textarea>
           <button class="btn sm ghost" style="align-self:flex-start" data-act="save-q">保存问题</button></div>
         <div class="field"><span class="lab">账号</span><div class="muted small">当前登录：${esc(S.user.username)}</div>
           <button class="btn sm ghost" style="align-self:flex-start" data-act="logout">退出登录</button></div>
@@ -950,7 +942,7 @@
       case 'save-q': {
         const qs = $('#set-q').value.split('\n').map(s => s.trim()).filter(Boolean);
         if (!qs.length) return toast('至少留一个问题');
-        S.settings.questions = qs; queue('PUT', '/settings', { questions: qs }); toCache(); toast('已保存，明天的回信开始生效'); break;
+        S.settings.questions = qs; queue('PUT', '/settings', { questions: qs }); toCache(); toast('已保存，下一封回信开始生效'); break;
       }
       case 'habit-del':
         if (!confirm('删除这个习惯？以前的打卡记录会一起隐藏。')) return;

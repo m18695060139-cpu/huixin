@@ -69,7 +69,7 @@ for (const l of todo) {
   } catch (e) { console.log(l.date, '失败：', e.message); continue; }
 
   // 你自己写过的答案优先
-  const answers = questions.map((_, i) => (old.answers && old.answers[i]) ? old.answers[i] : (r.answers[i] || ''));
+  const answers = questions.map((_, i) => (old.answers && old.answers[i]) ? old.answers[i] : '');
   const have = new Set(ideas.map(norm));
   const made = [];
   for (const it of r.ideas) {
