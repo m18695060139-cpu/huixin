@@ -33,12 +33,24 @@ async function callOnce(env, messages, maxTokens, temperature) {
   return { txt: String((ch && ch.message && ch.message.content) || '').trim(), finish: (ch && ch.finish_reason) || '' };
 }
 
+// Cloudflare Workers AI：免费额度每天 10,000 Neurons，一封回信约 180
+async function callWorkersAI(env, messages, maxTokens, temperature) {
+  const model = env.WORKERS_AI_MODEL || '@cf/openai/gpt-oss-120b';
+  const r = await env.AI.run(model, { messages, max_tokens: maxTokens, temperature });
+  const ch = r && r.choices && r.choices[0];
+  let txt = ch && ch.message ? ch.message.content : r && r.response;
+  if (txt && typeof txt !== 'string') txt = JSON.stringify(txt);
+  return { txt: String(txt || '').trim(), finish: (ch && ch.finish_reason) || '' };
+}
+
 async function callModel(env, messages, { maxTokens = 3000, temperature = 0.6 } = {}) {
-  if (!env.AI_API_KEY) throw new Error('还没有配置 AI 的 Key');
-  let r = await callOnce(env, messages, maxTokens, temperature);
+  // 配了第三方 Key 就用 Key；没配就用 Cloudflare 自带的免费模型
+  const call = env.AI_API_KEY ? callOnce : (env.AI ? callWorkersAI : null);
+  if (!call) throw new Error('还没有配置 AI');
+  let r = await call(env, messages, maxTokens, temperature);
   if (r.finish === 'length') {   // 被截断就放大预算再来一次
     try {
-      const r2 = await callOnce(env, messages, Math.min(maxTokens * 2, 8000), temperature);
+      const r2 = await call(env, messages, Math.min(maxTokens * 2, 8000), temperature);
       if (r2.txt.length > r.txt.length) r = r2;
     } catch { /* 沿用第一次 */ }
   }
