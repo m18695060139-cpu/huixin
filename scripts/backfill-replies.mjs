@@ -45,6 +45,7 @@ const env = {
 
 const [username, ...rest] = process.argv.slice(2);
 const weeksArg = rest.indexOf('--weeks') >= 0 ? rest[rest.indexOf('--weeks') + 1].split(',') : [];
+const ALL = rest.includes('--all');   // 全部重写（包括已经有回信的）
 const user = (await q('SELECT id, username, name FROM users WHERE username = ?', [username]))[0];
 if (!user) throw new Error('没有这个用户');
 const U = user.id;
@@ -52,7 +53,7 @@ const settings = JSON.parse(((await q('SELECT json FROM settings WHERE user_id =
 const questions = Array.isArray(settings.questions) && settings.questions.length ? settings.questions : DEFAULT_QUESTIONS;
 
 const letters = await q("SELECT date, text, reply FROM letters WHERE user_id = ? AND text != '' ORDER BY date", [U]);
-const todo = letters.filter(l => { const r = JSON.parse(l.reply || 'null'); return !r || r.imported; });
+const todo = ALL ? letters : letters.filter(l => { const r = JSON.parse(l.reply || 'null'); return !r || r.imported; });
 console.log(`要补写 ${todo.length} 封：${todo.map(l => l.date).join(' ')}`);
 
 let yesterday = '';
@@ -66,7 +67,11 @@ for (const l of todo) {
   let r;
   try {
     r = await writeReply(env, { name: user.name, date: l.date, today: l.date, backfill: false, text: l.text, questions, openTodos, ideas, yesterday: prevSum });
-  } catch (e) { console.log(l.date, '失败：', e.message); continue; }
+  } catch (e) {
+    console.log(l.date, '失败：', e.message);
+    if (/limit|quota|neurons|4006|3036/i.test(e.message)) { console.log('免费额度用完，停在这里'); break; }
+    continue;
+  }
 
   // 你自己写过的答案优先
   const answers = questions.map((_, i) => (old.answers && old.answers[i]) ? old.answers[i] : '');
@@ -80,7 +85,7 @@ for (const l of todo) {
     await q("INSERT INTO ideas (id, user_id, text, status, source_date, created, updated_at) VALUES (?, ?, ?, 'open', ?, ?, ?)", [id, U, it.text, l.date, l.date, nowIso()]);
     made.push({ id, text: it.text });
   }
-  const reply = { summary: r.summary, energy: r.energy, mood: r.mood, highlight: r.highlight, answers, questions, lenses: r.lenses, todos: [], ideas: made, backfilled: true };
+  const reply = { summary: r.summary, energy: r.energy, mood: r.mood, highlight: r.highlight, answers, questions, lenses: r.lenses, todos: old.todos || [], ideas: made.length ? made : (old.ideas || []), backfilled: true };
   await q('UPDATE letters SET reply = ?, energy = ?, mood = ?, replied_at = ? WHERE user_id = ? AND date = ?',
     [JSON.stringify(reply), r.energy, r.mood, nowIso(), U, l.date]);
   yesterday = r.summary;
