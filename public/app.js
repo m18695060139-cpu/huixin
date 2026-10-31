@@ -203,7 +203,7 @@
     applyThemeFallback();
     $('#app').innerHTML = `
       <form class="login" id="login-form" autocomplete="on">
-        <img class="logo" src="/icon-192.png" alt="回信" width="72" height="72">
+        <img class="logo" src="/icon-192-v2.png" alt="回信" width="72" height="72">
         <h1>回信</h1>
         <p>每晚写一封信，回信替未来的你整理好一切。</p>
         <input class="input" name="username" autocomplete="username" placeholder="账号" aria-label="账号" required>
