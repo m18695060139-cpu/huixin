@@ -203,7 +203,7 @@
     applyThemeFallback();
     $('#app').innerHTML = `
       <form class="login" id="login-form" autocomplete="on">
-        <div class="logo">Re:</div>
+        <img class="logo" src="/icon-192.png" alt="回信" width="72" height="72">
         <h1>回信</h1>
         <p>每晚写一封信，回信替未来的你整理好一切。</p>
         <input class="input" name="username" autocomplete="username" placeholder="账号" aria-label="账号" required>
@@ -244,7 +244,7 @@
 
   function tabbar() {
     const b = (id, label, icon) => `<button data-act="tab" data-v="${id}" ${V.tab === id ? 'aria-current="page"' : ''}>${icon}${label}</button>`;
-    return `<div class="tabbar"><div class="brand" aria-hidden="true"><b>Re:</b><span>回信</span></div><nav aria-label="主导航">${b('today', '今天', ICON.today)}${b('write', '写信', ICON.write)}${b('mailbox', '信箱', ICON.box)}</nav>
+    return `<div class="tabbar"><div class="brand" aria-hidden="true"><img src="/favicon.svg" alt="" width="28" height="28"><span>回信</span></div><nav aria-label="主导航">${b('today', '今天', ICON.today)}${b('write', '写信', ICON.write)}${b('mailbox', '信箱', ICON.box)}</nav>
       <button class="side-set" data-act="settings">${ICON.gear}<span>设置</span></button></div>`;
   }
 
