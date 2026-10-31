@@ -58,6 +58,15 @@ async function callModel(env, messages, { maxTokens = 3000, temperature = 0.6 } 
   return r.txt;
 }
 
+// 模型偶尔会返回格式不完整的内容：解析失败就再要一次
+async function callJSON(env, messages, opts) {
+  let lastErr;
+  for (let i = 0; i < 2; i++) {
+    try { return extractJSON(await callModel(env, messages, opts)); } catch (e) { lastErr = e; }
+  }
+  throw lastErr;
+}
+
 function extractJSON(txt) {
   const s = txt.replace(/^```(?:json)?/i, '').replace(/```$/, '');
   const a = s.indexOf('{'), b = s.lastIndexOf('}');
@@ -103,11 +112,10 @@ export async function writeReply(env, ctx) {
   if (ctx.yesterday) lines.push(`【前一天的回信摘要，只用来理解对比，不要把昨天的事写成今天】\n${ctx.yesterday}`);
 
   if (env.MOCK_AI) return mockReply(ctx);
-  const txt = await callModel(env, [
+  const j = await callJSON(env, [
     { role: 'system', content: REPLY_SYSTEM },
     { role: 'user', content: lines.join('\n\n') },
-  ], { maxTokens: 3000, temperature: 0.5 });
-  const j = extractJSON(txt);
+  ], { maxTokens: 4000, temperature: 0.5 });
 
   const clampStr = (s, n) => String(s || '').trim().slice(0, n);
   const answers = Array.from({ length: ctx.questions.length }, (_, i) => clampStr((j.answers || [])[i], 300));
@@ -152,11 +160,10 @@ const DIGEST_SYSTEM = {
 
 export async function writeDigest(env, kind, material) {
   if (env.MOCK_AI) return mockDigest(kind, material);
-  const txt = await callModel(env, [
+  return callJSON(env, [
     { role: 'system', content: DIGEST_SYSTEM[kind] },
     { role: 'user', content: material },
-  ], { maxTokens: kind === 'week' ? 2000 : 3500, temperature: 0.6 });
-  return extractJSON(txt);
+  ], { maxTokens: kind === 'week' ? 3000 : 4500, temperature: 0.6 });
 }
 
 // ───────────── 本地测试用的假 AI（MOCK_AI=1 时启用） ─────────────
