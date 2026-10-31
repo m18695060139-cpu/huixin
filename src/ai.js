@@ -1,5 +1,9 @@
 // 回信 · AI
-// 模型走 OpenAI 兼容网关（默认沿用 Life OS 的 TokenHub），Key 只存在 Worker 的加密变量里
+// 三种来源，按顺序尝试：
+//   ① 用户自己接的 AI（设置里填的 OpenAI 兼容接口 + Key）
+//   ② 站点统一配置的网关（Worker 密钥 AI_API_KEY，可选）
+//   ③ Cloudflare 自带的免费模型（每天 10,000 Neurons，一封回信约 200）
+// 前一个出错就自动换下一个，保证总能写出回信。
 import { parseJSON } from './util.js';
 
 export const MOODS = ['平静', '专注', '振奋', '疲惫', '焦虑', '低落', '烦躁', '感激'];
@@ -14,48 +18,119 @@ export const DEFAULT_QUESTIONS = [
   '今天的我比昨天进步了哪里？',
 ];
 
-async function callOnce(env, messages, maxTokens, temperature) {
-  const url = env.AI_BASE_URL || 'https://tokenhub.tencentmaas.com/v1/chat/completions';
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + env.AI_API_KEY },
-    body: JSON.stringify({
-      model: env.AI_MODEL || 'deepseek/deepseek-flash',
-      messages, temperature, max_tokens: maxTokens, stream: false,
-      // 关掉「先思考再回答」：思考会吃掉 max_tokens，正文被截断（Life OS 里踩过）
-      thinking: { type: 'disabled' },
-    }),
-  });
-  const text = await res.text();
+// 常用服务商：选了就自动填好地址和推荐模型（模型名可以改，以服务商控制台为准）
+export const PROVIDERS = {
+  deepseek: { name: 'DeepSeek', base: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+  zhipu: { name: '智谱 GLM', base: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash' },
+  qwen: { name: '通义千问', base: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+  kimi: { name: 'Kimi', base: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
+  siliconflow: { name: '硅基流动', base: 'https://api.siliconflow.cn/v1', model: 'deepseek-ai/DeepSeek-V3' },
+  tokenhub: { name: 'TokenHub', base: 'https://tokenhub.tencentmaas.com/v1', model: 'deepseek/deepseek-flash' },
+  openrouter: { name: 'OpenRouter', base: 'https://openrouter.ai/api/v1', model: 'deepseek/deepseek-chat' },
+  custom: { name: '自定义', base: '', model: '' },
+};
+
+export function chatUrl(base) {
+  const b = String(base || '').trim().replace(/\/+$/, '');
+  return /\/chat\/completions$/.test(b) ? b : b + '/chat/completions';
+}
+
+// 调一个 OpenAI 兼容接口。cfg = { baseUrl, model, key }
+export async function callOpenAI(cfg, messages, maxTokens, temperature) {
+  const body = { model: cfg.model, messages, temperature, max_tokens: maxTokens, stream: false };
+  // TokenHub 的模型默认先思考再回答，思考会吃掉 max_tokens（Life OS 里踩过），关掉
+  if (/tokenhub/i.test(cfg.baseUrl)) body.thinking = { type: 'disabled' };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 90000);
+  let res, text;
+  try {
+    res = await fetch(chatUrl(cfg.baseUrl), {
+      method: 'POST', signal: ctrl.signal,
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + cfg.key },
+      body: JSON.stringify(body),
+    });
+    text = await res.text();
+  } catch (e) {
+    throw new Error(e.name === 'AbortError' ? 'AI 超过 90 秒没有响应' : '连不上这个接口地址');
+  } finally { clearTimeout(timer); }
   const j = parseJSON(text, {});
-  if (!res.ok) throw new Error('模型返回 ' + res.status + '：' + String((j.error && j.error.message) || text).slice(0, 200));
+  if (!res.ok) {
+    const msg = String((j.error && (j.error.message || j.error)) || j.message || text).slice(0, 160);
+    if (res.status === 401 || res.status === 403) throw new Error('Key 不对或已经失效（' + res.status + '）');
+    if (res.status === 404) throw new Error('接口地址或模型名不对（404）：' + msg);
+    if (res.status === 402) throw new Error('账户余额不足（402）');
+    if (res.status === 429) throw new Error('请求太频繁或额度用完了（429）');
+    throw new Error('AI 返回 ' + res.status + '：' + msg);
+  }
   const ch = j.choices && j.choices[0];
   return { txt: String((ch && ch.message && ch.message.content) || '').trim(), finish: (ch && ch.finish_reason) || '' };
 }
 
-// Cloudflare Workers AI：免费额度每天 10,000 Neurons，一封回信约 180
 async function callWorkersAI(env, messages, maxTokens, temperature) {
   const model = env.WORKERS_AI_MODEL || '@cf/openai/gpt-oss-120b';
-  const r = await env.AI.run(model, { messages, max_tokens: maxTokens, temperature });
+  let r;
+  try {
+    r = await env.AI.run(model, { messages, max_tokens: maxTokens, temperature });
+  } catch (e) {
+    if (/4006|daily free allocation|neurons/i.test(e.message)) {
+      throw new Error('今天的免费 AI 额度用完了，北京时间早上 8 点恢复；也可以在「设置 → AI 回信」接入你自己的 AI');
+    }
+    throw e;
+  }
   const ch = r && r.choices && r.choices[0];
   let txt = ch && ch.message ? ch.message.content : r && r.response;
   if (txt && typeof txt !== 'string') txt = JSON.stringify(txt);
   return { txt: String(txt || '').trim(), finish: (ch && ch.finish_reason) || '' };
 }
 
-async function callModel(env, messages, { maxTokens = 3000, temperature = 0.6 } = {}) {
-  // 配了第三方 Key 就用 Key；没配就用 Cloudflare 自带的免费模型
-  const call = env.AI_API_KEY ? callOnce : (env.AI ? callWorkersAI : null);
-  if (!call) throw new Error('还没有配置 AI');
-  let r = await call(env, messages, maxTokens, temperature);
-  if (r.finish === 'length') {   // 被截断就放大预算再来一次
-    try {
-      const r2 = await call(env, messages, Math.min(maxTokens * 2, 8000), temperature);
-      if (r2.txt.length > r.txt.length) r = r2;
-    } catch { /* 沿用第一次 */ }
+// 这次请求能用的 AI，按优先级排好
+function engines(env) {
+  const list = [];
+  if (env.userAI) list.push({ label: env.userAI.label, own: true, call: (m, t, temp) => callOpenAI(env.userAI, m, t, temp) });
+  if (env.AI_API_KEY) {
+    const cfg = { baseUrl: env.AI_BASE_URL || 'https://tokenhub.tencentmaas.com/v1', model: env.AI_MODEL || 'deepseek/deepseek-flash', key: env.AI_API_KEY };
+    list.push({ label: '站点 AI', call: (m, t, temp) => callOpenAI(cfg, m, t, temp) });
   }
-  if (!r.txt) throw new Error('模型没有返回内容');
-  return r.txt;
+  if (env.AI) list.push({ label: 'Cloudflare 免费模型', call: (m, t, temp) => callWorkersAI(env, m, t, temp) });
+  return list;
+}
+
+async function callModel(env, messages, { maxTokens = 3000, temperature = 0.6 } = {}) {
+  const list = engines(env);
+  if (!list.length) throw new Error('还没有配置 AI');
+  let lastErr;
+  for (const e of list) {
+    try {
+      let r = await e.call(messages, maxTokens, temperature);
+      if (r.finish === 'length') {   // 被截断就放大预算再来一次
+        try {
+          const r2 = await e.call(messages, Math.min(maxTokens * 2, 8000), temperature);
+          if (r2.txt.length > r.txt.length) r = r2;
+        } catch { /* 沿用第一次 */ }
+      }
+      if (!r.txt) throw new Error('模型没有返回内容');
+      env.__engine = e.label;
+      return r.txt;
+    } catch (err) {
+      lastErr = err;
+      if (e.own) env.__ownError = err.message;   // 自己的 AI 出错了，记下来告诉用户，然后换下一个
+    }
+  }
+  if (env.__ownError && lastErr && lastErr.message !== env.__ownError) {
+    throw new Error(`你自己的 AI 没接通（${env.__ownError}），免费模型也没写成：${lastErr.message}`);
+  }
+  throw lastErr;
+}
+
+// 设置页「测试一下」
+export async function testAI(cfg) {
+  const t0 = Date.now();
+  const r = await callOpenAI(cfg, [
+    { role: 'system', content: '你是「回信」的连接测试。' },
+    { role: 'user', content: '用一句不超过 20 字的中文回复：回信已经接通。' },
+  ], 200, 0.3);
+  if (!r.txt) throw new Error('接通了，但模型没有返回内容（模型名可能不对）');
+  return { reply: r.txt.slice(0, 80), ms: Date.now() - t0 };
 }
 
 // 模型偶尔会返回格式不完整的内容：解析失败就再要一次

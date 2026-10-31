@@ -245,8 +245,8 @@ details.qa[open] summary svg { transform: rotate(90deg); }
 /* ── 二级页面（从右侧滑入） ── */
 .sheet {
   position: fixed; inset: 0; z-index: 20; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch;
-  animation: slidein .22s ease-out;
 }
+.sheet.enter { animation: slidein .22s ease-out; }
 @keyframes slidein { from { transform: translateX(24px); opacity: 0 } to { transform: none; opacity: 1 } }
 .sheet-bar {
   position: sticky; top: 0; z-index: 2; background: var(--glass);

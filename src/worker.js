@@ -1,7 +1,8 @@
 // 回信 · Cloudflare Worker
 // 静态页面由 Workers Assets 直接提供；/api/* 走这里
 import { login, logout, currentUser } from './auth.js';
-import { writeReply, writeDigest, DEFAULT_QUESTIONS } from './ai.js';
+import { writeReply, writeDigest, DEFAULT_QUESTIONS, PROVIDERS, testAI } from './ai.js';
+import { encryptKey, decryptKey } from './secret.js';
 import { importBackup } from './importer.js';
 import {
   json, err, cstDate, addDays, weekKey, quarterKey, periodRange, uid, nowIso, norm, parseJSON, isDate,
@@ -179,6 +180,30 @@ async function api(req, env, ctx, url) {
     return json({ ok: true });
   }
 
+  // ── 自己的 AI（OpenAI 兼容接口） ──
+  if (p === '/ai-config' && m === 'GET') return json(await aiConfigOut(env, U));
+  if (p.startsWith('/ai-config') && m !== 'GET' && user.username === 'demo') return err('示例账号不能修改 AI 设置');
+  if (p === '/ai-config' && m === 'PUT') {
+    const cfg = await aiConfigIn(env, U, body);
+    if (cfg.error) return err(cfg.error);
+    const keyEnc = cfg.keyChanged ? await encryptKey(env, cfg.key) : cfg.keyEnc;
+    await env.DB.prepare(`INSERT INTO ai_config (user_id, provider, base_url, model, key_enc, key_last4, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)
+      ON CONFLICT(user_id) DO UPDATE SET provider = excluded.provider, base_url = excluded.base_url, model = excluded.model,
+      key_enc = excluded.key_enc, key_last4 = excluded.key_last4, updated_at = excluded.updated_at`)
+      .bind(U, cfg.provider, cfg.baseUrl, cfg.model, keyEnc, cfg.key.slice(-4), nowIso()).run();
+    return json(await aiConfigOut(env, U));
+  }
+  if (p === '/ai-config' && m === 'DELETE') {
+    await env.DB.prepare('DELETE FROM ai_config WHERE user_id = ?').bind(U).run();
+    return json(await aiConfigOut(env, U));
+  }
+  if (p === '/ai-config/test' && m === 'POST') {
+    const cfg = await aiConfigIn(env, U, body);
+    if (cfg.error) return err(cfg.error);
+    try { return json({ ok: true, ...(await testAI(cfg)) }); }
+    catch (e) { return json({ ok: false, error: e.message }); }
+  }
+
   // ── 导入 Life OS 旧数据 ──
   if (p === '/import' && m === 'POST') return json(await importBackup(env, U, body));
 
@@ -238,6 +263,50 @@ function pick(o, keys) {
   return out;
 }
 
+// ───────────── 自己的 AI ─────────────
+
+// 读出来给网页看：永远不返回 Key，只给后 4 位
+async function aiConfigOut(env, U) {
+  const row = await env.DB.prepare('SELECT provider, base_url, model, key_last4, updated_at FROM ai_config WHERE user_id = ?').bind(U).first();
+  const providers = Object.fromEntries(Object.entries(PROVIDERS).map(([k, v]) => [k, v]));
+  if (!row) return { configured: false, providers };
+  return { configured: true, provider: row.provider, base_url: row.base_url, model: row.model, last4: row.key_last4, updated_at: row.updated_at, providers };
+}
+
+// 校验网页提交的配置；Key 留空表示沿用已保存的
+async function aiConfigIn(env, U, body) {
+  const provider = PROVIDERS[body.provider] ? body.provider : 'custom';
+  const baseUrl = String(body.base_url || (PROVIDERS[provider] || {}).base || '').trim();
+  const model = String(body.model || '').trim();
+  let key = String(body.key || '').trim();
+  let keyEnc = null, keyChanged = !!key;
+  if (!/^https:\/\/[^\s]+$/i.test(baseUrl) && !(env.ALLOW_HTTP_AI && /^http:\/\/(localhost|127\.0\.0\.1)/.test(baseUrl))) {
+    return { error: '接口地址要以 https:// 开头' };
+  }
+  if (!model) return { error: '请填写模型名' };
+  if (!key) {
+    const row = await env.DB.prepare('SELECT key_enc FROM ai_config WHERE user_id = ?').bind(U).first();
+    if (!row) return { error: '请填写 API Key' };
+    keyEnc = row.key_enc;
+    key = await decryptKey(env, keyEnc);
+  }
+  if (key.length < 8) return { error: 'API Key 看起来不完整' };
+  return { provider, baseUrl, model: model.slice(0, 120), key, keyEnc, keyChanged };
+}
+
+// 回信和周信用：给这次请求带上用户自己的 AI（没配就是 null）
+async function withUserAI(env, U) {
+  const row = await env.DB.prepare('SELECT * FROM ai_config WHERE user_id = ?').bind(U).first();
+  let userAI = null;
+  if (row) {
+    try {
+      userAI = { baseUrl: row.base_url, model: row.model, key: await decryptKey(env, row.key_enc),
+        label: (PROVIDERS[row.provider] || PROVIDERS.custom).name + (row.provider === 'custom' ? ' AI' : '') };
+    } catch (e) { console.error('解密用户 Key 失败', U, e.message); }
+  }
+  return { ...env, userAI };
+}
+
 // ───────────── 写回信 ─────────────
 
 async function replyTo(env, user, date, clientToday) {
@@ -252,7 +321,8 @@ async function replyTo(env, user, date, clientToday) {
     env.DB.prepare('SELECT reply FROM letters WHERE user_id = ? AND date = ?').bind(U, addDays(date, -1)).first(),
   ]);
 
-  const r = await writeReply(env, {
+  const aiEnv = await withUserAI(env, U);
+  const r = await writeReply(aiEnv, {
     name: user.name, date, today, backfill: date !== today, text: letter.text,
     questions: settings.questions,
     openTodos: openTodos.results.map(t => t.text),
@@ -288,9 +358,11 @@ async function replyTo(env, user, date, clientToday) {
 
   const reply = {
     summary: r.summary, energy: r.energy, mood: r.mood, highlight: r.highlight,
-    answers: r.answers, questions: settings.questions, lenses: r.lenses,
+    questions: settings.questions, lenses: r.lenses,
     todos: madeTodos.map(t => ({ id: t.id, text: t.text })),
     ideas: madeIdeas.map(t => ({ id: t.id, text: t.text })),
+    engine: aiEnv.__engine || '',
+    ownError: aiEnv.__ownError || undefined,   // 自己的 AI 出错、改用了免费模型时，告诉用户原因
   };
   stmts.push(env.DB.prepare('UPDATE letters SET reply = ?, energy = ?, mood = ?, replied_at = ? WHERE user_id = ? AND date = ?')
     .bind(JSON.stringify(reply), r.energy, r.mood, now, U, date));
@@ -334,7 +406,9 @@ async function makeDigest(env, user, kind, key) {
     if (qs.length) lines.push('【这一年的季信】\n' + qs.map(q => `${q.key}：${(parseJSON(q.content, {}) || {}).letter || ''}`).join('\n'));
   }
 
-  const content = await writeDigest(env, kind, lines.join('\n\n'));
+  const aiEnv = await withUserAI(env, U);
+  const content = await writeDigest(aiEnv, kind, lines.join('\n\n'));
+  content.engine = aiEnv.__engine || '';
   const avg = letters.filter(l => l.energy).reduce((s, l, _, a) => s + l.energy / a.length, 0);
   content.stats = { letters: letters.length, days, energyAvg: avg ? Math.round(avg * 10) / 10 : null, todosDone: done.length };
   content.range = [start, end];

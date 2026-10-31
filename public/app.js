@@ -523,7 +523,7 @@
         <div class="err-box"><span>这封信还没有回信。</span><button class="btn sm" data-act="retry-reply">让回信回一封</button></div>`;
     }
     const when = l.replied_at ? new Date(l.replied_at) : null;
-    const whenTxt = r.imported ? '从 Life OS 搬过来的旧信' : when ? `${pad(when.getHours())}:${pad(when.getMinutes())} 收到回信` : '';
+    const whenTxt = r.imported ? '从 Life OS 搬过来的旧信' : when ? `${pad(when.getHours())}:${pad(when.getMinutes())} 收到回信${r.engine ? ' · ' + esc(r.engine) : ''}` : '';
     const fb = block => {
       const v = S.feedback[l.date + '|' + block] || 0;
       return `<div class="fb"><button class="${v > 0 ? 'on' : ''}" data-act="fb" data-v="${block}" data-d="${l.date}" data-x="1">有用</button><button class="${v < 0 ? 'on' : ''}" data-act="fb" data-v="${block}" data-d="${l.date}" data-x="-1">没用</button></div>`;
@@ -549,6 +549,7 @@
         .map(([k, n]) => `<b>${n}</b><span>${L[k] ? esc(L[k]) : '<span class="muted">信里没提到</span>'}</span>`).join('');
       html += `<div class="blk"><span class="blk-h">四个角度 <span class="tag line">实验</span></span><div class="lenses">${ln}</div>${fb('lenses')}</div>`;
     }
+    if (r.ownError) html += `<p class="note" style="margin:0">你自己的 AI 这次没接通（${esc(r.ownError)}），这封先用免费模型写的。可以去「设置 → AI 回信」检查一下。</p>`;
     html += `</div>`;
     return html;
   }
@@ -631,11 +632,13 @@
   }
 
   // ───────────── 二级页面 ─────────────
-  function openSheet(s) { V.sheets.push(s); render(); }
+  function openSheet(s) { s.fresh = true; V.sheets.push(s); render(); }
   function closeSheet() { V.sheets.pop(); render(); }
   function viewSheet(s) {
     const titles = { letter: '信', digest: '', lists: '待办与点子', settings: '设置', todo: s.id ? '编辑待办' : '加一件事', idea: '编辑点子' };
-    return `<div class="sheet-dim" data-act="close" aria-hidden="true"></div><div class="sheet" role="dialog" aria-modal="true">
+    const anim = s.fresh ? ' enter' : '';
+    s.fresh = false;   // 只在刚打开时滑入，之后刷新内容不再重播动画
+    return `<div class="sheet-dim" data-act="close" aria-hidden="true"></div><div class="sheet${anim}" role="dialog" aria-modal="true">
       <div class="sheet-bar"><div><button class="back" data-act="close">${ICON.left}<span style="margin-left:6px">返回</span></button><span class="t">${titles[s.type] || ''}</span></div></div>
       <div class="page">${sheetBody(s)}</div></div>`;
   }
@@ -714,6 +717,7 @@
       const habits = S.habits.map(h => `<div class="row"><input class="input" style="background:none;padding:0;min-height:48px" value="${esc(h.name)}" data-habit-name="${h.id}" aria-label="习惯名称"><button class="link-btn" style="color:var(--danger)" data-act="habit-del" data-v="${h.id}">删除</button></div>`).join('');
       return `
         <div class="field"><label for="set-name">回信怎么称呼你</label><input class="input" id="set-name" value="${esc(S.user.name || '')}" placeholder="比如：非云"></div>
+        ${aiSettings()}
         <div class="field"><span class="lab">外观</span><div class="themes">${themes}</div></div>
         <div class="field"><span class="lab">要打卡的习惯</span><div class="group">${habits || '<div class="empty" style="padding:14px">还没有习惯</div>'}</div>
           <form id="habit-form" style="display:flex;gap:8px"><input class="input" id="habit-new" placeholder="新习惯，比如：运动 30 分钟" aria-label="新习惯"><button class="btn sm" style="height:48px" type="submit">添加</button></form></div>
@@ -724,6 +728,51 @@
         <p class="note" style="margin-top:40px;text-align:center">回信 Re: · 你只写信，其余交给回信</p>`;
     }
     return '';
+  }
+
+
+  // ───────────── 设置 · AI 回信 ─────────────
+  // V.ai：{ loading, data（服务器上的配置，不含 Key）, form（正在填的）, msg, busy }
+  async function loadAI() {
+    V.ai = { loading: true };
+    try {
+      const d = await api('GET', '/ai-config');
+      const p = d.configured ? d.provider : 'deepseek';
+      const pre = d.providers[p] || {};
+      V.ai = { data: d, form: { provider: p, base_url: d.base_url || pre.base, model: d.model || pre.model, key: '' }, open: !d.configured };
+    } catch (e) { V.ai = { error: e.message }; }
+    if (V.sheets.length && V.sheets[V.sheets.length - 1].type === 'settings') render();
+  }
+  function aiSettings() {
+    const A = V.ai || {};
+    if (A.loading) return `<div class="field"><span class="lab">AI 回信</span><div class="note" style="margin:0">读取中…</div></div>`;
+    if (A.error || !A.data) return `<div class="field"><span class="lab">AI 回信</span><div class="note" style="margin:0">${esc(A.error || '联网后可以设置')}</div></div>`;
+    const d = A.data, f = A.form, P = d.providers;
+    const status = d.configured
+      ? `正在用你自己的 <b>${esc((P[d.provider] || P.custom).name)}</b> · ${esc(d.model)} · Key 尾号 ${esc(d.last4)}`
+      : `正在用 <b>Cloudflare 免费模型</b>：不用花钱，但每天有额度上限，写一封要等半分钟左右。`;
+    const opts = Object.entries(P).map(([k, v]) => `<option value="${k}" ${f.provider === k ? 'selected' : ''}>${esc(v.name)}</option>`).join('');
+    return `<div class="field"><span class="lab">AI 回信</span>
+      <div class="group" style="padding:14px;font-size:15px;line-height:1.6">${status}
+        ${d.configured ? `<div style="margin-top:6px"><button class="link-btn" style="color:var(--danger);padding:4px 0" data-act="ai-off">停用，改回免费模型</button></div>` : ''}</div>
+      <button class="link-btn" style="align-self:flex-start" data-act="ai-toggle">${A.open ? '收起' : (d.configured ? '修改 ›' : '接入自己的 AI ›')}</button>
+      ${A.open ? `<div style="display:flex;flex-direction:column;gap:10px">
+        <label class="lab" for="ai-provider">服务商</label>
+        <select class="input" id="ai-provider" data-ai="provider">${opts}</select>
+        <label class="lab" for="ai-base">接口地址</label>
+        <input class="input" id="ai-base" data-ai="base_url" value="${esc(f.base_url || '')}" placeholder="https://…/v1" inputmode="url" autocomplete="off" spellcheck="false">
+        <label class="lab" for="ai-model">模型名</label>
+        <input class="input" id="ai-model" data-ai="model" value="${esc(f.model || '')}" placeholder="比如 deepseek-chat" autocomplete="off" spellcheck="false">
+        <label class="lab" for="ai-key">API Key</label>
+        <input class="input" id="ai-key" data-ai="key" type="password" value="${esc(f.key || '')}" placeholder="${d.configured ? '已保存（尾号 ' + esc(d.last4) + '），不改就留空' : '粘贴服务商给你的 Key'}" autocomplete="off" spellcheck="false">
+        <div style="display:flex;gap:10px;margin-top:4px">
+          <button class="btn sm ghost" data-act="ai-test" ${A.busy ? 'disabled' : ''}>${A.busy === 'test' ? '测试中…' : '测试一下'}</button>
+          <button class="btn sm" data-act="ai-save" ${A.busy ? 'disabled' : ''}>${A.busy === 'save' ? '保存中…' : '保存'}</button>
+        </div>
+        ${A.msg ? `<div class="note" style="margin:0;color:${A.ok ? 'var(--ink)' : 'var(--danger)'}">${esc(A.msg)}</div>` : ''}
+        <p class="note" style="margin:0">接上之后，你的回信和周信都用你自己的 AI 写，花的是你自己的额度。Key 加密保存在服务器上，网页里只显示后 4 位。DeepSeek、智谱、通义千问、Kimi、硅基流动等大多数服务商都能这样接入；模型名以服务商控制台为准。自己的 AI 出错时，会自动改用免费模型，不会漏掉回信。</p>
+      </div>` : ''}
+    </div>`;
   }
 
   // ───────────── 渲染后的绑定（输入框、表单） ─────────────
@@ -768,6 +817,17 @@
       if (s.id) { const x = S.ideas.find(y => y.id === s.id); x.text = text; queue('PUT', '/ideas/' + x.id, { text }); }
       else { const x = { id: uid('i'), text, status: 'open', created: today() }; S.ideas.unshift(x); queue('PUT', '/ideas/' + x.id, x); }
       toCache(); closeSheet();
+    });
+    document.querySelectorAll('[data-ai]').forEach(el => {
+      const k = el.dataset.ai;
+      el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
+        V.ai.form[k] = el.value;
+        if (k === 'provider') {
+          const pre = V.ai.data.providers[el.value] || {};
+          if (el.value !== 'custom') { V.ai.form.base_url = pre.base; V.ai.form.model = pre.model; }
+          V.ai.msg = ''; render();
+        }
+      });
     });
     const nm = $('#set-name');
     if (nm) nm.addEventListener('change', () => {
@@ -935,7 +995,29 @@
         } catch (err) { toast(err.message); }
         break;
       }
-      case 'settings': openSheet({ type: 'settings' }); break;
+      case 'settings': V.ai = { loading: true }; openSheet({ type: 'settings' }); loadAI(); break;
+      case 'ai-toggle': V.ai.open = !V.ai.open; V.ai.msg = ''; render(); break;
+      case 'ai-test': case 'ai-save': {
+        const isTest = act === 'ai-test';
+        V.ai.busy = isTest ? 'test' : 'save'; V.ai.msg = ''; render();
+        try {
+          if (isTest) {
+            const r = await api('POST', '/ai-config/test', V.ai.form);
+            V.ai.ok = r.ok;
+            V.ai.msg = r.ok ? `接通了，用时 ${(r.ms / 1000).toFixed(1)} 秒，它回复：「${r.reply}」` : '没接通：' + r.error;
+          } else {
+            const d = await api('PUT', '/ai-config', V.ai.form);
+            V.ai.data = d; V.ai.form.key = ''; V.ai.open = false; V.ai.ok = true; V.ai.msg = '';
+            toast('已保存，之后的回信用你自己的 AI 写');
+          }
+        } catch (e2) { V.ai.ok = false; V.ai.msg = e2.message; }
+        V.ai.busy = null; render(); break;
+      }
+      case 'ai-off': {
+        if (!confirm('停用自己的 AI，改回免费模型？保存的 Key 会被删除。')) return;
+        try { V.ai.data = await api('DELETE', '/ai-config'); toast('已改回免费模型'); } catch (e2) { toast(e2.message); }
+        render(); break;
+      }
       case 'close': closeSheet(); break;
       case 'theme':
         S.settings.theme = v; applyTheme(); queue('PUT', '/settings', { theme: v }); toCache(); render(); break;
