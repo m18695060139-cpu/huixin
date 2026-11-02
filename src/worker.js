@@ -1,6 +1,6 @@
 // 回信 · Cloudflare Worker
 // 静态页面由 Workers Assets 直接提供；/api/* 走这里
-import { login, logout, currentUser } from './auth.js';
+import { login, logout, register, currentUser } from './auth.js';
 import { writeReply, writeDigest, DEFAULT_QUESTIONS, PROVIDERS, testAI } from './ai.js';
 import { encryptKey, decryptKey } from './secret.js';
 import { importBackup } from './importer.js';
@@ -31,6 +31,7 @@ async function api(req, env, ctx, url) {
   const m = req.method;
 
   if (p === '/login' && m === 'POST') return login(req, env);
+  if (p === '/register' && m === 'POST') return register(req, env);
   if (p === '/logout' && m === 'POST') return logout(req, env);
 
   const user = await currentUser(req, env);
@@ -45,7 +46,8 @@ async function api(req, env, ctx, url) {
   // ── 设置 ──
   if (p === '/settings' && m === 'PUT') {
     const cur = await getSettings(env, U);
-    const next = { ...cur, ...pick(body, ['theme', 'questions']) };
+    const next = { ...cur, ...pick(body, ['theme', 'questions', 'deliver']) };
+    if (next.deliver !== 'now') next.deliver = 'morning';   // 回信什么时候送到：明早 6 点，或寄出后马上
     if (Array.isArray(next.questions)) next.questions = next.questions.map(s => String(s).slice(0, 120)).filter(Boolean).slice(0, 10);
     await env.DB.prepare('INSERT INTO settings (user_id, json) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET json = excluded.json')
       .bind(U, JSON.stringify(next)).run();

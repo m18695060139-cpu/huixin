@@ -73,6 +73,33 @@ export async function login(req, env) {
     { 'set-cookie': cookieHeader(token, SESSION_DAYS * 86400) });
 }
 
+// 邀请码注册：邀请码放在 Worker 密钥 INVITE_CODES 里（逗号分隔，可多个），没设置就关闭注册
+export async function register(req, env) {
+  const body = await req.json().catch(() => ({}));
+  const username = String(body.username || '').trim();
+  const password = String(body.password || '');
+  const code = String(body.code || '').trim();
+  const codes = String(env.INVITE_CODES || '').split(',').map(c => c.trim()).filter(Boolean);
+
+  await new Promise(r => setTimeout(r, 600));   // 放慢一点，挡住暴力猜邀请码
+  if (!codes.length) return err('暂未开放注册', 403);
+  if (!codes.some(c => safeEqual(c, code))) return err('邀请码不对', 403);
+  if (!/^[A-Za-z0-9_.-]{3,20}$/.test(username)) return err('账号用 3-20 位字母、数字或 _ . -');
+  if (password.length < 8 || password.length > 100) return err('密码至少 8 位');
+
+  const exists = await env.DB.prepare('SELECT 1 FROM users WHERE username = ?').bind(username).first();
+  if (exists) return err('这个账号名已被使用');
+
+  const saltBytes = new Uint8Array(16);
+  crypto.getRandomValues(saltBytes);
+  const salt = hex(saltBytes);
+  const idBytes = new Uint8Array(6);
+  crypto.getRandomValues(idBytes);
+  await env.DB.prepare('INSERT INTO users (id, username, pass_hash, salt, name, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .bind('u' + hex(idBytes), username, await hashPassword(password, salt), salt, '', new Date().toISOString()).run();
+  return login(new Request(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify({ username, password }) }), env);
+}
+
 export async function logout(req, env) {
   const token = readCookie(req);
   if (token) await env.DB.prepare('DELETE FROM sessions WHERE token_hash = ?').bind(await sha256(token)).run();
