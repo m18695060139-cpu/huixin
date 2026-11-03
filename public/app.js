@@ -1,6 +1,7 @@
 /* 回信 · 前端
  * 原则：你只写信，其余交给回信。
  * 数据：云端是正本；本机缓存一份，打开秒开、没网也能写，联网后自动补寄。
+ * 送达：今晚寄出的信，回信马上写好，但封存到第二天早上 6 点才拆；补写的信马上送到。
  */
 (function () {
   'use strict';
@@ -15,6 +16,7 @@
   const WD = ['日', '一', '二', '三', '四', '五', '六'];
   const wd = s => WD[new Date(s + 'T00:00:00').getDay()];
   const cn = s => `${Number(s.slice(5, 7))}月${Number(s.slice(8, 10))}日`;
+  const hm = d => `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   const weekKey = s => addDays(s, -((new Date(s + 'T00:00:00').getDay() + 6) % 7));
   const quarterKey = s => s.slice(0, 4) + '-Q' + (Math.floor((Number(s.slice(5, 7)) - 1) / 3) + 1);
   const hash = s => { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; };
@@ -24,18 +26,32 @@
     set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 存不下就算了 */ } },
     del(k) { try { localStorage.removeItem(k); } catch (e) { /* ignore */ } },
   };
+  const svg = (w, body, sw = 2) => `<svg width="${w}" height="${w}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${sw}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
   const ICON = {
-    check: '<svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="var(--on-ink)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.3 5.8 10 11 4.2"/></svg>',
-    checkSm: '<svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="var(--on-ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.3 5.8 10 11 4.2"/></svg>',
-    today: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v2.2M12 19v2.2M2.8 12h2.2M19 12h2.2M5.5 5.5l1.5 1.5M17 17l1.5 1.5M5.5 18.5 7 17M17 7l1.5-1.5"/></svg>',
-    write: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15.5 4.5 19.5 8.5 9 19H5v-4z"/><path d="M13 7l4 4"/></svg>',
-    box: '<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m3.8 7 8.2 6 8.2-6"/></svg>',
-    gear: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
-    left: '<svg width="11" height="18" viewBox="0 0 11 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 1 2 9l7 8"/></svg>',
-    right: '<svg width="11" height="18" viewBox="0 0 11 18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m2 1 7 8-7 8"/></svg>',
-    chev: '<svg width="8" height="14" viewBox="0 0 8 14" fill="none" stroke="var(--ring)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m1 1 6 6-6 6"/></svg>',
-    plus: '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+    checkSm: '<svg width="13" height="13" viewBox="0 0 14 14" fill="none" stroke="var(--on-ink)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7.3 5.8 10 11 4.2"/></svg>',
+    check: svg(14, '<path d="M5 12.5l4.5 4.5L19 7.5"/>', 3),
+    today: svg(24, '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.8v2.2M12 19v2.2M2.8 12h2.2M19 12h2.2M5.5 5.5l1.5 1.5M17 17l1.5 1.5M5.5 18.5 7 17M17 7l1.5-1.5"/>', 1.8),
+    pen: svg(24, '<path d="M4 20h4L19 9l-4-4L4 16v4z"/><path d="M13.5 6.5l4 4"/>'),
+    penSm: svg(16, '<path d="M4 20h4L19 9l-4-4L4 16v4z"/>', 2.2),
+    box: svg(24, '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m3.8 7 8.2 6 8.2-6"/>', 1.8),
+    boxSm: svg(18, '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m3.8 7 8.2 6 8.2-6"/>'),
+    send: svg(20, '<path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/>'),
+    bulb: svg(14, '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>', 2.4),
+    mic: svg(22, '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>'),
+    clock: svg(16, '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>', 2.2),
+    x: svg(15, '<path d="M6 6l12 12M18 6L6 18"/>', 2.6),
+    gear: '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>',
+    left: svg(18, '<path d="M15 5l-7 7 7 7"/>', 2.4),
+    right: svg(18, '<path d="M9 5l7 7-7 7"/>', 2.4),
+    chev: '<svg class="chev" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>',
+    tick: svg(18, '<path d="M5 12.5l4.5 4.5L19 7.5"/>', 2.6),
   };
+  // 首页「昨晚的你来信了」那只信封
+  const ENVELOPE = `<svg class="bob" width="200" height="128" viewBox="0 0 200 128" aria-hidden="true">
+    <rect x="0" y="0" width="200" height="128" rx="14" style="fill:var(--card)"/>
+    <path d="M6 6 L100 74 L194 6" style="fill:var(--tint);stroke:var(--sep)" stroke-width="2"/>
+    <circle cx="100" cy="72" r="16" style="fill:var(--ink)"/>
+    <text x="100" y="78" text-anchor="middle" font-size="15" font-weight="700" style="fill:var(--on-ink)">回</text></svg>`;
 
   function toast(msg) {
     const t = $('#toast');
@@ -50,6 +66,7 @@
   const V = {                   // 界面状态
     tab: 'today', writeDate: null, editing: false, replying: false, replyErr: '',
     mb: 'all', sheets: [], quoteOffset: 0, olderLoaded: false, online: navigator.onLine,
+    sent: null,                 // 刚寄出、正在看「已寄出」那一屏的信：{ date, at }
   };
 
   function fromBoot(b) {
@@ -80,7 +97,7 @@
       body: body ? JSON.stringify(body) : undefined,
     });
     const data = await res.json().catch(() => ({}));
-    if (res.status === 401 && path !== '/login') { showLogin(); throw new Error('请先登录'); }
+    if (res.status === 401 && path !== '/login' && path !== '/register') { showLogin(); throw new Error('请先登录'); }
     if (!res.ok) throw new Error(data.error || ('请求失败 ' + res.status));
     return data;
   }
@@ -127,11 +144,11 @@
 
   // ───────────── 外观 ─────────────
   const THEMES = [
-    { id: 'auto', name: '跟随系统', sw: ['#FFFFFF', '#000000', '#2B4C9B'] },
-    { id: 'ink', name: '墨水', sw: ['#FFFFFF', '#1D1D1F', '#2B4C9B'] },
-    { id: 'night', name: '夜信', sw: ['#000000', '#F5F5F7', '#8FA8EC'] },
-    { id: 'paper', name: '信笺', sw: ['#F6F1E7', '#2B2622', '#A8392C'] },
-    { id: 'mono', name: '素笺', sw: ['#FFFFFF', '#000000', '#000000'] },
+    { id: 'auto', name: '跟随系统', sw: ['#F2F2F7', '#000000', '#D0402B'] },
+    { id: 'ink', name: '回信红', sw: ['#F2F2F7', '#FFFFFF', '#D0402B'] },
+    { id: 'night', name: '夜信', sw: ['#000000', '#1C1C1E', '#FF6B5E'] },
+    { id: 'paper', name: '信笺', sw: ['#F4EEE4', '#FFFDF8', '#B4432F'] },
+    { id: 'mono', name: '素笺', sw: ['#F2F2F2', '#FFFFFF', '#000000'] },
   ];
   const darkMQ = matchMedia('(prefers-color-scheme: dark)');
   function applyTheme() {
@@ -139,23 +156,65 @@
     if (t === 'auto') t = darkMQ.matches ? 'night' : 'ink';
     document.documentElement.setAttribute('data-theme', t);
     const bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim();
-    $('#meta-theme').setAttribute('content', bg || '#FFFFFF');
+    $('#meta-theme').setAttribute('content', bg || '#F2F2F7');
   }
   darkMQ.addEventListener && darkMQ.addEventListener('change', applyTheme);
 
-  // ───────────── 启动 ─────────────
+  // ───────────── 日子 ─────────────
   function today() { return localDate(); }
   // 凌晨 4 点前写的，算前一天的信
   function letterDay() { const h = new Date().getHours(); return h < 4 ? addDays(today(), -1) : today(); }
   function hasText(d) { const l = S.letters[d]; return !!(l && l.text && l.text.trim()); }
+  function totalLetters() { return Math.max(Object.values(S.letters).filter(l => l.text && l.text.trim()).length, S.stats.letters || 0); }
+  // 第几封信：总数减去这一天之后写的
+  function letterNo(d) {
+    const after = Object.values(S.letters).filter(l => l.date > d && l.text && l.text.trim()).length;
+    return Math.max(1, totalLetters() - after + (hasText(d) ? 0 : 1));
+  }
 
+  // ───────────── 送达：今晚寄出，明早 6 点拆 ─────────────
+  // 回信在寄出时就写好了（待办点子也已入库），这里只决定什么时候给你看
+  // 记「拆过哪封」用 日期|回信时间：信重寄、回信重写，就又是一封没拆的
+  let opened = new Set(store.get('hx_opened2', null) || []);
+  const okey = d => d + '|' + ((S.letters[d] && S.letters[d].replied_at) || '');
+  const isOpened = d => opened.has(okey(d));
+  function saveOpened() { store.set('hx_opened2', [...opened].sort().slice(-400)); }
+  function markOpened(d) { const k = okey(d); if (!opened.has(k)) { opened.add(k); saveOpened(); } }
+  // 第一次用新版本：以前收到的回信都算已经拆过，只留昨晚那封让你拆
+  function initOpened() {
+    if (store.get('hx_opened2', null) != null) return;
+    const y = addDays(today(), -1);
+    Object.values(S.letters).forEach(l => { if (l.reply && l.date !== y) opened.add(okey(l.date)); });
+    saveOpened();
+    store.del('hx_opened');
+  }
+  const deliverMode = () => (S.settings.deliver === 'now' ? 'now' : 'morning');
+  const deliverAt = d => new Date(addDays(d, 1) + 'T06:00:00');
+  const cutoff = d => new Date(addDays(d, 1) + 'T04:00:00');   // 过了这个点再寄，就算补写
+  // 现在寄出这封信，回信要不要等到明早
+  function sendsTonight(d) { return deliverMode() === 'morning' && new Date() < cutoff(d); }
+  function isSealed(d) {
+    const l = S.letters[d];
+    if (!l || !l.reply || l.reply.imported || deliverMode() === 'now' || isOpened(d)) return false;
+    if (new Date() >= deliverAt(d)) return false;
+    const sentAt = l.replied_at ? new Date(l.replied_at) : new Date();
+    return sentAt < cutoff(d);
+  }
+  // 封存中、或已送到还没拆的那封信里拆出来的事，拆开之前先不出现
+  const visibleFrom = x => !x.source_date || (!isSealed(x.source_date) && x.source_date !== V._env);
+  // 已经送到、还没拆的回信（最近三天里最新的一封）
+  function unopenedLetter(t) {
+    return Object.values(S.letters)
+      .filter(l => l.reply && !l.reply.imported && !isOpened(l.date) && !isSealed(l.date) && l.date >= addDays(t, -3))
+      .sort((a, b) => (a.date < b.date ? 1 : -1))[0] || null;
+  }
+  const deliverNote = d => (sendsTonight(d) ? '回信明早 6:00 送到' : '寄出后马上回信');
+
+  // ───────────── 启动 ─────────────
   function pickStartTab() {
     const h = new Date().getHours();
-    const yday = addDays(today(), -1);
-    if (h >= 19 || h < 4) { V.tab = 'write'; V.writeDate = letterDay(); return; }
-    if (h < 12 && !hasText(yday) && S.stats.letters > 0) { V.tab = 'write'; V.writeDate = yday; return; }
-    V.tab = 'today';
     V.writeDate = letterDay();
+    V.tab = (h >= 19 || h < 4) && !hasText(letterDay()) && !unopenedLetter(today()) ? 'write' : 'today';
   }
 
   let lastRefresh = 0;
@@ -166,6 +225,7 @@
     pendingLetters.forEach(d => { if (S && S.letters[d]) keep[d] = S.letters[d]; });   // 本机还没寄出的信，不被云端旧版盖掉
     S = fromBoot(b);
     Object.assign(S.letters, keep);
+    initOpened();
     lastRefresh = Date.now();
     toCache();
     applyTheme();
@@ -179,6 +239,7 @@
     const cache = store.get('hx_cache', null);
     if (cache && cache.user) {
       S = fromBoot(cache);
+      initOpened();
       applyTheme();
       pickStartTab();
       render();
@@ -194,36 +255,45 @@
       if (!S) showLogin(/请先登录/.test(e.message) ? '' : '连不上服务器，请检查网络后再试');
     }
   }
+  // 封存的回信到点自动出现
+  setInterval(() => { if (S && !V.editing && !V.sheets.length && V.tab === 'today') render(); }, 5 * 60e3);
 
   // ───────────── 登录 ─────────────
-  function showLogin(msg) {
+  function showLogin(msg, mode) {
     S = null;
     store.del('hx_cache');
     V.sheets = [];
     applyThemeFallback();
+    const reg = mode === 'register';
     $('#app').innerHTML = `
       <form class="login" id="login-form" autocomplete="on">
-        <img class="logo" src="/icon-192-v2.png" alt="回信" width="72" height="72">
+        <div class="logo">Re:</div>
         <h1>回信</h1>
-        <p>每晚写一封信，回信替未来的你整理好一切。</p>
+        <p>每晚写一封信给明早的自己，回信替你整理好一切。</p>
         <input class="input" name="username" autocomplete="username" placeholder="账号" aria-label="账号" required>
-        <input class="input" style="margin-top:10px" name="password" type="password" autocomplete="current-password" placeholder="密码" aria-label="密码" required>
-        <button class="btn full" type="submit">登录</button>
+        <input class="input" style="margin-top:10px" name="password" type="password" autocomplete="${reg ? 'new-password' : 'current-password'}" placeholder="${reg ? '密码（至少 8 位）' : '密码'}" aria-label="密码" required>
+        ${reg ? '<input class="input" style="margin-top:10px" name="code" placeholder="邀请码" aria-label="邀请码" autocomplete="off" required>' : ''}
+        <button class="btn full" type="submit">${reg ? '注册' : '登录'}</button>
         <div class="msg" id="login-msg">${esc(msg || '')}</div>
+        <button class="btn sm ghost" type="button" id="login-switch">${reg ? '已有账号？去登录' : '有邀请码？去注册'}</button>
       </form>`;
+    $('#login-switch').addEventListener('click', () => showLogin('', reg ? 'login' : 'register'));
     $('#login-form').addEventListener('submit', async e => {
       e.preventDefault();
       const f = e.target;
-      const btn = f.querySelector('button');
-      btn.disabled = true; btn.textContent = '登录中…';
+      const btn = f.querySelector('button[type=submit]');
+      const label = btn.textContent;
+      btn.disabled = true; btn.textContent = reg ? '注册中…' : '登录中…';
       try {
-        await api('POST', '/login', { username: f.username.value.trim(), password: f.password.value });
+        const data = { username: f.username.value.trim(), password: f.password.value };
+        if (reg) data.code = f.code.value.trim();
+        await api('POST', reg ? '/register' : '/login', data);
         await refresh();
         pickStartTab();
         render();
       } catch (err) {
         $('#login-msg').textContent = err.message;
-        btn.disabled = false; btn.textContent = '登录';
+        btn.disabled = false; btn.textContent = label;
       }
     });
   }
@@ -235,324 +305,339 @@
   function render() {
     if (!S) return;
     const keepScroll = V._lastTab === V.tab ? window.scrollY : 0;
+    V._composing = false;
+    const u = unopenedLetter(today());
+    V._env = u ? u.date : null;
     const html = V.tab === 'today' ? viewToday() : V.tab === 'write' ? viewWrite() : viewMailbox();
-    $('#app').innerHTML = html + tabbar() + V.sheets.map(viewSheet).join('');
+    const sent = V.sent && V.tab === 'write' ? viewSent() : '';
+    $('#app').innerHTML = html + tabbar() + sent + V.sheets.map(viewSheet).join('');
     if (V._lastTab !== V.tab) window.scrollTo(0, 0); else window.scrollTo(0, keepScroll);
     V._lastTab = V.tab;
     afterRender();
   }
 
   function tabbar() {
-    const b = (id, label, icon) => `<button data-act="tab" data-v="${id}" ${V.tab === id ? 'aria-current="page"' : ''}>${icon}${label}</button>`;
-    return `<div class="tabbar"><div class="brand" aria-hidden="true"><img src="/favicon.svg" alt="" width="28" height="28"><span>回信</span></div><nav aria-label="主导航">${b('today', '今天', ICON.today)}${b('write', '写信', ICON.write)}${b('mailbox', '信箱', ICON.box)}</nav>
+    const dot = V.tab !== 'today' && unopenedLetter(today()) ? '<i class="badge-dot" aria-hidden="true"></i>' : '';
+    const b = (id, label, icon, cls = '', extra = '') =>
+      `<button class="${cls}" data-act="tab" data-v="${id}" ${V.tab === id ? 'aria-current="page"' : ''} aria-label="${label}">${icon}<span>${label}</span>${extra}</button>`;
+    return `<div class="tabbar${V._composing ? ' hide-m' : ''}"><div class="brand" aria-hidden="true"><b>Re:</b><span>回信</span></div>
+      <nav aria-label="主导航">${b('today', '今天', ICON.today, '', dot)}${b('write', '写信', ICON.pen, 'write')}${b('mailbox', '信箱', ICON.box)}</nav>
       <button class="side-set" data-act="settings">${ICON.gear}<span>设置</span></button></div>`;
   }
 
   const offlineLine = () => `<div class="offline" data-offline ${V.online ? 'hidden' : ''}>离线中 · 改动会在联网后自动同步</div>`;
+  const countBadge = () => { const n = totalLetters(); return n ? `<div class="count" aria-label="已经写了 ${n} 封信">${n}</div>` : ''; };
 
   // ───────────── 今天 ─────────────
   function viewToday() {
     const t = today();
-    const yday = addDays(t, -1);
     const h = new Date().getHours();
-    let banner = '';
-    if (h >= 4 && h < 12 && !hasText(yday) && S.stats.letters > 0) {
-      banner = `<button class="banner" data-act="write-day" data-v="${yday}"><span>昨天的信还没写，现在补上？</span>${ICON.right}</button>`;
-    } else if ((h >= 19 || h < 4) && !hasText(letterDay())) {
-      banner = `<button class="banner" data-act="write-day" data-v="${letterDay()}"><span>今晚的信，写几句？</span>${ICON.right}</button>`;
-    }
     return `<main class="page">
       <div class="head">
-        <div class="head-l"><span class="eyebrow">${cn(t)} 星期${wd(t)}</span><h1>今天</h1></div>
-        ${letterCount()}
+        <div class="head-l"><span class="eyebrow">${cn(t)} 星期${wd(t)}</span><h1>${h >= 4 && h < 11 ? '早上好' : '今天'}</h1></div>
+        ${countBadge()}
       </div>
       ${offlineLine()}
-      <div class="cols">
-        <div class="col">
-          ${quoteBlock(t)}
-          ${banner}
-          ${reminders(t)}
-          ${habitsBlock(t)}
-        </div>
-        <div class="col">
-          ${pendingBlock(t)}
-          ${energyBlock(t, 14)}
-        </div>
-      </div>
+      ${heroBlock(t)}
+      ${pendingBlock(t)}
+      ${memoryBlock(t)}
     </main>`;
   }
 
-  // 右上角的编号：一共写了几封信（没写的日子不涨），寄出一封马上 +1
-  function letterCount() {
-    const n = Object.values(S.letters).filter(l => l.text && l.text.trim() && S.letters[l.date] === l).length;
-    const total = Math.max(n, S.stats.letters || 0);
-    if (!total) return `<div class="count"><b><small>No.</small>1</b><span>第一封信，等你来写</span></div>`;
-    return `<div class="count" aria-label="已经写了 ${total} 封信"><b><small>No.</small>${total}</b><span>已经写了 ${total} 封信</span></div>`;
+  // 首页的主角：按时段和信的状态换
+  function heroBlock(t) {
+    const h = new Date().getHours();
+    const night = h >= 17 || h < 4;
+    const ld = letterDay(), yday = addDays(t, -1);
+    const u = unopenedLetter(t);
+    if (u) return envelopeCard(u, t);
+    if (hasText(ld) && (isSealed(ld) || (V.replying && V.writeDate === ld && sendsTonight(ld)))) return sealedCard(ld);
+    if (!night && h < 12 && !hasText(ld) && !hasText(yday) && S.stats.letters > 0 && !store.get('hx_skipbf_' + yday, false)) return backfillCard(yday);
+    if (!hasText(ld) && night) return writeCard(ld, '今晚');
+    const last = [ld, yday].find(d => hasText(d) && S.letters[d].reply);
+    if (last) return readRow(last, t);
+    return hasText(ld) ? '' : writeCard(ld, h < 17 ? '今天' : '今晚');
+  }
+  function envelopeCard(l, t) {
+    const r = l.reply;
+    const nT = (r.todos || []).length, nI = (r.ideas || []).length;
+    const who = l.date === addDays(t, -1) || l.date === t ? '昨晚的你来信了' : `${cn(l.date)}的回信到了`;
+    return `<button class="envelope" data-act="open-reply" data-v="${l.date}">${ENVELOPE}
+      <span><span class="env-t" style="display:block">${who}</span><span class="env-s" style="display:block">No.${letterNo(l.date)}${nT ? ` · ${nT} 件待办` : ''}${nI ? ` · ${nI} 个点子` : ''}</span></span>
+      <span class="env-btn">拆开</span></button>`;
+  }
+  function sealedCard(d) {
+    const busy = V.replying && V.writeDate === d;
+    return `<div class="card hero"><div class="hero-top">
+        <span class="hero-ic">${ICON.boxSm}</span>
+        <div style="flex:1;min-width:0"><div class="hero-t">${d === letterDay() ? '今晚的信已寄出' : cn(d) + '的信已寄出'}</div>
+        <div class="hero-s">${busy ? '回信正在连夜整理…' : '回信明早 6:00 送到'}</div></div>
+        <button class="btn sm ghost" data-act="take-back" data-v="${d}">拿回来改</button></div></div>`;
+  }
+  function backfillCard(d) {
+    return `<div class="card hero" style="align-items:center;text-align:center;padding-top:24px">
+      <svg width="120" height="80" viewBox="0 0 120 80" aria-hidden="true"><rect x="2" y="2" width="116" height="76" rx="12" style="fill:var(--tile);stroke:var(--ring)" stroke-width="2" stroke-dasharray="6 5"/><path d="M6 7 L60 46 L114 7" fill="none" style="stroke:var(--ring)" stroke-width="2" stroke-dasharray="6 5"/></svg>
+      <div class="hero-t" style="font-size:20px">昨晚没有写信</div>
+      <div class="hero-s" style="font-size:14px;line-height:1.6">现在补上也来得及。补写的信寄出后，回信马上送到，拆出来的事直接放进今天。</div>
+      <button class="btn full" data-act="write-day" data-v="${d}">补写 ${cn(d)}的信</button>
+      <button class="lk muted" data-act="skip-backfill" data-v="${d}">今天先不补</button></div>`;
+  }
+  function writeCard(d, label) {
+    return `<div class="card hero"><div class="hero-top">
+        <span class="hero-ic">${ICON.pen}</span>
+        <div><div class="hero-t">${label}的信还没写</div><div class="hero-s">${S.habits.length ? '写信时顺手打卡 · ' : ''}${deliverNote(d)}</div></div></div>
+      <button class="btn full" data-act="write-day" data-v="${d}">写${label}的信</button></div>`;
+  }
+  function readRow(d, t) {
+    const l = S.letters[d];
+    const first = String(l.reply.summary || '').split(/[。！？\n]/).map(s => s.trim()).filter(Boolean).pop() || '';
+    const who = d === addDays(t, -1) ? '昨晚的回信' : d === t ? '今天的回信' : cn(d) + '的回信';
+    return `<button class="card row tap" style="margin-top:16px;min-height:64px" data-act="open-reply" data-v="${d}">
+      <span class="ic">${ICON.boxSm}</span>
+      <span class="row-main"><span style="font-size:15px;font-weight:600">${who} · 已拆开</span><span class="sub one-line">${first ? '“' + esc(first) + '”' : 'No.' + letterNo(d)}</span></span>
+      <span style="font-size:15px;color:var(--ink)">再读</span>${ICON.chev}</button>`;
   }
 
-  // 每日一句：大多数日子是诗，偶尔（约三天一次）换成「很久以前的你写过的一句话」
-  function quoteBlock(t) {
-    const own = ownQuote(t);
-    if (own && V.quoteOffset === 0) {
-      return `<button class="quote" data-act="quote">
-        <span class="quote-label">${own.ago} 天前的你写道</span>
-        <p class="quote-t">${esc(own.text)}</p>
-        <span class="quote-s">${cn(own.date)} 的信</span></button>`;
-    }
-    const p = poem(t);
-    if (!p) return '';
-    const lines = String(p.t).replace(/([，。；！？])(?!$)/g, '$1\n').split('\n');
-    return `<button class="quote" data-act="quote"><p class="quote-t">${lines.map(esc).join('<br>')}</p><span class="quote-s">${esc(p.s)}</span></button>`;
-  }
-  function ownQuote(t) {
-    if (hash(t + '|own') % 3 !== 0) return null;
+  // 旧信里翻出来的一句话（30 天以前写的），点一下换一句
+  function memoryBlock(t) {
     const old = Object.values(S.letters).filter(l => l.text && diffDays(t, l.date) >= 30);
-    if (!old.length) return null;
-    const l = old[hash(t) % old.length];
+    if (!old.length) return '';
+    const l = old[(hash(t) + V.quoteOffset) % old.length];
     const sents = l.text.split(/[。！？!?\n]/).map(s => s.trim()).filter(s => s.length >= 8 && s.length <= 60);
-    if (!sents.length) return null;
-    return { date: l.date, ago: diffDays(t, l.date), text: sents[hash(t + l.date) % sents.length] + '。' };
-  }
-  function poem(t) {
-    if (!window.POEMS) return null;
-    const y = S.letters[addDays(t, -1)];
-    const mood = y && y.mood && window.POEMS[y.mood] ? y.mood : null;
-    let list;
-    if (mood) list = window.POEMS[mood].list;
-    else {
-      const m = Number(t.slice(5, 7));
-      const season = m >= 3 && m <= 5 ? '春' : m >= 6 && m <= 8 ? '夏' : m >= 9 && m <= 11 ? '秋' : '冬';
-      list = (window.SEASON_POEMS[season] || {}).list || window.POEMS['平静'].list;
-    }
-    return list[(hash(t + '|' + (mood || '')) + V.quoteOffset) % list.length];
+    if (!sents.length) return '';
+    const q = sents[hash(t + l.date) % sents.length];
+    return `<button class="card memo tap" data-act="quote" aria-label="换一句">
+      <span class="lab">${diffDays(t, l.date)} 天前的你写道</span>
+      <span class="q">${esc(q)}。</span>
+      <span class="sub">${cn(l.date)}的信 · 点一下换一句</span></button>`;
   }
 
   function dueInfo(td, t) {
     if (!td.due) return null;
     const n = diffDays(td.due, t);
-    if (n < 0) return { cls: 'late', label: `过期 ${-n} 天`, rank: 0 };
-    if (n === 0) return { cls: 'hot', label: '今天', rank: 1 };
-    if (n === 1) return { cls: '', label: '明天', rank: 2 };
-    return { cls: '', label: cn(td.due), rank: 3 };
+    if (n < 0) return { cls: 'red', label: `过期 ${-n} 天`, rank: 0 };
+    if (n === 0) return { cls: 'red', label: '今天', rank: 1 };
+    if (n === 1) return { cls: 'amber', label: '明天到期', rank: 2 };
+    return { cls: '', label: n < 7 ? '周' + wd(td.due) : cn(td.due), rank: 3 };
   }
   function openTodos(t) {
-    return S.todos.filter(x => !x.done && !x.archived).sort((a, b) => {
+    return S.todos.filter(x => !x.done && !x.archived && visibleFrom(x)).sort((a, b) => {
       const da = dueInfo(a, t), db = dueInfo(b, t);
       const ra = da ? da.rank : 4, rb = db ? db.rank : 4;
       if (ra !== rb) return ra - rb;
       return (a.due || '9999') < (b.due || '9999') ? -1 : (a.due || '9999') > (b.due || '9999') ? 1 : (a.created < b.created ? 1 : -1);
     });
   }
-  function staleIdeas(t) {
-    return S.ideas.filter(i => i.status === 'open' && diffDays(t, i.created) >= 7);
+  const openIdeas = () => S.ideas.filter(i => i.status === 'open' && visibleFrom(i));
+  function staleIdeas(t) { return openIdeas().filter(i => diffDays(t, i.created) >= 7); }
+  function srcLine(x, t) {
+    if (!x.source_date) return { text: '自己加的', cls: '' };
+    if (x.source_date === addDays(t, -1)) return { text: `昨晚的信 · No.${letterNo(x.source_date)}`, cls: 'hot' };
+    if (x.source_date === t) return { text: '今天的信', cls: 'hot' };
+    return { text: cn(x.source_date) + '的信', cls: '' };
   }
 
-  function reminders(t) {
-    const items = [];
-    openTodos(t).forEach(x => {
-      const d = dueInfo(x, t);
-      if (d && d.rank === 0 && items.length < 2) items.push(`「${esc(x.text)}」已经过期 ${-diffDays(x.due, t)} 天`);
-      else if (d && d.rank === 1 && items.length < 2) items.push(`「${esc(x.text)}」今天到期`);
-    });
-    const st = staleIdeas(t);
-    if (st.length) {
-      const i = st[hash(t) % st.length];
-      items.push(`${diffDays(t, i.created)} 天前的点子「${esc(i.text)}」还没动`);
-    }
-    if (!items.length) return '';
-    const y = S.letters[addDays(t, -1)];
-    const who = y && y.reply && !y.reply.imported ? '昨晚的回信提醒你' : '回信提醒你';
-    return `<div class="re-card"><div class="re-card-h"><b>Re:</b><span>${who}</span></div>
-      ${items.map(s => `<div class="re-item"><span>${s}</span></div>`).join('')}</div>`;
-  }
-
-  function habitsBlock(t) {
-    if (!S.habits.length) {
-      return `<div class="sec-h"><h2>习惯</h2></div><div class="empty">还没有要打卡的习惯。<button class="link-btn" data-act="settings">去添加 ›</button></div>`;
-    }
-    const wk = weekKey(t);
-    const days = diffDays(t, wk) + 1;
-    let done = 0;
-    S.habits.forEach(h => { for (let i = 0; i < days; i++) if (S.logs.has(h.id + '|' + addDays(wk, i))) done++; });
-    const rows = S.habits.map(h => {
-      const dots = [6, 5, 4, 3, 2, 1].map(n => `<i class="${S.logs.has(h.id + '|' + addDays(t, -n)) ? 'on' : ''}"></i>`).join('');
-      const on = S.logs.has(h.id + '|' + t);
-      return `<div class="habit"><div class="habit-l"><span class="habit-name">${esc(h.name)}</span><div class="dots" aria-hidden="true">${dots}</div></div>
-        <button class="hchk ${on ? 'on' : ''}" data-act="habit" data-v="${h.id}" aria-pressed="${on}" aria-label="${esc(h.name)} 今天${on ? '已完成' : '未完成'}"><i>${ICON.check}</i></button></div>`;
-    }).join('');
-    return `<div class="sec-h"><h2>习惯</h2><span class="sec-meta">本周 ${done} / ${S.habits.length * days}</span></div><div class="rows">${rows}</div>`;
-  }
-
-  function todoRow(x, t, opts = {}) {
+  function todoRow(x, t) {
     const d = dueInfo(x, t);
-    const meta = x.done ? (x.done_at ? cn(x.done_at) + ' 完成' : '') : d ? d.label : '';
+    const s = srcLine(x, t);
+    const tail = x.done ? `<span class="pill green">${x.done_at ? cn(x.done_at) + ' 完成' : '完成'}</span>` : d ? `<span class="pill ${d.cls}">${d.label}</span>` : '';
     return `<div class="row">
-      <button class="chk ${x.done ? 'on' : ''}" data-act="todo-toggle" data-v="${x.id}" aria-pressed="${x.done}" aria-label="${x.done ? '标为未完成' : '完成'}：${esc(x.text)}"><i>${ICON.checkSm}</i></button>
-      <button class="row-text ${x.done ? 'done' : ''}" data-act="todo-edit" data-v="${x.id}">${esc(x.text)}</button>
-      ${meta ? `<span class="row-meta ${x.done ? '' : d ? d.cls : ''}">${meta}</span>` : ''}
-    </div>`;
+      <button class="ck ${x.done ? 'on' : ''}" data-act="todo-toggle" data-v="${x.id}" aria-pressed="${x.done}" aria-label="${x.done ? '标为未完成' : '完成'}：${esc(x.text)}"><i>${ICON.checkSm}</i></button>
+      <button class="row-main ${x.done ? 'done' : ''}" data-act="todo-edit" data-v="${x.id}"><span>${esc(x.text)}</span><span class="sub ${x.done ? '' : s.cls}">${s.text}</span></button>
+      ${tail}</div>`;
   }
   function ideaRow(i, opts = {}) {
+    const age = diffDays(today(), i.created);
+    const sub = age >= 7 ? `点子 · ${age} 天没动了` : `点子 · ${i.source_date ? cn(i.source_date) + '的信' : '自己记的'}`;
     return `<div class="row">
-      <span class="tag">点子</span>
-      <button class="row-text" data-act="idea-edit" data-v="${i.id}">${esc(i.text)}</button>
-      <button class="link-btn" data-act="idea-todo" data-v="${i.id}">转待办</button>
-      ${opts.drop ? `<button class="link-btn" style="color:var(--sub)" data-act="idea-drop" data-v="${i.id}">放下</button>` : ''}
-    </div>`;
+      <span class="ic sm idea">${ICON.bulb}</span>
+      <button class="row-main" data-act="idea-edit" data-v="${i.id}"><span>${esc(i.text)}</span><span class="sub ${age >= 7 ? 'warm' : ''}">${sub}</span></button>
+      <button class="lk" data-act="idea-todo" data-v="${i.id}">转待办</button>
+      ${opts.drop ? `<button class="lk muted" data-act="idea-drop" data-v="${i.id}">放下</button>` : ''}</div>`;
   }
 
+  // 待处理：到期提醒和「放久了的点子」都合在这一张卡片里
   function pendingBlock(t) {
+    const h = new Date().getHours();
     const todos = openTodos(t);
-    const ideas = S.ideas.filter(i => i.status === 'open');
-    const showT = todos.slice(0, 5);
+    const ideas = openIdeas();
+    const showT = todos.slice(0, 4);
     const st = staleIdeas(t);
-    const showI = (st.length ? st : ideas).slice(0, 2);
-    const recentDone = S.todos.filter(x => x.done && x.done_at === t);
+    const showI = st.length ? [st[hash(t) % st.length]] : [];
+    const recentDone = S.todos.filter(x => x.done && x.done_at === t && visibleFrom(x));
     const body = (showT.length || showI.length || recentDone.length)
       ? showT.map(x => todoRow(x, t)).join('') + recentDone.map(x => todoRow(x, t)).join('') + showI.map(i => ideaRow(i)).join('')
       : `<div class="empty">没有待处理的事。写信时提到要做的事、冒出的点子，回信会自动放到这里。</div>`;
     const more = todos.length - showT.length + ideas.length - showI.length;
-    return `<div class="sec-h"><h2>待处理</h2><span class="sec-meta">待办 ${todos.length} · 点子 ${ideas.length}</span></div>
-      <div class="rows">${body}</div>
-      <div style="display:flex;justify-content:space-between">
-        <button class="link-btn" data-act="todo-new">${'＋ 加一件事'}</button>
-        <button class="link-btn" data-act="lists" data-v="todos">${more > 0 ? `还有 ${more} 项 ›` : '全部 ›'}</button>
-      </div>`;
-  }
-
-  function energySeries(t, n) {
-    const pts = [];
-    for (let i = n - 1; i >= 0; i--) {
-      const d = addDays(t, -i);
-      const l = S.letters[d];
-      pts.push({ d, v: l && l.energy ? l.energy : null });
-    }
-    return pts;
-  }
-  function chartSvg(pts, label) {
-    const W = 350, H = 96, n = pts.length;
-    const x = i => (n === 1 ? W / 2 : (i * (W - 4)) / (n - 1) + 2);
-    const y = v => 86 - (v - 1) * 18.5;
-    let segs = [], cur = [];
-    pts.forEach((p, i) => {
-      if (p.v == null) { if (cur.length) segs.push(cur); cur = []; return; }
-      cur.push(`${x(i).toFixed(1)},${y(p.v).toFixed(1)}`);
-    });
-    if (cur.length) segs.push(cur);
-    const lines = segs.map(s => s.length > 1
-      ? `<polyline points="${s.join(' ')}" fill="none" stroke="var(--ink)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`
-      : `<circle cx="${s[0].split(',')[0]}" cy="${s[0].split(',')[1]}" r="2.5" fill="var(--ink)"/>`).join('');
-    let lastI = -1;
-    pts.forEach((p, i) => { if (p.v != null) lastI = i; });
-    const last = lastI >= 0 ? `<circle cx="${x(lastI).toFixed(1)}" cy="${y(pts[lastI].v).toFixed(1)}" r="4.5" fill="var(--bg)" stroke="var(--ink)" stroke-width="2"/>` : '';
-    return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">
-      <line x1="0" y1="${y(1) + 2}" x2="${W}" y2="${y(1) + 2}" stroke="var(--sep)" stroke-width="1"/>
-      <line x1="0" y1="${y(3)}" x2="${W}" y2="${y(3)}" stroke="var(--sep)" stroke-width="1" stroke-dasharray="2 4"/>
-      ${lines}${last}</svg>`;
-  }
-  function energyBlock(t, n) {
-    const pts = energySeries(t, n);
-    const vals = pts.filter(p => p.v != null);
-    const head = `<div class="sec-h"><h2>状态</h2><span class="sec-meta">近 ${n} 天 · 精力</span></div>`;
-    if (vals.length < 3) return head + `<div class="empty">写几天信之后，回信会给每天的精力打分，这里会出现你的精力曲线。</div>`;
-    const avg = a => a.reduce((s, p) => s + p.v, 0) / a.length;
-    const half = Math.floor(n / 2);
-    const a1 = pts.slice(0, half).filter(p => p.v != null), a2 = pts.slice(half).filter(p => p.v != null);
-    let note = `平均 ${avg(vals).toFixed(1)} 分（满分 5）`;
-    if (a1.length >= 2 && a2.length >= 2) {
-      const d = avg(a2) - avg(a1);
-      note += Math.abs(d) < 0.3 ? '，前后两周差不多。' : d > 0 ? `，最近一周比之前高 ${d.toFixed(1)}。` : `，最近一周比之前低 ${(-d).toFixed(1)}。`;
-    }
-    const moods = {};
-    pts.forEach(p => { const l = S.letters[p.d]; if (l && l.mood) moods[l.mood] = (moods[l.mood] || 0) + 1; });
-    const top = Object.entries(moods).sort((a, b) => b[1] - a[1])[0];
-    if (top) note += ` 出现最多的情绪是「${top[0]}」。`;
-    return head + chartSvg(pts, `近 ${n} 天精力曲线，${note}`) +
-      `<div class="chart-x"><span>${cn(pts[0].d)}</span><span>今天</span></div><p class="note">${esc(note)}</p>`;
+    const env = V._env && S.letters[V._env] ? (S.letters[V._env].reply.todos || []).length : 0;
+    return `<div class="gh"><h2>${h >= 4 && h < 12 ? '今天要做的' : '待处理'}</h2><span>${env ? `拆信后再加 ${env} 件` : `待办 ${todos.length} · 点子 ${ideas.length}`}</span></div>
+      <div class="card">${body}
+        <div class="row foot"><button class="lk" data-act="todo-new">＋ 加一件事</button>
+        <button class="lk muted" data-act="lists" data-v="todos">${more > 0 ? `还有 ${more} 项 ›` : '全部 ›'}</button></div></div>`;
   }
 
   // ───────────── 写信 ─────────────
+  const PROMPTS = ['今天哪一刻最有劲？', '有什么在回避？', '明天要做的事：', '今天想记住的一句话：'];
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+
   function viewWrite() {
     const d = V.writeDate || letterDay();
     const t = today();
+    const h = new Date().getHours();
     const l = S.letters[d] || { date: d, text: '' };
     const draft = store.get('hx_draft_' + d, null);
     const text = draft != null ? draft : (l.text || '');
     const showEditor = V.editing || !l.text || !l.text.trim() || (!l.reply && !V.replying && !V.replyErr && draft != null && draft !== l.text);
     const isToday = d === letterDay();
-    const label = isToday ? (new Date().getHours() >= 17 || new Date().getHours() < 4 ? '今晚' : '今天') : (d === addDays(t, -1) ? '补写昨天' : '补写');
+    const label = isToday ? (h >= 17 || h < 4 ? '今晚' : '今天') : d === addDays(letterDay(), -1) ? '补写昨天' : '补写';
     const canNext = d < letterDay();
+    V._composing = showEditor;
 
-    let body;
-    if (showEditor) {
-      body = `<textarea class="editor" id="editor" placeholder="今天过得怎么样？做了什么、想到什么、哪里卡住了，随便写。&#10;&#10;写完点「寄出」，回信会帮你整理好其余的一切。" aria-label="信的内容">${esc(text)}</textarea>
-        <div class="send-bar"><div>
-          <span class="save-state" id="save-state">${text ? '已存为草稿' : ''}</span>
-          ${V.editing && l.reply ? `<button class="btn ghost" data-act="cancel-edit">取消</button>` : ''}
-          <button class="btn" data-act="send" id="send-btn" ${text.trim() ? '' : 'disabled'}>${l.reply ? '重新寄出' : '寄出'}</button>
-        </div></div>`;
-    } else {
-      body = `<div class="write-grid"><div class="letter-col"><p class="letter-text">${esc(l.text)}</p>
-        <div style="margin-top:10px"><button class="link-btn" data-act="edit-letter">修改这封信</button></div></div>
-        <div class="reply-col">${replySection(l)}</div></div>`;
-    }
-    return `<main class="page">
-      <div class="head">
-        <div class="head-l"><span class="eyebrow">${cn(d)} 星期${wd(d)} · ${label}</span><h1>写信</h1></div>
-        <div class="daynav">
-          <button class="icon-btn" data-act="day" data-v="-1" aria-label="前一天">${ICON.left}</button>
-          <button class="icon-btn" data-act="day" data-v="1" aria-label="后一天" ${canNext ? '' : 'disabled'}>${ICON.right}</button>
-        </div>
+    const bar = `<div class="wbar">
+      ${showEditor ? `<button class="round-btn" data-act="tab" data-v="today" aria-label="关闭">${ICON.x}</button>` : '<span style="width:40px"></span>'}
+      <div class="daynav">
+        <button class="nav-btn" data-act="day" data-v="-1" aria-label="前一天">${ICON.left}</button>
+        <div class="lab"><b>${label}</b><span>${cn(d)} 星期${wd(d)}</span></div>
+        <button class="nav-btn" data-act="day" data-v="1" aria-label="后一天" ${canNext ? '' : 'disabled'}>${ICON.right}</button>
       </div>
-      ${offlineLine()}
-      ${body}
+      <span class="save-state" id="save-state">${showEditor && text ? '已存' : ''}</span></div>`;
+    const to = isToday ? '致 明早的我' : `补写 · ${cn(d)}`;
+
+    if (showEditor) {
+      return `<main class="page bare" style="padding-bottom:calc(var(--safe-bottom) + 130px)">${bar}${offlineLine()}
+        <div class="card paper"><div class="paper-h"><span>${to}</span><span class="no-tag">No.${letterNo(d)}</span></div>
+          <textarea class="editor" id="editor" placeholder="今天过得怎么样？做了什么、想到什么、哪里卡住了，随便写。&#10;&#10;写完点「寄出」，回信会帮你整理好其余的一切。" aria-label="信的内容">${esc(text)}</textarea></div>
+        <div class="chips" role="group" aria-label="不知道写什么时，点一个">${PROMPTS.map(p => `<button class="chip" data-act="chip" data-v="${esc(p)}"><i></i>${esc(p)}</button>`).join('')}</div>
+        ${habitStrip(d)}
+        <div class="send-bar"><div>
+          <div class="send-row">
+            ${SR ? `<button class="mic" id="mic" data-act="mic" aria-label="语音写信">${ICON.mic}</button>` : ''}
+            ${V.editing && l.reply ? `<button class="btn ghost" data-act="cancel-edit">取消</button>` : ''}
+            <button class="btn" data-act="send" id="send-btn" ${text.trim() ? '' : 'disabled'}>${ICON.send}${l.reply ? '重新寄出' : '寄出'}</button>
+          </div>
+          <span class="send-note">${deliverNote(d)}${sendsTonight(d) ? ' · 送到前都可以拿回来改' : ''}</span>
+        </div></div>
+      </main>`;
+    }
+
+    let after;
+    if (V.replying && V.writeDate === d) {
+      after = sendsTonight(d)
+        ? `<div class="card hero sealed"><div class="hero-top"><span class="hero-ic">${ICON.boxSm}</span><div><div class="hero-t">已寄出</div><div class="hero-s">回信正在连夜整理，明早 6:00 送到</div></div></div></div>`
+        : `<div class="card sealed"><div class="waiting"><svg class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 1-9 9"/></svg>正在拆信、整理待办和点子…</div></div>`;
+    } else if (V.replyErr && V.writeDate === d) {
+      after = `<div class="card pad sealed" style="display:flex;flex-direction:column;gap:12px;font-size:15px;line-height:1.6"><span>信已经存好了，但回信暂时没写成：${esc(V.replyErr)}</span><button class="btn sm" style="align-self:flex-start" data-act="retry-reply">再试一次</button></div>`;
+    } else if (!l.reply) {
+      after = `<div class="card pad sealed" style="display:flex;flex-direction:column;gap:12px;font-size:15px"><span class="muted">这封信还没有回信。</span><button class="btn sm" style="align-self:flex-start" data-act="retry-reply">让回信回一封</button></div>`;
+    } else if (isSealed(d)) {
+      after = sealedCard(d);
+    } else {
+      after = replyView(l, {});
+    }
+    return `<main class="page">${bar}${offlineLine()}
+      <div class="card paper"><div class="paper-h"><span>${to}</span><span class="no-tag">No.${letterNo(d)}</span></div>
+        <p class="letter-text">${esc(l.text)}</p></div>
+      ${isSealed(d) || V.replying ? '' : `<div style="padding:0 4px"><button class="lk" data-act="edit-letter">修改这封信</button></div>`}
+      ${habitStrip(d)}
+      ${after}
     </main>`;
   }
 
-  function replySection(l, opts = {}) {
-    if (V.replying && V.writeDate === l.date && !opts.readonly) {
-      return `<div class="re-div"><span></span><b>Re:</b><span></span></div><div class="waiting"><i class="pulse"></i>正在给你回信…</div>`;
-    }
-    if (V.replyErr && V.writeDate === l.date && !opts.readonly) {
-      return `<div class="re-div"><span></span><b>Re:</b><span></span></div>
-        <div class="err-box"><span>信已经存好了，但回信暂时没写成：${esc(V.replyErr)}</span><button class="btn sm" data-act="retry-reply">再试一次</button></div>`;
-    }
+  // 写信时顺手打卡：只打这一天的
+  function habitStrip(d) {
+    if (!S.habits.length || d < addDays(today(), -6)) return '';
+    const hs = S.habits.map(h => {
+      const on = S.logs.has(h.id + '|' + d);
+      return `<button class="hb ${on ? 'on' : ''}" data-act="habit" data-v="${h.id}" data-d="${d}" aria-pressed="${on}" aria-label="${esc(h.name)}${on ? ' 已完成' : ' 未完成'}">${ICON.check}${esc(h.name)}</button>`;
+    }).join('');
+    return `<div class="card habits"><span>${d === today() ? '今天的习惯' : cn(d) + '的习惯'}</span>${hs}</div>`;
+  }
+
+  // 寄出后的那一屏：信封落下、盖戳，回信在后台连夜整理
+  function viewSent() {
+    const d = V.sent.date;
+    const busy = V.replying && V.writeDate === d;
+    const err = !busy && V.replyErr && V.writeDate === d;
+    const step2 = busy
+      ? `<span class="dot"><svg class="spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FF9F0A" stroke-width="2.6" stroke-linecap="round" aria-hidden="true"><path d="M12 3a9 9 0 1 1-9 9"/></svg></span><span class="t">连夜拆信、整理待办和点子</span>`
+      : err ? `<span class="dot err">!</span><span class="t">整理时出了点问题</span><button class="btn sm" data-act="retry-reply">再试</button>`
+        : `<span class="dot ok">${ICON.check}</span><span class="t">待办和点子都整理好了</span>`;
+    return `<div class="sent" role="dialog" aria-modal="true" aria-label="信已寄出">
+      <div class="env-wrap"><svg width="300" height="190" viewBox="0 0 300 190" role="img" aria-label="封好的信封，邮戳 No.${letterNo(d)}">
+        <rect width="300" height="190" rx="16" fill="#FFFFFF"/>
+        <path d="M8 8 L150 110 L292 8" fill="none" stroke="#E5E5EA" stroke-width="2"/>
+        <rect x="236" y="18" width="46" height="54" rx="6" fill="#FFE3DE"/>
+        <text x="259" y="53" text-anchor="middle" font-size="20" font-weight="700" fill="#D0402B">回</text>
+        <g class="pm"><circle cx="236" cy="64" r="28" fill="none" stroke="#D0402B" stroke-width="2" opacity=".85"/>
+          <text x="236" y="60" text-anchor="middle" font-size="8" fill="#D0402B">${d.replace(/-/g, '.')}</text>
+          <text x="236" y="74" text-anchor="middle" font-size="12" font-weight="700" fill="#D0402B">No.${letterNo(d)}</text></g>
+        <text x="24" y="166" font-size="14" fill="#6C6C70">致 明早的我</text></svg></div>
+      <h1>已寄出</h1>
+      <p class="lead">好好睡一觉，剩下的交给回信。</p>
+      <div class="steps">
+        <div class="row"><span class="dot ok">${ICON.check}</span><span class="t">信已寄出</span><span class="tm">${hm(V.sent.at)}</span></div>
+        <div class="row">${step2}</div>
+        <div class="row"><span class="dot">${ICON.clock}</span><span class="t dim">明早 6:00 送到</span></div>
+      </div>
+      <div class="sent-btns">
+        <button class="btn dark" data-act="take-back" data-v="${d}">拿回来改</button>
+        <button class="btn light" data-act="sent-close">晚安</button>
+      </div></div>`;
+  }
+
+  // ───────────── 回信 ─────────────
+  function replyView(l, opts) {
     const r = l.reply;
-    if (!r) {
-      return opts.readonly ? '' : `<div class="re-div"><span></span><b>Re:</b><span></span></div>
-        <div class="err-box"><span>这封信还没有回信。</span><button class="btn sm" data-act="retry-reply">让回信回一封</button></div>`;
+    const t = today();
+    let h = '';
+    if (opts.mine) {
+      const first = l.text.split('\n').map(s => s.trim()).find(Boolean) || '';
+      h += `<details class="card mine mt"><summary class="row"><span class="ic gray">${ICON.penSm}</span>
+        <span class="row-main"><span style="font-size:15px;font-weight:600">你写的信</span><span class="sub one-line">${esc(first)}</span></span>${ICON.chev}</summary>
+        <p class="letter-text">${esc(l.text)}</p></details>`;
     }
+    const paras = String(r.summary || '').split(/\n\s*\n/).map(p => p.trim()).filter(Boolean).map(p => `<p>${esc(p)}</p>`).join('');
     const when = l.replied_at ? new Date(l.replied_at) : null;
-    const whenTxt = r.imported ? '从 Life OS 搬过来的旧信' : when ? `${pad(when.getHours())}:${pad(when.getMinutes())} 收到回信${r.engine ? ' · ' + esc(r.engine) : ''}` : '';
-    const fb = block => {
-      const v = S.feedback[l.date + '|' + block] || 0;
-      return `<div class="fb"><button class="${v > 0 ? 'on' : ''}" data-act="fb" data-v="${block}" data-d="${l.date}" data-x="1">有用</button><button class="${v < 0 ? 'on' : ''}" data-act="fb" data-v="${block}" data-d="${l.date}" data-x="-1">没用</button></div>`;
-    };
-    let html = `<div class="re-div"><span></span><b>Re:</b><span></span></div>${whenTxt ? `<p class="re-when">${whenTxt}</p>` : ''}<div class="reply">`;
-    if (r.summary) html += `<p class="reply-sum">${esc(r.summary)}</p>`;
+    const sealedOnce = when && when < cutoff(l.date) && deliverMode() === 'morning';
+    const whenTxt = r.imported ? '从 Life OS 搬过来的旧信'
+      : sealedOnce ? `${cn(addDays(l.date, 1))} 6:00 送到` : when ? `${cn(localDate(when))} ${hm(when)} 收到` : '';
+    h += `<article class="card reply-letter">${paras || '<p class="muted">（这封回信没有正文）</p>'}
+      <div class="reply-sign"><b>Re: 回信</b><span>${esc(whenTxt)}${r.engine ? ' · ' + esc(r.engine) : ''}</span></div></article>`;
+
+    const tds = r.todos || [], ids = r.ideas || [];
+    if (tds.length || ids.length) {
+      const rows = tds.map((x, i) => {
+        const live = S.todos.find(y => y.id === x.id) || x;
+        const due = live.due;
+        const badge = live.done ? '已完成' : due && due <= t ? '已放进今天' : '已加入待办';
+        return `<div class="row"><span class="ic">${ICON.check}</span>
+          <span class="row-main"><span>${esc(x.text)}</span><span class="sub">待办${due ? ' · ' + (due === t ? '今天' : cn(due)) : ''}</span></span>
+          <span class="pill green pop" style="animation-delay:${0.6 + i * 0.2}s">${badge}</span></div>`;
+      }).join('') + ids.map((x, i) => `<div class="row"><span class="ic idea">${ICON.bulb}</span>
+          <span class="row-main"><span>${esc(x.text)}</span><span class="sub">点子</span></span>
+          <span class="pill green pop" style="animation-delay:${0.6 + (tds.length + i) * 0.2}s">已收进点子库</span></div>`).join('');
+      h += `<div class="gh"><h2>附件</h2><span>从你的信里整理出来的</span></div><div class="card">${rows}</div>`;
+    }
     if (r.energy) {
-      html += `<div class="stats">
+      h += `<div class="card stats mt">
         <div class="stat"><span>精力</span><b>${r.energy}<small> / 5</small></b></div>
         <div class="stat"><span>情绪</span><b>${esc(r.mood || '—')}</b></div>
         <div class="stat"><span>高光</span><b>${esc(r.highlight || '—')}</b></div></div>`;
     }
-    const tds = r.todos || [], ids = r.ideas || [];
-    if (tds.length || ids.length) {
-      html += `<div class="blk"><span class="blk-h">从信里拆出来的</span><div class="panel">
-        ${tds.map(x => `<div class="panel-row"><span class="tag ink">待办</span><span>${esc(x.text)}</span><span class="small muted">已加入</span></div>`).join('')}
-        ${ids.map(x => `<div class="panel-row"><span class="tag">点子</span><span>${esc(x.text)}</span><span class="small muted">已存入</span></div>`).join('')}
-      </div></div>`;
-    }
     const L = r.lenses || {};
     if (L.health || L.energy || L.career || L.relation) {
-      const ln = [['health', '健康'], ['energy', '精力'], ['career', '事业'], ['relation', '关系']]
-        .map(([k, n]) => `<b>${n}</b><span>${L[k] ? esc(L[k]) : '<span class="muted">信里没提到</span>'}</span>`).join('');
-      html += `<div class="blk"><span class="blk-h">四个角度 <span class="tag line">实验</span></span><div class="lenses">${ln}</div>${fb('lenses')}</div>`;
+      const v = S.feedback[l.date + '|lenses'] || 0;
+      const ln = LENSES.map(([k, n, c]) => `<div class="row lens"><span class="ic" style="background:${c}" aria-hidden="true">${n[0]}</span>
+        <span class="row-main"><span>${n}</span><span>${L[k] ? esc(L[k]) : '<span class="muted">信里没提到</span>'}</span></span></div>`).join('');
+      h += `<div class="gh"><h2>四个角度</h2><span style="color:var(--ink);font-weight:600">实验</span></div>
+        <div class="card">${ln}<div class="row foot"><span class="small muted">这部分对你有用吗？</span>
+          <div class="seg2"><button class="${v > 0 ? 'on' : ''}" data-act="fb" data-v="lenses" data-d="${l.date}" data-x="1">有用</button><button class="${v < 0 ? 'on' : ''}" data-act="fb" data-v="lenses" data-d="${l.date}" data-x="-1">没用</button></div></div></div>`;
     }
-    if (r.ownError) html += `<p class="note" style="margin:0">你自己的 AI 这次没接通（${esc(r.ownError)}），这封先用免费模型写的。可以去「设置 → AI 回信」检查一下。</p>`;
-    html += `</div>`;
-    return html;
+    if (r.ownError) h += `<p class="note">你自己的 AI 这次没接通（${esc(r.ownError)}），这封先用免费模型写的。可以去「设置 → AI 回信」检查一下。</p>`;
+    if (opts.go) h += `<button class="btn full" style="margin-top:20px" data-act="go-today">去看今天要做的</button>`;
+    return h;
   }
+  const LENSES = [['health', '健康', '#FF2D55'], ['energy', '精力', '#E07A00'], ['career', '事业', '#007AFF'], ['relation', '关系', '#248A3D']];
 
   // ───────────── 信箱 ─────────────
   function viewMailbox() {
@@ -561,60 +646,139 @@
     const seg = `<div class="seg" role="tablist" aria-label="信的类型">${filters.map(([k, n]) => `<button role="tab" aria-selected="${V.mb === k}" data-act="mb" data-v="${k}">${n}</button>`).join('')}</div>`;
     const first = S.stats.first;
     const days = first ? diffDays(t, first) + 1 : 0;
+    const month = Number(t.slice(5, 7));
     const monthN = Object.values(S.letters).filter(l => l.text && l.date.slice(0, 7) === t.slice(0, 7)).length;
-    // 手机上：分类 → 小卡片 → 曲线 → 时间线；电脑上：小卡片和曲线挪到右侧栏
-    const side = `<div class="tiles">
+    const tiles = `<div class="tiles">
         <button class="tile" data-act="lists" data-v="todos"><span>待办</span><b>${openTodos(t).length}</b></button>
-        <button class="tile" data-act="lists" data-v="ideas"><span>点子</span><b>${S.ideas.filter(i => i.status === 'open').length}</b></button>
-        <div class="tile"><span>本月的信</span><b>${monthN}</b></div></div>${energyBlock(t, 30)}`;
-    const main = V.mb === 'all' ? timeline(t) : digestList(V.mb, t);
-    const body = `<div class="mb-grid"><aside class="mb-side ${V.mb === 'all' ? '' : 'only-wide'}">${side}</aside><div class="mb-main">${main}</div></div>`;
+        <button class="tile" data-act="lists" data-v="ideas"><span>点子</span><b>${openIdeas().length}</b></button>
+        <div class="tile"><span>${month}月的信</span><b>${monthN}</b></div></div>`;
+    const main = V.mb === 'all' ? stateCard(t) + timeline(t) : digestList(V.mb, t);
     return `<main class="page">
       <div class="head">
-        <div class="head-l"><span class="eyebrow">${days ? `已经往来 ${days} 天 · ${S.stats.letters} 封信` : '还没有信'}</span><h1>信箱</h1></div>
-        <button class="icon-btn" data-act="settings" aria-label="设置">${ICON.gear}</button>
+        <div class="head-l"><span class="eyebrow">${days ? `已经往来 ${days} 天 · ${totalLetters()} 封信` : '还没有信'}</span><h1>信箱</h1></div>
+        <button class="round-btn" data-act="settings" aria-label="设置">${ICON.gear}</button>
       </div>
       ${offlineLine()}
-      ${seg}
-      ${body}
+      ${seg}${tiles}${main}
     </main>`;
   }
 
+  function energySeries(t, n) {
+    const pts = [];
+    for (let i = n; i >= 1; i--) {
+      const d = addDays(t, -i);
+      const l = S.letters[d];
+      pts.push({ d, v: l && l.energy && !isSealed(d) ? l.energy : null, mood: l && !isSealed(d) ? l.mood : null });
+    }
+    const tl = S.letters[t];
+    pts.push({ d: t, v: tl && tl.energy && !isSealed(t) ? tl.energy : null, mood: tl && !isSealed(t) ? tl.mood : null });
+    return pts;
+  }
+  function chartSvg(pts, label) {
+    const W = 350, H = 88, n = pts.length;
+    const x = i => (n === 1 ? W / 2 : (i * (W - 4)) / (n - 1) + 2);
+    const y = v => 80 - (v - 1) * 17;
+    let segs = [], cur = [];
+    pts.forEach((p, i) => {
+      if (p.v == null) { if (cur.length) segs.push(cur); cur = []; return; }
+      cur.push(`${x(i).toFixed(1)},${y(p.v).toFixed(1)}`);
+    });
+    if (cur.length) segs.push(cur);
+    const lines = segs.map(s => s.length > 1
+      ? `<polyline points="${s.join(' ')}" fill="none" style="stroke:var(--ink)" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`
+      : `<circle cx="${s[0].split(',')[0]}" cy="${s[0].split(',')[1]}" r="2.5" style="fill:var(--ink)"/>`).join('');
+    let lastI = -1;
+    pts.forEach((p, i) => { if (p.v != null) lastI = i; });
+    const last = lastI >= 0 ? `<circle cx="${x(lastI).toFixed(1)}" cy="${y(pts[lastI].v).toFixed(1)}" r="4.5" style="fill:var(--card);stroke:var(--ink)" stroke-width="2.4"/>` : '';
+    return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">
+      <line x1="0" y1="${y(1) + 2}" x2="${W}" y2="${y(1) + 2}" style="stroke:var(--sep)" stroke-width="1"/>
+      <line x1="0" y1="${y(3)}" x2="${W}" y2="${y(3)}" style="stroke:var(--sep)" stroke-width="1" stroke-dasharray="2 4"/>
+      ${lines}${last}</svg>`;
+  }
+  // 状态：近 30 天精力、情绪、习惯完成率。趋势一周看一次就够，所以放在信箱
+  function stateCard(t) {
+    const n = 30;
+    const pts = energySeries(t, n);
+    const vals = pts.filter(p => p.v != null);
+    const head = `<div class="gh"><h2>状态</h2><span>近 ${n} 天</span></div>`;
+    if (vals.length < 3) return head + `<div class="card empty">写几天信之后，回信会给每天的精力打分，这里会出现你的精力曲线。</div>`;
+    const avg = a => a.reduce((s, p) => s + p.v, 0) / a.length;
+    const recent = pts.slice(-7).filter(p => p.v != null), before = pts.slice(0, -7).filter(p => p.v != null);
+    let trend = '';
+    if (recent.length >= 2 && before.length >= 2) {
+      const dlt = avg(recent) - avg(before);
+      trend = Math.abs(dlt) < 0.3 ? '<span class="up" style="color:var(--sub)">和之前差不多</span>'
+        : dlt > 0 ? `<span class="up">最近一周 +${dlt.toFixed(1)}</span>` : `<span class="down">最近一周 ${dlt.toFixed(1)}</span>`;
+    }
+    const moods = {};
+    pts.forEach(p => { if (p.mood) moods[p.mood] = (moods[p.mood] || 0) + 1; });
+    const top = Object.entries(moods).sort((a, b) => b[1] - a[1])[0];
+    const span = Math.max(1, Math.min(n, first() ? diffDays(t, first()) + 1 : n));
+    const rates = S.habits.slice(0, 4).map(hb => {
+      let c = 0; for (let i = 0; i < span; i++) if (S.logs.has(hb.id + '|' + addDays(t, -i))) c++;
+      return `${esc(hb.name)} ${Math.round(c / span * 100)}%`;
+    }).join(' · ');
+    const label = `近 ${n} 天精力曲线，平均 ${avg(vals).toFixed(1)} 分`;
+    return head + `<div class="card pad">
+      <div class="big-num"><span class="small muted" style="font-weight:600">平均精力</span><b>${avg(vals).toFixed(1)}</b><span class="small muted">/ 5</span>${trend}</div>
+      ${chartSvg(pts, label)}
+      <div class="chart-x"><span>${cn(pts[0].d)}</span><span>今天</span></div>
+      ${top ? `<div class="kv"><span>出现最多的情绪</span><b>${esc(top[0])} · ${top[1]} 天</b></div>` : ''}
+      ${rates ? `<div class="kv"><span>习惯完成率</span><b>${rates}</b></div>` : ''}
+    </div>`;
+  }
+  const first = () => S.stats.first;
+
   function dayRow(l) {
     const r = l.reply || {};
-    const sum = r.summary || l.text;
-    const meta = l.energy ? `<i class="${l.energy <= 2 ? 'low' : ''}"></i>精力 ${l.energy}${l.mood ? ' · ' + esc(l.mood) : ''}` : (r.imported ? '旧信' : '还没有回信');
-    return `<button class="day" data-act="letter" data-v="${l.date}">
-      <span class="day-d"><b>${Number(l.date.slice(8))}</b><span>周${wd(l.date)}</span></span>
-      <span class="day-b"><span class="day-t">${esc(sum)}</span><span class="day-m">${meta}</span></span></button>`;
+    const sealed = isSealed(l.date);
+    // 跳过开头只有称呼的那一行（「非云，」）
+    const line = sealed ? '回信封存中 · 明早 6:00 送到'
+      : (String(r.summary || l.text).split('\n').map(s => s.trim()).find(s => s && !/^[^，。,]{1,12}[，,：:]$/.test(s)) || '');
+    const meta = sealed ? `No.${letterNo(l.date)}` : l.energy ? `No.${letterNo(l.date)} · 精力 ${l.energy}${l.mood ? ' · ' + esc(l.mood) : ''}` : (r.imported ? '旧信' : '还没有回信');
+    return `<button class="row day" data-act="letter" data-v="${l.date}">
+      <span class="dt"><b>${Number(l.date.slice(8))}</b><span>周${wd(l.date)}</span></span>
+      <span class="row-main"><span class="one-line">${esc(line)}</span><span class="sub">${meta}</span></span>${ICON.chev}</button>`;
+  }
+  function gapRow(d) {
+    return `<button class="row day gapday" data-act="write-day" data-v="${d}">
+      <span class="dt gap"><b>${Number(d.slice(8))}</b><span>周${wd(d)}</span></span>
+      <span class="row-main"><span>这天没有写信</span><span class="sub">点一下补写</span></span>${ICON.chev}</button>`;
   }
   function digestCard(d) {
     const kindN = { week: '周信', quarter: '季信', year: '年信' }[d.kind];
-    const lab = d.kind === 'week' ? `${cn(d.key)} 那一周 · 周信` : d.kind === 'quarter' ? `${d.key.replace('-', ' 年 ')} · 季信` : `${d.key} 年 · 年信`;
-    return `<button class="digest" data-act="digest" data-v="${d.kind}|${d.key}">
-      <span class="digest-h"><span>${lab}</span><small>${d.imported ? '旧版复盘' : kindN}</small></span>
+    const st = d.stats;
+    const badge = `${kindN}${st && st.letters ? ` · ${st.letters} 封信` : ''}`;
+    const lab = d.imported ? '旧版复盘' : d.kind === 'week' ? `${cn(d.key)} 那一周` : d.kind === 'quarter' ? d.key.replace('-', ' 年 ') : `${d.key} 年`;
+    return `<button class="digest tap" data-act="digest" data-v="${d.kind}|${d.key}">
+      <span class="digest-h"><span class="badge">${badge}</span><span>${lab}</span></span>
       ${d.title && !d.imported ? `<span class="digest-t">${esc(d.title)}</span>` : ''}
-      <span class="digest-b">${esc(d.letter || '')}</span>
-      <span class="digest-go">读完整的${kindN} ›</span></button>`;
+      ${st ? `<span class="digest-stats"><span><span>平均精力</span><b>${st.energyAvg ?? '—'}</b></span><span><span>完成待办</span><b>${st.todosDone ?? 0}</b></span><span><span>可能漏掉</span><b>${(d.forgotten || []).length}</b></span></span>`
+        : `<span class="digest-b">${esc(d.letter || '')}</span>`}
+      <span style="font-size:14px;font-weight:600">读完整的${kindN} ›</span></button>`;
   }
   function timeline(t) {
     const letters = Object.values(S.letters).filter(l => l.text && l.text.trim()).sort((a, b) => (a.date < b.date ? 1 : -1));
-    if (!letters.length) return `<div class="empty" style="margin-top:30px">信箱还是空的。今晚写第一封信吧。<br><button class="link-btn" data-act="write-day" data-v="${letterDay()}">去写信 ›</button></div>`;
+    if (!letters.length) return `<div class="card empty mt">信箱还是空的。今晚写第一封信吧。<br><button class="lk" data-act="write-day" data-v="${letterDay()}">去写信 ›</button></div>`;
+    // 一天一行：写了的是信，没写的留一个空位，可以点进去补写
+    const oldest = letters[letters.length - 1].date;
+    const start = hasText(letterDay()) ? letterDay() : addDays(letterDay(), -1);
     const groups = [];
-    letters.forEach(l => {
-      const wk = weekKey(l.date);
-      if (!groups.length || groups[groups.length - 1].wk !== wk) groups.push({ wk, items: [] });
-      groups[groups.length - 1].items.push(l);
-    });
+    for (let d = start, i = 0; d >= oldest && i < 140; d = addDays(d, -1), i++) {
+      const wk = weekKey(d);
+      if (!groups.length || groups[groups.length - 1].wk !== wk) groups.push({ wk, days: [] });
+      groups[groups.length - 1].days.push(d);
+    }
     const thisWk = weekKey(t);
     let html = '';
     groups.forEach(g => {
-      const name = g.wk === thisWk ? '本周' : g.wk === addDays(thisWk, -7) ? '上周' : `${cn(g.wk)} – ${cn(addDays(g.wk, 6))}`;
-      html += `<h2 class="wk-h">${name}</h2>`;
-      const dg = S.digests.find(d => d.kind === 'week' && d.key === g.wk);
-      if (dg) html += digestCard(dg);
-      else if (g.wk < thisWk) html += `<button class="link-btn" data-act="gen" data-v="week|${g.wk}">让回信写这一周的周信 ›</button>`;
-      html += g.items.map(dayRow).join('');
+      const name = g.wk === thisWk ? '本周' : g.wk === addDays(thisWk, -7) ? '上周' : cn(g.wk) + ' 那一周';
+      html += `<div class="gh"><h2>${name}</h2><span>${cn(g.wk)} – ${cn(addDays(g.wk, 6))}</span></div>`;
+      const dg = S.digests.find(x => x.kind === 'week' && x.key === g.wk);
+      if (dg) html += digestCard(dg) + '<div style="height:12px"></div>';
+      const rows = g.days.map(d => (hasText(d) ? dayRow(S.letters[d]) : gapRow(d))).join('');
+      const gen = !dg && g.wk < thisWk ? `<div class="row foot"><button class="lk" data-act="gen" data-v="week|${g.wk}">让回信写这一周的周信 ›</button></div>` : '';
+      html += `<div class="card">${rows}${gen}</div>`;
     });
     html += V.olderLoaded === 'done' ? '' : `<div style="text-align:center;margin-top:20px"><button class="btn ghost sm" data-act="older">更早的信</button></div>`;
     return html;
@@ -626,8 +790,8 @@
     const curKey = kind === 'week' ? weekKey(t) : kind === 'quarter' ? quarterKey(t) : t.slice(0, 4);
     const curName = { week: '本周', quarter: '这一季', year: '今年' }[kind];
     let html = `<p class="note" style="margin-top:18px">${kindN}会在${when}自动送达。也可以现在就让回信先写一封${curName}到目前为止的。</p>
-      <button class="link-btn" data-act="gen" data-v="${kind}|${curKey}">现在写${curName}的${kindN} ›</button>`;
-    html += list.length ? list.map(digestCard).join('') : `<div class="empty">还没有${kindN}。</div>`;
+      <div style="padding:0 4px"><button class="lk" data-act="gen" data-v="${kind}|${curKey}">现在写${curName}的${kindN} ›</button></div>`;
+    html += list.length ? list.map(d => `<div style="margin-top:12px">${digestCard(d)}</div>`).join('') : `<div class="card empty mt">还没有${kindN}。</div>`;
     return html;
   }
 
@@ -635,42 +799,50 @@
   function openSheet(s) { s.fresh = true; V.sheets.push(s); render(); }
   function closeSheet() { V.sheets.pop(); render(); }
   function viewSheet(s) {
-    const titles = { letter: '信', digest: '', lists: '待办与点子', settings: '设置', todo: s.id ? '编辑待办' : '加一件事', idea: '编辑点子' };
+    const titles = { reply: '', letter: '', digest: '', lists: '待办与点子', settings: '设置', todo: s.id ? '编辑待办' : '加一件事', idea: s.id ? '编辑点子' : '记一个点子' };
     const anim = s.fresh ? ' enter' : '';
-    s.fresh = false;   // 只在刚打开时滑入，之后刷新内容不再重播动画
+    s.fresh = false;   // 只在刚打开时升起，之后刷新内容不再重播动画
     return `<div class="sheet-dim" data-act="close" aria-hidden="true"></div><div class="sheet${anim}" role="dialog" aria-modal="true">
-      <div class="sheet-bar"><div><button class="back" data-act="close">${ICON.left}<span style="margin-left:6px">返回</span></button><span class="t">${titles[s.type] || ''}</span></div></div>
+      <div class="sheet-bar"><div><span class="sp"></span><span class="t">${titles[s.type] || ''}</span><button class="x" data-act="close" aria-label="关闭">${ICON.x}</button></div></div>
       <div class="page">${sheetBody(s)}</div></div>`;
   }
   function sheetBody(s) {
     const t = today();
-    if (s.type === 'letter') {
+    if (s.type === 'reply' || s.type === 'letter') {
       const l = S.letters[s.date];
-      if (!l) return '<div class="empty">找不到这封信。</div>';
-      return `<div class="head"><div class="head-l"><span class="eyebrow">星期${wd(l.date)}</span><h1>${cn(l.date)}</h1></div></div>
-        <p class="letter-text">${esc(l.text)}</p>
-        <div style="margin-top:10px"><button class="link-btn" data-act="open-in-write" data-v="${l.date}">在写信里打开</button></div>
-        ${replySection(l, { readonly: true })}`;
+      if (!l) return '<div class="card empty">找不到这封信。</div>';
+      const yday = addDays(t, -1);
+      const title = !l.reply || isSealed(l.date) ? cn(l.date) + '的信' : l.date === yday ? '昨晚的回信' : l.date === t ? '今天的回信' : cn(l.date) + '的回信';
+      let h = `<div class="head"><div class="head-l"><span class="eyebrow">Re: No.${letterNo(l.date)} · 星期${wd(l.date)}</span><h1 style="font-size:28px">${title}</h1></div></div>`;
+      if (!l.reply || isSealed(l.date)) {
+        h += `<div class="card paper mt"><p class="letter-text">${esc(l.text)}</p></div>`;
+        h += isSealed(l.date) ? `<p class="note">回信已经写好，封存到 ${cn(addDays(l.date, 1))} 早上 6:00。</p>` : `<p class="note">这封信还没有回信。</p>`;
+      } else {
+        h += replyView(l, { mine: true, go: l.date >= yday && s.type === 'reply' });
+      }
+      h += `<div style="padding:0 4px;margin-top:8px"><button class="lk" data-act="open-in-write" data-v="${l.date}">在写信里打开</button></div>`;
+      return h;
     }
     if (s.type === 'digest') {
       const d = S.digests.find(x => x.kind === s.kind && x.key === s.key);
-      if (!d) return '<div class="empty">找不到这封信。</div>';
+      if (!d) return '<div class="card empty">找不到这封信。</div>';
       const kindN = { week: '周信', quarter: '季信', year: '年信' }[d.kind];
       const range = d.range ? `${cn(d.range[0])} – ${cn(d.range[1])}` : (d.kind === 'week' ? `${cn(d.key)} – ${cn(addDays(d.key, 6))}` : d.key);
-      let h = `<div class="head"><div class="head-l"><span class="eyebrow">${kindN} · ${range}</span><h1 style="font-size:28px">${esc(d.title || kindN)}</h1></div></div>`;
-      if (d.stats) h += `<div class="stats" style="margin-top:20px">
-        <div class="stat" style="background:var(--tile)"><span>写了</span><b>${d.stats.letters}<small> 封</small></b></div>
-        <div class="stat" style="background:var(--tile)"><span>平均精力</span><b>${d.stats.energyAvg ?? '—'}</b></div>
-        <div class="stat" style="background:var(--tile)"><span>完成待办</span><b>${d.stats.todosDone}</b></div></div>`;
-      h += `<p class="letter-text" style="font-size:17px">${esc(d.letter || '')}</p>`;
-      if (d.energy_note) h += `<div class="field"><span class="lab">精力的规律</span><div>${esc(d.energy_note)}</div></div>`;
-      if (d.forgotten && d.forgotten.length) h += `<div class="field"><span class="lab">可能漏掉的</span>${d.forgotten.map(x => `<div class="re-item"><span>${esc(x)}</span></div>`).join('')}</div>`;
-      if (d.next) h += `<div class="field"><span class="lab">${d.kind === 'week' ? '下周最值得做的一件事' : '接下来'}</span><div>${esc(d.next)}</div></div>`;
-      const four = [['health', '健康'], ['energy', '精力'], ['career', '事业'], ['relation', '关系']];
-      if (d.lenses && Object.values(d.lenses).some(Boolean)) h += `<div class="field"><span class="lab">四个角度</span><div class="lenses">${four.map(([k, n]) => `<b>${n}</b><span>${esc(d.lenses[k] || '—')}</span>`).join('')}</div></div>`;
-      if (d.plans && Object.values(d.plans).some(Boolean)) h += `<div class="field"><span class="lab">下个季度的四条小规划</span><div class="lenses">${four.map(([k, n]) => `<b>${n}</b><span>${esc(d.plans[k] || '—')}</span>`).join('')}</div></div>`;
-      if (d.themes && d.themes.length) h += `<div class="field"><span class="lab">这一年反复出现的主题</span><div>${d.themes.map(esc).join(' · ')}</div></div>`;
-      if (!d.imported) h += `<div style="margin-top:30px"><button class="btn ghost sm" data-act="gen" data-v="${d.kind}|${d.key}">让回信重写这封${kindN}</button></div>`;
+      let h = `<div class="head"><div class="head-l"><span class="eyebrow">${kindN} · ${range}</span><h1 style="font-size:26px">${esc(d.title || kindN)}</h1></div></div>`;
+      if (d.stats) h += `<div class="card stats mt">
+        <div class="stat"><span>写了</span><b>${d.stats.letters}<small> 封</small></b></div>
+        <div class="stat"><span>平均精力</span><b>${d.stats.energyAvg ?? '—'}</b></div>
+        <div class="stat"><span>完成待办</span><b>${d.stats.todosDone}</b></div></div>`;
+      h += `<article class="card reply-letter"><p>${esc(d.letter || '')}</p></article>`;
+      const sec = (lab, body) => `<div class="gh"><h2>${lab}</h2></div><div class="card pad" style="font-size:15px;line-height:1.6">${body}</div>`;
+      if (d.energy_note) h += sec('精力的规律', esc(d.energy_note));
+      if (d.forgotten && d.forgotten.length) h += sec('可能漏掉的', d.forgotten.map(x => `<div>· ${esc(x)}</div>`).join(''));
+      if (d.next) h += sec(d.kind === 'week' ? '下周最值得做的一件事' : '接下来', esc(d.next));
+      const four = (o) => `<div class="card">${LENSES.map(([k, n, c]) => `<div class="row lens"><span class="ic" style="background:${c}" aria-hidden="true">${n[0]}</span><span class="row-main"><span>${n}</span><span>${esc(o[k] || '—')}</span></span></div>`).join('')}</div>`;
+      if (d.lenses && Object.values(d.lenses).some(Boolean)) h += `<div class="gh"><h2>四个角度</h2></div>` + four(d.lenses);
+      if (d.plans && Object.values(d.plans).some(Boolean)) h += `<div class="gh"><h2>下个季度的四条小规划</h2></div>` + four(d.plans);
+      if (d.themes && d.themes.length) h += sec('这一年反复出现的主题', d.themes.map(esc).join(' · '));
+      if (!d.imported) h += `<div style="margin-top:26px"><button class="btn ghost sm" data-act="gen" data-v="${d.kind}|${d.key}">让回信重写这封${kindN}</button></div>`;
       return h;
     }
     if (s.type === 'lists') {
@@ -679,17 +851,15 @@
       let rows;
       if (tab === 'todos') {
         const l = openTodos(t);
-        rows = l.length ? l.map(x => todoRow(x, t)).join('') : '<div class="empty">没有待办。</div>';
-        rows += `<button class="link-btn" data-act="todo-new">＋ 加一件事</button>`;
+        rows = (l.length ? l.map(x => todoRow(x, t)).join('') : '<div class="empty">没有待办。</div>') + `<div class="row foot"><button class="lk" data-act="todo-new">＋ 加一件事</button></div>`;
       } else if (tab === 'ideas') {
-        const l = S.ideas.filter(i => i.status === 'open');
-        rows = l.length ? l.map(i => ideaRow(i, { drop: true })).join('') : '<div class="empty">点子库是空的。写信时冒出的想法，回信会收到这里。</div>';
-        rows += `<button class="link-btn" data-act="idea-new">＋ 记一个点子</button>`;
+        const l = openIdeas();
+        rows = (l.length ? l.map(i => ideaRow(i, { drop: true })).join('') : '<div class="empty">点子库是空的。写信时冒出的想法，回信会收到这里。</div>') + `<div class="row foot"><button class="lk" data-act="idea-new">＋ 记一个点子</button></div>`;
       } else {
         const l = S.todos.filter(x => x.done).sort((a, b) => ((a.done_at || '') < (b.done_at || '') ? 1 : -1));
         rows = l.length ? l.map(x => todoRow(x, t)).join('') : '<div class="empty">最近 30 天还没有完成的待办。</div>';
       }
-      return seg + `<div class="rows" style="margin-top:10px">${rows}</div>`;
+      return seg + `<div class="card mt">${rows}</div>`;
     }
     if (s.type === 'todo') {
       const x = s.id ? S.todos.find(y => y.id === s.id) : { text: '', due: addDays(t, 3) };
@@ -707,25 +877,30 @@
       return `<form id="idea-form">
         <div class="field"><label for="if-text">点子</label><textarea class="input" id="if-text" rows="3" required>${esc(x.text)}</textarea></div>
         ${x.source_date ? `<p class="note">来自 ${cn(x.source_date)} 的信</p>` : ''}
-        <div style="display:flex;gap:10px;margin-top:26px"><button class="btn" type="submit">保存</button>
+        <div style="display:flex;gap:10px;margin-top:26px;flex-wrap:wrap"><button class="btn" type="submit">保存</button>
         ${s.id ? `<button class="btn ghost" type="button" data-act="idea-todo" data-v="${x.id}">转成待办</button><button class="btn ghost" type="button" data-act="idea-drop" data-v="${x.id}">放下</button>` : ''}</div></form>`;
     }
     if (s.type === 'settings') {
       const cur = S.settings.theme || 'auto';
       const themes = THEMES.map(th => `<button class="theme-opt" data-act="theme" data-v="${th.id}" aria-pressed="${cur === th.id}">
-        <span class="swatch" style="background:${th.id === 'auto' ? 'linear-gradient(90deg,#fff 50%,#000 50%)' : th.sw[0]}"><i style="background:${th.sw[2]};width:60%"></i><i style="background:${th.id === 'auto' ? '#8E8E93' : th.sw[1]};width:85%;opacity:.5"></i></span>${th.name}</button>`).join('');
-      const habits = S.habits.map(h => `<div class="row"><input class="input" style="background:none;padding:0;min-height:48px" value="${esc(h.name)}" data-habit-name="${h.id}" aria-label="习惯名称"><button class="link-btn" style="color:var(--danger)" data-act="habit-del" data-v="${h.id}">删除</button></div>`).join('');
+        <span class="swatch" style="background:${th.id === 'auto' ? 'linear-gradient(90deg,#F2F2F7 50%,#000 50%)' : th.sw[0]}"><i style="background:${th.sw[2]};width:60%"></i><i style="background:${th.sw[1]};width:85%"></i></span>${th.name}</button>`).join('');
+      const habits = S.habits.map(h => `<div class="row"><input class="input" style="background:none;padding:0;min-height:48px" value="${esc(h.name)}" data-habit-name="${h.id}" aria-label="习惯名称"><button class="lk" style="color:var(--danger)" data-act="habit-del" data-v="${h.id}">删除</button></div>`).join('');
+      const dm = deliverMode();
+      const opt = (v, t1, t2) => `<button class="opt" data-act="deliver" data-v="${v}" aria-pressed="${dm === v}"><span>${t1}<small>${t2}</small></span><span class="tick">${ICON.tick}</span></button>`;
       return `
         <div class="field"><label for="set-name">回信怎么称呼你</label><input class="input" id="set-name" value="${esc(S.user.name || '')}" placeholder="比如：非云"></div>
+        <div class="field"><span class="lab">回信什么时候送到</span><div class="group opts">
+          ${opt('morning', '明早 6:00 拆信', '今晚寄出的信，回信封存到第二天早上；补写的信马上送到')}
+          ${opt('now', '寄出后马上', '写完就能看到回信')}</div></div>
         ${aiSettings()}
         <div class="field"><span class="lab">外观</span><div class="themes">${themes}</div></div>
-        <div class="field"><span class="lab">要打卡的习惯</span><div class="group">${habits || '<div class="empty" style="padding:14px">还没有习惯</div>'}</div>
+        <div class="field"><span class="lab">写信时顺手打卡的习惯</span><div class="group">${habits || '<div class="empty" style="padding:14px">还没有习惯</div>'}</div>
           <form id="habit-form" style="display:flex;gap:8px"><input class="input" id="habit-new" placeholder="新习惯，比如：运动 30 分钟" aria-label="新习惯"><button class="btn sm" style="height:48px" type="submit">添加</button></form></div>
         <div class="field"><label for="set-q">回信写信时会想着的问题（一行一个）</label><textarea class="input" id="set-q" rows="8">${esc((S.settings.questions || []).join('\n'))}</textarea>
           <button class="btn sm ghost" style="align-self:flex-start" data-act="save-q">保存问题</button></div>
-        <div class="field"><span class="lab">账号</span><div class="muted small">当前登录：${esc(S.user.username)}</div>
+        <div class="field"><span class="lab">账号</span><div class="muted small" style="padding:0 4px">当前登录：${esc(S.user.username)}</div>
           <button class="btn sm ghost" style="align-self:flex-start" data-act="logout">退出登录</button></div>
-        <p class="note" style="margin-top:40px;text-align:center">回信 Re: · 你只写信，其余交给回信</p>`;
+        <p class="note" style="margin-top:40px;text-align:center">回信 Re: · 今晚写给明早的自己</p>`;
     }
     return '';
   }
@@ -754,8 +929,8 @@
     const opts = Object.entries(P).map(([k, v]) => `<option value="${k}" ${f.provider === k ? 'selected' : ''}>${esc(v.name)}</option>`).join('');
     return `<div class="field"><span class="lab">AI 回信</span>
       <div class="group" style="padding:14px;font-size:15px;line-height:1.6">${status}
-        ${d.configured ? `<div style="margin-top:6px"><button class="link-btn" style="color:var(--danger);padding:4px 0" data-act="ai-off">停用，改回免费模型</button></div>` : ''}</div>
-      <button class="link-btn" style="align-self:flex-start" data-act="ai-toggle">${A.open ? '收起' : (d.configured ? '修改 ›' : '接入自己的 AI ›')}</button>
+        ${d.configured ? `<div style="margin-top:6px"><button class="lk" style="color:var(--danger);padding:4px 0" data-act="ai-off">停用，改回免费模型</button></div>` : ''}</div>
+      <button class="lk" style="align-self:flex-start;padding-left:4px" data-act="ai-toggle">${A.open ? '收起' : (d.configured ? '修改 ›' : '接入自己的 AI ›')}</button>
       ${A.open ? `<div style="display:flex;flex-direction:column;gap:10px">
         <label class="lab" for="ai-provider">服务商</label>
         <select class="input" id="ai-provider" data-ai="provider">${opts}</select>
@@ -779,18 +954,19 @@
   function afterRender() {
     const ed = $('#editor');
     if (ed) {
-      const grow = () => { ed.style.height = 'auto'; ed.style.height = Math.max(ed.scrollHeight, window.innerHeight * 0.46) + 'px'; };
+      const grow = () => { ed.style.height = 'auto'; ed.style.height = Math.max(ed.scrollHeight, window.innerHeight * 0.36) + 'px'; };
       grow();
       ed.addEventListener('input', () => {
         grow();
         const d = V.writeDate;
         store.set('hx_draft_' + d, ed.value);
         $('#send-btn').disabled = !ed.value.trim();
-        $('#save-state').textContent = '正在保存…';
+        $('#save-state').textContent = '保存中';
         clearTimeout(afterRender._t);
         afterRender._t = setTimeout(() => saveLetter(d, ed.value), 1200);
       });
       if (V.editing) { ed.focus(); ed.setSelectionRange(ed.value.length, ed.value.length); }
+      if (rec && $('#mic')) $('#mic').classList.add('on');
     }
     const tf = $('#todo-form');
     if (tf) tf.addEventListener('submit', e => {
@@ -849,6 +1025,25 @@
     });
   }
 
+  // ───────────── 语音写信（浏览器支持才显示按钮） ─────────────
+  let rec = null;
+  function toggleMic() {
+    if (!SR) return;
+    if (rec) { rec.stop(); return; }
+    rec = new SR();
+    rec.lang = 'zh-CN'; rec.continuous = true; rec.interimResults = false;
+    rec.onresult = e => {
+      const ed = $('#editor'); if (!ed) return;
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        if (e.results[i].isFinal) { ed.value += e.results[i][0].transcript; ed.dispatchEvent(new Event('input')); }
+      }
+    };
+    rec.onerror = ev => { if (ev.error === 'not-allowed' || ev.error === 'service-not-allowed') toast('没有麦克风权限，可以用键盘上的语音输入'); };
+    rec.onend = () => { rec = null; const m = $('#mic'); if (m) m.classList.remove('on'); };
+    try { rec.start(); const m = $('#mic'); if (m) m.classList.add('on'); toast('在听了，再点一下停止'); }
+    catch (e) { rec = null; toast('这台设备暂时用不了语音，可以用键盘上的语音输入'); }
+  }
+
   // ───────────── 动作 ─────────────
   async function saveLetter(d, text) {
     const l = S.letters[d] || (S.letters[d] = { date: d, text: '', reply: null });
@@ -856,7 +1051,7 @@
     toCache();
     queue('PUT', '/letters/' + d, { text });
     const st = $('#save-state');
-    if (st) st.textContent = V.online ? '已保存' : '已存在本机，联网后同步';
+    if (st) st.textContent = V.online ? '已存' : '存在本机';
   }
 
   async function send() {
@@ -865,10 +1060,12 @@
     const text = ed ? ed.value : (S.letters[d] || {}).text;
     if (!text || !text.trim()) return;
     clearTimeout(afterRender._t);
+    if (rec) rec.stop();
     const l = S.letters[d] || (S.letters[d] = { date: d });
     l.text = text;
     store.del('hx_draft_' + d);
     V.editing = false; V.replying = true; V.replyErr = '';
+    V.sent = sendsTonight(d) ? { date: d, at: new Date() } : null;
     toCache(); render();
     try {
       await api('PUT', '/letters/' + d, { text });
@@ -893,8 +1090,11 @@
       (r.ideas || []).forEach(x => { if (!S.ideas.find(y => y.id === x.id)) S.ideas.unshift(x); });
       if (!S.stats.first || d < S.stats.first) S.stats.first = d;
       S.stats.letters = Object.values(S.letters).filter(x => x.text && x.text.trim()).length;
-      V.replying = false; toCache(); render();
-      toast('收到回信');
+      V.replying = false; toCache();
+      if (isSealed(d)) { render(); if (!(V.sent && V.sent.date === d)) toast('整理好了，明早 6:00 送到'); return; }
+      // 补写的信（或设成马上送到）：直接拆开
+      if (V.tab === 'write' && V.writeDate === d && !V.sheets.length) { markOpened(d); openSheet({ type: 'reply', date: d }); return; }
+      render(); toast('收到回信');
     } catch (e) {
       V.replying = false;
       V.replyErr = /Failed to fetch|Load failed|NetworkError/i.test(e.message) ? '现在没有网络，联网后点「再试一次」' : e.message;
@@ -916,6 +1116,12 @@
     } catch (e) { toast(e.message); }
   }
 
+  function startEdit(d) {
+    V.tab = 'write'; V.writeDate = d; V.editing = true; V.sent = null; V.sheets = [];
+    store.set('hx_draft_' + d, (S.letters[d] || {}).text || '');
+    render();
+  }
+
   document.addEventListener('click', async e => {
     const el = e.target.closest('[data-act]');
     if (!el || !S) return;
@@ -923,21 +1129,34 @@
     const t = today();
     switch (act) {
       case 'tab':
-        if (V.tab === 'write' && v !== 'write') { V.editing = false; }
-        V.tab = v; V.sheets = [];
-        if (v === 'write' && !V.writeDate) V.writeDate = letterDay();
+        if (V.tab === 'write' && v !== 'write') { V.editing = false; if (rec) rec.stop(); }
+        V.tab = v; V.sheets = []; V.sent = null;
+        if (v === 'write') V.writeDate = V.writeDate || letterDay();
         render(); break;
-      case 'write-day': V.tab = 'write'; V.writeDate = v; V.editing = !hasText(v); V.replyErr = ''; V.sheets = []; render(); break;
+      case 'write-day': V.tab = 'write'; V.writeDate = v; V.editing = !hasText(v); V.replyErr = ''; V.sheets = []; V.sent = null; render(); break;
       case 'day': {
         const n = addDays(V.writeDate, Number(v));
         if (n > letterDay()) return;
         V.writeDate = n; V.editing = false; V.replyErr = ''; render(); break;
       }
       case 'quote': V.quoteOffset++; render(); break;
+      case 'chip': {
+        const ed = $('#editor'); if (!ed) return;
+        ed.value = ed.value.replace(/\s*$/, '') + (ed.value.trim() ? '\n' : '') + v;
+        ed.dispatchEvent(new Event('input'));
+        ed.focus(); ed.setSelectionRange(ed.value.length, ed.value.length);
+        break;
+      }
+      case 'mic': toggleMic(); break;
       case 'habit': {
-        const k = v + '|' + t; const on = !S.logs.has(k);
+        const day = el.dataset.d || t;
+        const k = v + '|' + day; const on = !S.logs.has(k);
         on ? S.logs.add(k) : S.logs.delete(k);
-        queue('PUT', `/habits/${v}/log/${t}`, { done: on }); toCache(); render(); break;
+        queue('PUT', `/habits/${v}/log/${day}`, { done: on }); toCache();
+        // 写信时不整页重画，免得打断正在写的字
+        if ($('#editor')) { el.classList.toggle('on', on); el.setAttribute('aria-pressed', on); }
+        else render();
+        break;
       }
       case 'todo-toggle': {
         const x = S.todos.find(y => y.id === v); if (!x) return;
@@ -971,8 +1190,13 @@
         if (outbox.some(o => o.key === 'PUT /letters/' + d)) { await flush(); }
         requestReply(d); break;
       }
-      case 'edit-letter': V.editing = true; store.set('hx_draft_' + V.writeDate, S.letters[V.writeDate].text); render(); break;
+      case 'edit-letter': startEdit(V.writeDate); break;
+      case 'take-back': startEdit(v || V.writeDate); break;
       case 'cancel-edit': V.editing = false; store.del('hx_draft_' + V.writeDate); render(); break;
+      case 'sent-close': V.sent = null; V.tab = 'today'; render(); break;
+      case 'skip-backfill': store.set('hx_skipbf_' + v, true); render(); break;
+      case 'open-reply': markOpened(v); openSheet({ type: 'reply', date: v }); break;
+      case 'go-today': V.sheets = []; V.tab = 'today'; render(); break;
       case 'fb': {
         const key = el.dataset.d + '|' + v; const val = Number(el.dataset.x);
         const next = S.feedback[key] === val ? 0 : val;
@@ -981,8 +1205,8 @@
         toCache(); render(); break;
       }
       case 'mb': V.mb = v; render(); break;
-      case 'letter': openSheet({ type: 'letter', date: v }); break;
-      case 'open-in-write': V.sheets = []; V.tab = 'write'; V.writeDate = v; V.editing = false; render(); break;
+      case 'letter': if (!isSealed(v)) markOpened(v); openSheet({ type: 'letter', date: v }); break;
+      case 'open-in-write': V.sheets = []; V.tab = 'write'; V.writeDate = v; V.editing = false; V.sent = null; render(); break;
       case 'digest': { const [kind, key] = v.split('|'); openSheet({ type: 'digest', kind, key }); break; }
       case 'gen': { const [kind, key] = v.split('|'); generate(kind, key); break; }
       case 'older': {
@@ -996,6 +1220,9 @@
         break;
       }
       case 'settings': V.ai = { loading: true }; openSheet({ type: 'settings' }); loadAI(); break;
+      case 'deliver':
+        S.settings.deliver = v; queue('PUT', '/settings', { deliver: v }); toCache(); render();
+        toast(v === 'now' ? '之后寄出的信，马上就能看到回信' : '之后今晚寄出的信，回信明早 6:00 送到'); break;
       case 'ai-toggle': V.ai.open = !V.ai.open; V.ai.msg = ''; render(); break;
       case 'ai-test': case 'ai-save': {
         const isTest = act === 'ai-test';
@@ -1032,7 +1259,7 @@
         S.habits = S.habits.filter(h => h.id !== v); toCache(); render(); break;
       case 'logout':
         try { await api('POST', '/logout'); } catch (err) { /* ignore */ }
-        store.del('hx_outbox'); outbox = [];
+        store.del('hx_outbox'); store.del('hx_opened2'); outbox = []; opened = new Set();
         showLogin(); break;
     }
   });

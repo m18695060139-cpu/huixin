@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 100 100">
-  <title>回信</title>
-  <rect width="100" height="100" rx="22.5" fill="#1a2445"/>
-  <rect x="13" y="24" width="74" height="54" rx="8" fill="#f7f2e8"/>
-  <path d="M50 38 C 52 51, 54.5 53.5, 67 55.5 C 54.5 57.5, 52 60, 50 73 C 48 60, 45.5 57.5, 33 55.5 C 45.5 53.5, 48 51, 50 38 Z" fill="#ff7a45"/>
-</svg>
