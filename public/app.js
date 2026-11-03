@@ -493,6 +493,58 @@
         <button class="lk muted" data-act="lists" data-v="todos">${more > 0 ? `还有 ${more} 项 ›` : '全部 ›'}</button></div></div>`;
   }
 
+  // ───────── 完成 / 放下：按时间分组，条数少全展开，条数多时只展开最近的 ─────────
+  function doneHistory(t) {
+    const mode = V.doneMode || 'done';
+    const pool = S.todos.concat((Array.isArray(V.olderTodos) ? V.olderTodos : []).filter(o => !S.todos.some(x => x.id === o.id)));
+    const doneL = pool.filter(x => x.done && !x.dropped_at && x.done_at);
+    const dropL = pool.filter(x => x.dropped_at);
+    const list = (mode === 'done' ? doneL : dropL).map(x => ({ x, d: mode === 'done' ? x.done_at : x.dropped_at }))
+      .sort((a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : 0));
+    const toggle = `<div class="mini-seg" role="tablist">
+      <button role="tab" aria-selected="${mode === 'done'}" data-act="done-mode" data-v="done">完成 ${doneL.length}</button>
+      <button role="tab" aria-selected="${mode === 'dropped'}" data-act="done-mode" data-v="dropped">放下 ${dropL.length}</button></div>`;
+    const older = V.olderTodos === undefined
+      ? `<div class="fold"><button class="lk muted" data-act="older-todos">查看 30 天以前的 ›</button></div>`
+      : V.olderTodos === 'loading' ? `<div class="fold"><span class="sub">正在找…</span></div>` : '';
+    if (!list.length) {
+      return toggle + `<div class="card"><div class="empty">${mode === 'done' ? '最近还没有完成的待办。' : '还没有放下的事。做不了或决定不做的待办，点开选「放下」会收在这里。'}</div></div>` + older;
+    }
+    // 分组：今天 / 昨天 / 这周 / 某一周（35 天内）/ 某个月（更早）
+    const wk = weekKey(t);
+    const groupOf = d => d === t ? ['today', '今天'] : d === addDays(t, -1) ? ['yday', '昨天']
+      : weekKey(d) === wk ? ['week', '这周']
+      : diffDays(t, d) <= 35 ? ['w' + weekKey(d), weekKey(d) === addDays(wk, -7) ? '上周' : `${cn(weekKey(d))}那一周`]
+      : ['m' + d.slice(0, 7), `${d.slice(0, 4) === t.slice(0, 4) ? '' : d.slice(0, 4) + '年'}${Number(d.slice(5, 7))}月`];
+    const groups = [];
+    list.forEach(it => {
+      const [k, label] = groupOf(it.d);
+      let g = groups.find(y => y.k === k);
+      if (!g) groups.push(g = { k, label, items: [] });
+      g.items.push(it);
+    });
+    // 总数不多就全部展开；多了只展开最近的（今天、昨天、这周），其余点开再看
+    const few = list.length <= 12;
+    const opened = V.openGroups || (V.openGroups = {});
+    const html = groups.map((g, gi) => {
+      const open = g.k in opened ? opened[g.k] : (few || ['today', 'yday', 'week'].includes(g.k) || (gi === 0 && !groups.some(y => ['today', 'yday', 'week'].includes(y.k))));
+      const head = `<button class="grp-h" data-act="done-group" data-v="${g.k}" aria-expanded="${open}">
+        <span>${g.label}</span><span class="grp-n">${mode === 'done' ? '完成' : '放下'} ${g.items.length} 件<i class="chev ${open ? 'up' : ''}">›</i></span></button>`;
+      const rows = open ? g.items.map(({ x, d }) => historyRow(x, d, g.k)).join('') : '';
+      return `<div class="card grp">${head}${rows}</div>`;
+    }).join('');
+    return toggle + html + older;
+  }
+  function historyRow(x, d, gk) {
+    const showDate = !['today', 'yday'].includes(gk);
+    const ck = x.dropped_at
+      ? `<span class="ck dropped" aria-hidden="true"><i>${ICON.x}</i></span>`
+      : `<button class="ck on" data-act="todo-toggle" data-v="${x.id}" aria-pressed="true" aria-label="标为未完成：${esc(x.text)}"><i>${ICON.checkSm}</i></button>`;
+    return `<div class="row hist">${ck}
+      <button class="row-main" data-act="todo-edit" data-v="${x.id}"><span>${esc(x.text)}</span>${x.note ? `<span class="sub todo-note">${esc(x.note)}</span>` : ''}</button>
+      ${showDate ? `<span class="hist-d">${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}</span>` : ''}</div>`;
+  }
+
   // 首页的点子：最新的在前，待办少时多放几条；放了 7 天以上没动的留一个位置提醒
   function ideasBlock(t) {
     const all = openIdeas();
@@ -832,7 +884,7 @@
 
   // ───────────── 二级页面 ─────────────
   function openSheet(s) { s.fresh = true; V.sheets.push(s); render(); }
-  function closeSheet() { V.sheets.pop(); V.droppedIdeas = undefined; render(); }
+  function closeSheet() { V.sheets.pop(); V.droppedIdeas = undefined; if (!V.sheets.length) { V.openGroups = null; V.olderTodos = undefined; } render(); }
   function viewSheet(s) {
     const titles = { reply: '', letter: '', digest: '', lists: '待办与点子', settings: '设置', todo: s.id ? '编辑待办' : '加一件事', drop: '放下这件事', idea: s.id ? '编辑点子' : '记一个点子' };
     const anim = s.fresh ? ' enter' : '';
@@ -901,10 +953,7 @@
           <div class="fold"><button class="lk muted" data-act="dropped-ideas">${dv === undefined ? '放下的点子 ›' : '收起放下的点子'}</button></div>
           ${dv === undefined ? '' : `<div class="card">${dropped}</div>`}`;
       } else {
-        const l = S.todos.filter(x => x.done && !x.dropped_at).sort((a, b) => ((a.done_at || '') < (b.done_at || '') ? 1 : -1));
-        rows = l.length ? l.map(x => todoRow(x, t)).join('') : '<div class="empty">最近 30 天还没有完成的待办。</div>';
-        const dr = S.todos.filter(x => x.dropped_at).sort((a, b) => (a.dropped_at < b.dropped_at ? 1 : -1));
-        if (dr.length) return seg + `<div class="card mt">${rows}</div><div class="gh"><h2>放下的</h2><span>决定不做或做不了的，点开可以恢复</span></div><div class="card">${dr.map(x => todoRow(x, t)).join('')}</div>`;
+        return seg + doneHistory(t);
       }
       return seg + `<div class="card mt">${rows}</div>`;
     }
@@ -1278,6 +1327,18 @@
         S.ideas = S.ideas.filter(y => y.id !== v);
         toCache(); if (V.sheets.length && V.sheets[V.sheets.length - 1].type === 'idea') V.sheets.pop(); render();
         toast('已放下', V._droppedIdea ? { label: '撤回', act: 'idea-undrop', v } : null); break;
+      case 'done-mode': V.doneMode = v; render(); break;
+      case 'done-group': {
+        const sh = $('.grp-h[data-v="' + v + '"]');
+        V.openGroups = V.openGroups || {};
+        V.openGroups[v] = !(sh && sh.getAttribute('aria-expanded') === 'true'); render(); break;
+      }
+      case 'older-todos': {
+        V.olderTodos = 'loading'; render();
+        try { V.olderTodos = (await api('GET', '/todos')).todos; }
+        catch (e) { V.olderTodos = undefined; toast(e.message); }
+        render(); break;
+      }
       case 'dropped-ideas': {
         if (V.droppedIdeas !== undefined) { V.droppedIdeas = undefined; render(); break; }
         V.droppedIdeas = 'loading'; render();
