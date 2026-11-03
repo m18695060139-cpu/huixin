@@ -95,8 +95,13 @@ export async function register(req, env) {
   const salt = hex(saltBytes);
   const idBytes = new Uint8Array(6);
   crypto.getRandomValues(idBytes);
-  await env.DB.prepare('INSERT INTO users (id, username, pass_hash, salt, name, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .bind('u' + hex(idBytes), username, await hashPassword(password, salt), salt, '', new Date().toISOString()).run();
+  try {
+    await env.DB.prepare('INSERT INTO users (id, username, pass_hash, salt, name, created_at) VALUES (?, ?, ?, ?, ?, ?)')
+      .bind('u' + hex(idBytes), username, await hashPassword(password, salt), salt, '', new Date().toISOString()).run();
+  } catch (e) {
+    if (/UNIQUE/i.test(e.message)) return err('这个账号名已被使用');   // 两个人同时注册同一个名字
+    throw e;
+  }
   return login(new Request(req.url, { method: 'POST', headers: req.headers, body: JSON.stringify({ username, password }) }), env);
 }
 

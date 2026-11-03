@@ -98,7 +98,7 @@
     });
     const data = await res.json().catch(() => ({}));
     if (res.status === 401 && path !== '/login' && path !== '/register') { showLogin(); throw new Error('请先登录'); }
-    if (!res.ok) throw new Error(data.error || ('请求失败 ' + res.status));
+    if (!res.ok) { const e = new Error(data.error || ('请求失败 ' + res.status)); e.status = res.status; throw e; }
     return data;
   }
 
@@ -122,6 +122,9 @@
           await api(o.method, o.path, o.body);
         } catch (e) {
           if (/Failed to fetch|NetworkError|Load failed|network/i.test(e.message)) { setOnline(false); break; }
+          // 登录过期、服务器临时出错：留着下次再寄，不能丢
+          if (e.message === '请先登录') break;
+          if (e.status >= 500 && (o.tries = (o.tries || 0) + 1) < 5) { store.set('hx_outbox', outbox); break; }
           console.warn('丢弃一条寄不出的修改', o, e.message);   // 服务器明确拒绝的，不再重试
         }
         outbox.shift();
@@ -1083,7 +1086,7 @@
   async function requestReply(d) {
     V.replying = true; V.replyErr = ''; render();
     try {
-      const r = await api('POST', `/letters/${d}/reply`, { today: today() });
+      const r = await api('POST', `/letters/${d}/reply`, { today: letterDay() });   // 凌晨 4 点前寄出的，"今天"仍是前一天
       const l = S.letters[d];
       l.reply = r.reply; l.replied_at = r.replied_at; l.energy = r.reply.energy; l.mood = r.reply.mood;
       (r.todos || []).forEach(x => { if (!S.todos.find(y => y.id === x.id)) S.todos.push(x); });
