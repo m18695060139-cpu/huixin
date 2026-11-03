@@ -174,7 +174,7 @@ async function api(req, env, ctx, url) {
     if (!isDate(body.date) || !body.block) return err('参数不对');
     const v = Number(body.value);
     if (v === 0) {
-      await env.DB.prepare('DELETE FROM feedback WHERE user_id = ? AND date = ? AND block = ?').bind(U, body.date, String(body.block)).run();
+      await env.DB.prepare('DELETE FROM feedback WHERE user_id = ? AND date = ? AND block = ?').bind(U, body.date, String(body.block).slice(0, 30)).run();
     } else {
       await env.DB.prepare(`INSERT INTO feedback (user_id, date, block, value) VALUES (?, ?, ?, ?)
         ON CONFLICT(user_id, date, block) DO UPDATE SET value = excluded.value`).bind(U, body.date, String(body.block).slice(0, 30), v > 0 ? 1 : -1).run();
@@ -318,8 +318,8 @@ async function replyTo(env, user, date, clientToday) {
   const today = isDate(clientToday) ? clientToday : cstDate();
   const [settings, openTodos, ideas, yday] = await Promise.all([
     getSettings(env, U),
-    env.DB.prepare('SELECT text FROM todos WHERE user_id = ? AND done = 0 AND archived = 0').bind(U).all(),
-    env.DB.prepare("SELECT text FROM ideas WHERE user_id = ? AND status = 'open' ORDER BY created DESC LIMIT 40").bind(U).all(),
+    env.DB.prepare('SELECT id, text, due, source_date, created FROM todos WHERE user_id = ? AND done = 0 AND archived = 0').bind(U).all(),
+    env.DB.prepare("SELECT id, text, source_date, created FROM ideas WHERE user_id = ? AND status = 'open' ORDER BY created DESC LIMIT 40").bind(U).all(),
     env.DB.prepare('SELECT reply FROM letters WHERE user_id = ? AND date = ?').bind(U, addDays(date, -1)).first(),
   ]);
 
@@ -337,7 +337,11 @@ async function replyTo(env, user, date, clientToday) {
   const haveT = new Set(openTodos.results.map(t => norm(t.text)));
   const haveI = new Set(ideas.results.map(t => norm(t.text)));
   const stmts = [];
-  const madeTodos = [], madeIdeas = [];
+  // 同一封信重新要回信时（比如上一次网络断了但其实写成了），之前从这封信拆出的事仍算在这封回信里
+  const madeTodos = openTodos.results.filter(t => t.source_date === date)
+    .map(t => ({ id: t.id, text: t.text, due: t.due, done: false, source_date: date, created: t.created }));
+  const madeIdeas = ideas.results.filter(t => t.source_date === date)
+    .map(t => ({ id: t.id, text: t.text, status: 'open', source_date: date, created: t.created }));
   for (const t of r.tasks) {
     const k = norm(t.text);
     if (!k || haveT.has(k)) continue;
