@@ -506,7 +506,7 @@
     if (show.length < limit) show = show.concat(byNew.filter(i => !show.includes(i)).slice(0, limit - show.length));
     const more = all.length - show.length;
     return `<div class="gh"><h2>点子</h2><span>${fresh.length ? `最近 7 天 ${fresh.length} 个` : '最近没有新点子'}</span></div>
-      <div class="card">${show.map(i => ideaRow(i)).join('')}
+      <div class="card">${show.map(i => ideaRow(i, { drop: true })).join('')}
         <div class="row foot"><button class="lk" data-act="idea-new">＋ 记一个点子</button>
         <button class="lk muted" data-act="lists" data-v="ideas">${more > 0 ? `全部 ${all.length} 个 ›` : '全部 ›'}</button></div></div>`;
   }
@@ -1263,9 +1263,17 @@
         toCache(); if (V.sheets.length && V.sheets[V.sheets.length - 1].type === 'idea') V.sheets.pop(); render(); toast('已转成待办'); break;
       }
       case 'idea-drop':
+        V._droppedIdea = S.ideas.find(y => y.id === v) || null;
         queue('PUT', '/ideas/' + v, { status: 'dropped' });
         S.ideas = S.ideas.filter(y => y.id !== v);
-        toCache(); if (V.sheets.length && V.sheets[V.sheets.length - 1].type === 'idea') V.sheets.pop(); render(); toast('已放下'); break;
+        toCache(); if (V.sheets.length && V.sheets[V.sheets.length - 1].type === 'idea') V.sheets.pop(); render();
+        toast('已放下', V._droppedIdea ? { label: '撤回', act: 'idea-undrop', v } : null); break;
+      case 'idea-undrop': {
+        const i = V._droppedIdea; hideToast();
+        if (!i || i.id !== v) return;
+        i.status = 'open'; V._droppedIdea = null;
+        S.ideas.push(i); queue('PUT', '/ideas/' + v, { status: 'open' }); toCache(); render(); break;
+      }
       case 'lists': openSheet({ type: 'lists', tab: v }); break;
       case 'lists-tab': V.sheets[V.sheets.length - 1].tab = v; render(); break;
       case 'send': send(); break;
