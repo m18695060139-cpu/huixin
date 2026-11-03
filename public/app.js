@@ -832,7 +832,7 @@
 
   // ───────────── 二级页面 ─────────────
   function openSheet(s) { s.fresh = true; V.sheets.push(s); render(); }
-  function closeSheet() { V.sheets.pop(); render(); }
+  function closeSheet() { V.sheets.pop(); V.droppedIdeas = undefined; render(); }
   function viewSheet(s) {
     const titles = { reply: '', letter: '', digest: '', lists: '待办与点子', settings: '设置', todo: s.id ? '编辑待办' : '加一件事', drop: '放下这件事', idea: s.id ? '编辑点子' : '记一个点子' };
     const anim = s.fresh ? ' enter' : '';
@@ -890,6 +890,16 @@
       } else if (tab === 'ideas') {
         const l = openIdeas();
         rows = (l.length ? l.map(i => ideaRow(i, { drop: true })).join('') : '<div class="empty">点子库是空的。写信时冒出的想法，回信会收到这里。</div>') + `<div class="row foot"><button class="lk" data-act="idea-new">＋ 记一个点子</button></div>`;
+        // 放下的点子：藏在最底下，点开才加载
+        const dv = V.droppedIdeas;
+        const dropped = dv === undefined ? '' : dv === 'loading' ? '<div class="empty">正在找…</div>'
+          : !dv.length ? '<div class="empty">还没有放下的点子。</div>'
+          : dv.map(i => `<div class="row"><span class="ic sm idea dim">${ICON.bulb}</span>
+              <span class="row-main done"><span>${esc(i.text)}</span><span class="sub">${i.dropped_at ? cn(i.dropped_at) + ' 放下' : '放下了'}</span></span>
+              <button class="lk" data-act="idea-restore" data-v="${i.id}">恢复</button></div>`).join('');
+        return seg + `<div class="card mt">${rows}</div>
+          <div class="fold"><button class="lk muted" data-act="dropped-ideas">${dv === undefined ? '放下的点子 ›' : '收起放下的点子'}</button></div>
+          ${dv === undefined ? '' : `<div class="card">${dropped}</div>`}`;
       } else {
         const l = S.todos.filter(x => x.done && !x.dropped_at).sort((a, b) => ((a.done_at || '') < (b.done_at || '') ? 1 : -1));
         rows = l.length ? l.map(x => todoRow(x, t)).join('') : '<div class="empty">最近 30 天还没有完成的待办。</div>';
@@ -1268,6 +1278,19 @@
         S.ideas = S.ideas.filter(y => y.id !== v);
         toCache(); if (V.sheets.length && V.sheets[V.sheets.length - 1].type === 'idea') V.sheets.pop(); render();
         toast('已放下', V._droppedIdea ? { label: '撤回', act: 'idea-undrop', v } : null); break;
+      case 'dropped-ideas': {
+        if (V.droppedIdeas !== undefined) { V.droppedIdeas = undefined; render(); break; }
+        V.droppedIdeas = 'loading'; render();
+        try { V.droppedIdeas = (await api('GET', '/ideas/dropped')).ideas; }
+        catch (e) { V.droppedIdeas = undefined; toast(e.message); }
+        render(); break;
+      }
+      case 'idea-restore': {
+        const i = Array.isArray(V.droppedIdeas) && V.droppedIdeas.find(y => y.id === v); if (!i) return;
+        V.droppedIdeas = V.droppedIdeas.filter(y => y.id !== v);
+        const back = { id: i.id, text: i.text, status: 'open', source_date: i.source_date, created: i.created };
+        S.ideas.push(back); queue('PUT', '/ideas/' + v, { status: 'open' }); toCache(); render(); toast('已恢复到点子库'); break;
+      }
       case 'idea-undrop': {
         const i = V._droppedIdea; hideToast();
         if (!i || i.id !== v) return;

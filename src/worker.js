@@ -116,6 +116,11 @@ async function api(req, env, ctx, url) {
   }
 
   // ── 点子 ──
+  // 放下的点子：平时不加载，点子列表底部点开时才取
+  if (p === '/ideas/dropped' && m === 'GET') {
+    const rows = await env.DB.prepare("SELECT * FROM ideas WHERE user_id = ? AND status = 'dropped' ORDER BY updated_at DESC LIMIT 200").bind(U).all();
+    return json({ ideas: rows.results.map(r => ({ ...ideaOut(r), dropped_at: (r.updated_at || '').slice(0, 10) })) });
+  }
   if (seg[0] === 'ideas' && seg[1] && m === 'PUT') {
     const id = seg[1];
     const ex = await env.DB.prepare('SELECT * FROM ideas WHERE id = ? AND user_id = ?').bind(id, U).first();
