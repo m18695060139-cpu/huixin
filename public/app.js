@@ -53,13 +53,21 @@
     <circle cx="100" cy="72" r="16" style="fill:var(--ink)"/>
     <text x="100" y="78" text-anchor="middle" font-size="15" font-weight="700" style="fill:var(--on-ink)">回</text></svg>`;
 
-  function toast(msg) {
+  // act: 可选的按钮 { label, act, v }，比如「补一句备注」
+  function toast(msg, act, ms) {
     const t = $('#toast');
     t.textContent = msg;
+    t.classList.toggle('has-act', !!act);
+    if (act) {
+      const b = document.createElement('button');
+      b.className = 'toast-act'; b.dataset.act = act.act; if (act.v) b.dataset.v = act.v; b.textContent = act.label;
+      t.appendChild(b);
+    }
     t.classList.add('show');
     clearTimeout(toast._t);
-    toast._t = setTimeout(() => t.classList.remove('show'), 2200);
+    toast._t = setTimeout(() => t.classList.remove('show', 'has-act'), ms || (act ? 5000 : 2200));
   }
+  function hideToast() { clearTimeout(toast._t); $('#toast').classList.remove('show', 'has-act'); }
 
   // ───────────── 状态 ─────────────
   let S = null;                 // 当前用户的所有数据
@@ -811,7 +819,7 @@
   function openSheet(s) { s.fresh = true; V.sheets.push(s); render(); }
   function closeSheet() { V.sheets.pop(); render(); }
   function viewSheet(s) {
-    const titles = { reply: '', letter: '', digest: '', lists: '待办与点子', settings: '设置', todo: s.id ? '编辑待办' : '加一件事', idea: s.id ? '编辑点子' : '记一个点子' };
+    const titles = { reply: '', letter: '', digest: '', lists: '待办与点子', settings: '设置', todo: s.id ? '编辑待办' : '加一件事', drop: '放下这件事', idea: s.id ? '编辑点子' : '记一个点子' };
     const anim = s.fresh ? ' enter' : '';
     s.fresh = false;   // 只在刚打开时升起，之后刷新内容不再重播动画
     return `<div class="sheet-dim" data-act="close" aria-hidden="true"></div><div class="sheet${anim}" role="dialog" aria-modal="true">
@@ -888,6 +896,18 @@
         ${s.id && x.dropped_at ? `<button class="btn ghost" type="button" data-act="todo-undrop" data-v="${x.id}">恢复成待办</button>` : ''}
         ${s.id && !x.dropped_at && !x.done ? `<button class="btn ghost" type="button" data-act="todo-drop" data-v="${x.id}">放下</button>` : ''}
         ${s.id ? `<button class="btn ghost" type="button" data-act="todo-del" data-v="${x.id}">删除</button>` : ''}</div></form>`;
+    }
+    if (s.type === 'drop') {
+      const x = S.todos.find(y => y.id === s.id);
+      if (!x) return '';
+      const reasons = ['暂时没时间', '不重要了', '条件还不具备', '换了别的做法', '交给别人了'];
+      return `<p class="drop-what">${esc(x.text)}</p>
+        <div class="field"><label for="dn-note">为什么放下？</label>
+          <textarea class="input" id="dn-note" rows="3" maxlength="500" placeholder="写一句就好，以后回头看会用得上。也可以不写。">${esc(s.note != null ? s.note : (x.note || ''))}</textarea></div>
+        <div class="chips wrap" role="group" aria-label="常用原因">${reasons.map(r => `<button class="chip" type="button" data-act="drop-reason" data-v="${esc(r)}">${esc(r)}</button>`).join('')}</div>
+        <p class="note">放下的事会和原因一起留在「完成 / 放下」里，随时可以恢复。回信和周信也会看到。</p>
+        <div style="display:flex;gap:10px;margin-top:22px"><button class="btn" type="button" data-act="drop-confirm" data-v="${x.id}">放下</button>
+        <button class="btn ghost" type="button" data-act="close">先不放下</button></div>`;
     }
     if (s.type === 'idea') {
       const x = s.id ? S.ideas.find(y => y.id === s.id) : { text: '' };
@@ -986,6 +1006,10 @@
       if (V.editing) { ed.focus(); ed.setSelectionRange(ed.value.length, ed.value.length); }
       if (rec && $('#mic')) $('#mic').classList.add('on');
     }
+    const topSheet = V.sheets[V.sheets.length - 1];
+    if (topSheet && topSheet.focusNote && $('#tf-note')) { topSheet.focusNote = false; $('#tf-note').focus(); }
+    const dn = $('#dn-note');
+    if (dn) dn.addEventListener('input', () => { topSheet.note = dn.value; });
     const tf = $('#todo-form');
     if (tf) tf.addEventListener('submit', e => {
       e.preventDefault();
@@ -1183,12 +1207,27 @@
         V.justDone = V.justDone || {};
         if (x.done) { V.justDone[x.id] = Date.now() + 5000; setTimeout(() => { if (V.tab === 'today' && !V.sheets.length) render(); }, 5100); }
         else delete V.justDone[x.id];
-        queue('PUT', '/todos/' + v, { done: x.done, done_at: x.done_at }); toCache(); render(); break;
+        queue('PUT', '/todos/' + v, { done: x.done, done_at: x.done_at }); toCache(); render();
+        if (x.done) toast('✓ 已完成', { label: x.note ? '改备注' : '补一句备注', act: 'todo-note', v: x.id }); else hideToast();
+        break;
       }
-      case 'todo-drop': case 'todo-undrop': {
+      case 'todo-note': hideToast(); openSheet({ type: 'todo', id: v, focusNote: true }); break;
+      case 'todo-drop': {
+        // 放下前先问一句原因：把编辑页里已经写的备注带过去
+        const note = $('#tf-note') ? $('#tf-note').value.trim() : null;
+        V.sheets.pop(); openSheet({ type: 'drop', id: v, note }); break;
+      }
+      case 'drop-reason': {
+        const ta = $('#dn-note'); if (!ta) return;
+        const cur = ta.value.trim();
+        ta.value = cur ? (cur.includes(v) ? cur : cur + '，' + v) : v;
+        V.sheets[V.sheets.length - 1].note = ta.value; ta.focus(); break;
+      }
+      case 'drop-confirm': case 'todo-undrop': {
         const x = S.todos.find(y => y.id === v); if (!x) return;
-        const note = $('#tf-note') ? $('#tf-note').value.trim() : (x.note || '');
-        const drop = act === 'todo-drop';
+        const ta = $('#dn-note') || $('#tf-note');
+        const note = ta ? ta.value.trim() : (x.note || '');
+        const drop = act === 'drop-confirm';
         Object.assign(x, { note, dropped_at: drop ? t : null, done: false, done_at: null });
         queue('PUT', '/todos/' + v, { note, dropped: drop, dropped_at: x.dropped_at });
         toCache(); closeSheet(); toast(drop ? '已放下' : '已恢复成待办'); break;
