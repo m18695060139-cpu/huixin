@@ -1,14 +1,14 @@
 {
   "name": "回信",
   "short_name": "回信",
-  "description": "每晚写一封信，AI 替未来的你回信。",
+  "description": "每晚写一封信给明早的自己，回信替你整理好一切。",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#FFFFFF",
-  "theme_color": "#FFFFFF",
+  "background_color": "#F2F2F7",
+  "theme_color": "#F2F2F7",
   "lang": "zh-CN",
   "icons": [
-    { "src": "/icon-192-v2.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icon-512-v2.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
   ]
 }

@@ -4,3 +4,9 @@ node_modules/
 .env.deploy
 .cf-token
 .ai-key
+
+.invite-codes
+.demo-account
+.demo-user.sql
+
+backup/

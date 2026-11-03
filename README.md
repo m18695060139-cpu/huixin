@@ -30,6 +30,17 @@ AI 的 Key：`npx wrangler secret put AI_API_KEY`。
 
 新建账号：`node scripts/create-user.mjs <账号> <密码> [名字]` 生成 SQL，再 `npx wrangler d1 execute huixin --remote --command "<SQL>"`。
 
+## 示例账号
+
+给别人演示前，把示例账号的数据按今天的日期重铺一遍（只动这个账号的信、待办、点子、习惯、周信季信，账号密码不变）：
+
+```bash
+node scripts/demo-reset.mjs <示例账号> [回信怎么称呼] > demo.sql
+npx wrangler d1 execute huixin --remote --file demo.sql
+```
+
+重铺后，「昨晚的你来信了」的信封在任何设备上都会重新出现。
+
 ## 本地开发
 
 ```bash
