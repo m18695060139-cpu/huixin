@@ -350,6 +350,7 @@
       ${offlineLine()}
       ${heroBlock(t)}
       ${pendingBlock(t)}
+      ${ideasBlock(t)}
       ${memoryBlock(t)}
     </main>`;
   }
@@ -475,24 +476,39 @@
   function pendingBlock(t) {
     const h = new Date().getHours();
     const todos = openTodos(t);
-    const ideas = openIdeas();
     const showT = todos.slice(0, 4);
-    const st = staleIdeas(t);
-    const showI = st.length ? [st[hash(t) % st.length]] : [];
     // 今天完成的：刚勾掉的那几条留几秒（点错了能撤回），其余合成一行
     const recentDone = S.todos.filter(x => x.done && x.done_at === t && !x.dropped_at && visibleFrom(x));
     const justDone = recentDone.filter(x => V.justDone && V.justDone[x.id] > Date.now());
     const doneLine = recentDone.length > justDone.length
       ? `<button class="row done-line" data-act="lists" data-v="done"><span class="ck on" aria-hidden="true"><i>${ICON.checkSm}</i></span><span class="row-main"><span>今天完成了 ${recentDone.length} 件</span></span><span class="lk muted">查看 ›</span></button>` : '';
-    const body = (showT.length || showI.length || recentDone.length)
-      ? showT.map(x => todoRow(x, t)).join('') + justDone.map(x => todoRow(x, t)).join('') + doneLine + showI.map(i => ideaRow(i)).join('')
+    const body = (showT.length || recentDone.length)
+      ? showT.map(x => todoRow(x, t)).join('') + justDone.map(x => todoRow(x, t)).join('') + doneLine
       : `<div class="empty">没有待处理的事。写信时提到要做的事、冒出的点子，回信会自动放到这里。</div>`;
-    const more = todos.length - showT.length + ideas.length - showI.length;
+    const more = todos.length - showT.length;
     const env = V._env && S.letters[V._env] ? (S.letters[V._env].reply.todos || []).length : 0;
-    return `<div class="gh"><h2>${h >= 4 && h < 12 ? '今天要做的' : '待处理'}</h2>${env ? `<span>拆信后再加 ${env} 件</span>` : `<span class="gh-links"><button class="lk muted" data-act="lists" data-v="todos">待办 ${todos.length} ›</button><button class="lk muted" data-act="lists" data-v="ideas">点子 ${ideas.length} ›</button></span>`}</div>
+    return `<div class="gh"><h2>${h >= 4 && h < 12 ? '今天要做的' : '待处理'}</h2>${env ? `<span>拆信后再加 ${env} 件</span>` : `<span class="gh-links"><button class="lk muted" data-act="lists" data-v="todos">待办 ${todos.length} ›</button></span>`}</div>
       <div class="card">${body}
         <div class="row foot"><button class="lk" data-act="todo-new">＋ 加一件事</button>
         <button class="lk muted" data-act="lists" data-v="todos">${more > 0 ? `还有 ${more} 项 ›` : '全部 ›'}</button></div></div>`;
+  }
+
+  // 首页的点子：最新的在前，待办少时多放几条；放了 7 天以上没动的留一个位置提醒
+  function ideasBlock(t) {
+    const all = openIdeas();
+    if (!all.length) return '';
+    const limit = openTodos(t).length <= 1 ? 5 : 3;
+    const byNew = all.slice().sort((a, b) => (a.created < b.created ? 1 : a.created > b.created ? -1 : 0));
+    const fresh = byNew.filter(i => diffDays(t, i.created) < 7);
+    const stale = staleIdeas(t);
+    let show = fresh.slice(0, stale.length ? limit - 1 : limit);
+    if (stale.length) show.push(stale[hash(t) % stale.length]);
+    if (show.length < limit) show = show.concat(byNew.filter(i => !show.includes(i)).slice(0, limit - show.length));
+    const more = all.length - show.length;
+    return `<div class="gh"><h2>点子</h2><span>${fresh.length ? `最近 7 天 ${fresh.length} 个` : '最近没有新点子'}</span></div>
+      <div class="card">${show.map(i => ideaRow(i)).join('')}
+        <div class="row foot"><button class="lk" data-act="idea-new">＋ 记一个点子</button>
+        <button class="lk muted" data-act="lists" data-v="ideas">${more > 0 ? `全部 ${all.length} 个 ›` : '全部 ›'}</button></div></div>`;
   }
 
   // ───────────── 写信 ─────────────
