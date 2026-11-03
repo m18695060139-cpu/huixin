@@ -223,9 +223,8 @@
 
   // ───────────── 启动 ─────────────
   function pickStartTab() {
-    const h = new Date().getHours();
     V.writeDate = letterDay();
-    V.tab = (h >= 19 || h < 4) && !hasText(letterDay()) && !unopenedLetter(today()) ? 'write' : 'today';
+    V.tab = 'today';   // 打开总是先到首页；晚上首页最上面就是「写今晚的信」
   }
 
   let lastRefresh = 0;
