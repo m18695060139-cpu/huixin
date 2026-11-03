@@ -371,8 +371,8 @@ textarea.input { line-height: 1.6; resize: vertical; }
 .card.grp { margin-top: 12px; padding: 0; overflow: hidden; }
 .grp-h { width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 14px 16px; border: none; background: none; color: var(--text); font-size: 15px; font-weight: 600; text-align: left; }
 .grp-n { font-size: 13px; font-weight: 400; color: var(--sub); display: flex; align-items: center; gap: 6px; }
-.chev { font-style: normal; display: inline-block; transform: rotate(90deg); transition: transform .15s; }
-.chev.up { transform: rotate(-90deg); }
+.grp-chev { font-style: normal; display: inline-block; transform: rotate(90deg); transition: transform .15s; }
+.grp-chev.up { transform: rotate(-90deg); }
 .row.hist { min-height: 48px; border-top: .5px solid var(--sep); }
 .row.hist .row-main { padding: 8px 0; }
 .row.hist .row-main > span:first-child { color: var(--sub); }

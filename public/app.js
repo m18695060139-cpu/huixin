@@ -529,7 +529,7 @@
     const html = groups.map((g, gi) => {
       const open = g.k in opened ? opened[g.k] : (few || ['today', 'yday', 'week'].includes(g.k) || (gi === 0 && !groups.some(y => ['today', 'yday', 'week'].includes(y.k))));
       const head = `<button class="grp-h" data-act="done-group" data-v="${g.k}" aria-expanded="${open}">
-        <span>${g.label}</span><span class="grp-n">${mode === 'done' ? '完成' : '放下'} ${g.items.length} 件<i class="chev ${open ? 'up' : ''}">›</i></span></button>`;
+        <span>${g.label}</span><span class="grp-n">${mode === 'done' ? '完成' : '放下'} ${g.items.length} 件<i class="grp-chev ${open ? 'up' : ''}">›</i></span></button>`;
       const rows = open ? g.items.map(({ x, d }) => historyRow(x, d, g.k)).join('') : '';
       return `<div class="card grp">${head}${rows}</div>`;
     }).join('');
