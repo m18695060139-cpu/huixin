@@ -84,20 +84,24 @@ async function api(req, env, ctx, url) {
     const id = seg[1];
     if (m === 'PUT') {
       const now = nowIso();
-      const t = pick(body, ['text', 'due', 'done', 'archived']);
+      const t = pick(body, ['text', 'due', 'done', 'archived', 'note', 'dropped']);
+      const note = 'note' in t ? String(t.note || '').trim().slice(0, 500) : null;
       const ex = await env.DB.prepare('SELECT * FROM todos WHERE id = ? AND user_id = ?').bind(id, U).first();
       if (!ex) {
         if (!t.text) return err('待办内容不能为空');
-        await env.DB.prepare(`INSERT INTO todos (id, user_id, text, due, done, done_at, archived, source_date, created, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`)
+        await env.DB.prepare(`INSERT INTO todos (id, user_id, text, due, done, done_at, archived, source_date, created, updated_at, note, dropped_at)
+          VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?, ?)`)
           .bind(id, U, String(t.text).slice(0, 200), t.due || null, t.done ? 1 : 0, t.done ? cstDate() : null,
-            body.source_date || null, body.created || cstDate(), now).run();
+            body.source_date || null, body.created || cstDate(), now, note || '', t.dropped ? (body.dropped_at || cstDate()) : null).run();
       } else {
         const done = 'done' in t ? (t.done ? 1 : 0) : ex.done;
         const doneAt = done ? (ex.done ? ex.done_at : (body.done_at || cstDate())) : null;
-        await env.DB.prepare('UPDATE todos SET text = ?, due = ?, done = ?, done_at = ?, archived = ?, updated_at = ? WHERE id = ? AND user_id = ?')
+        // 放下：dropped=true 记下日期，dropped=false 恢复成待办；完成和放下互斥
+        const droppedAt = 'dropped' in t ? (t.dropped ? (ex.dropped_at || body.dropped_at || cstDate()) : null) : ex.dropped_at;
+        await env.DB.prepare('UPDATE todos SET text = ?, due = ?, done = ?, done_at = ?, archived = ?, note = ?, dropped_at = ?, updated_at = ? WHERE id = ? AND user_id = ?')
           .bind('text' in t ? String(t.text).slice(0, 200) : ex.text, 'due' in t ? (t.due || null) : ex.due,
-            done, doneAt, 'archived' in t ? (t.archived ? 1 : 0) : ex.archived, now, id, U).run();
+            droppedAt ? 0 : done, droppedAt ? null : doneAt, 'archived' in t ? (t.archived ? 1 : 0) : ex.archived,
+            note != null ? note : (ex.note || ''), droppedAt, now, id, U).run();
       }
       return json({ ok: true, todo: todoOut(await env.DB.prepare('SELECT * FROM todos WHERE id = ?').bind(id).first()) });
     }
@@ -229,7 +233,8 @@ async function bootstrap(env, user) {
   const [settings, letters, todos, ideas, habits, logs, digests, fb, count] = await Promise.all([
     getSettings(env, U),
     env.DB.prepare('SELECT * FROM letters WHERE user_id = ? AND date >= ? ORDER BY date DESC').bind(U, since).all(),
-    env.DB.prepare('SELECT * FROM todos WHERE user_id = ? AND archived = 0 AND (done = 0 OR done_at >= ?)').bind(U, addDays(today, -30)).all(),
+    env.DB.prepare(`SELECT * FROM todos WHERE user_id = ? AND archived = 0
+      AND ((done = 0 AND dropped_at IS NULL) OR done_at >= ? OR dropped_at >= ?)`).bind(U, addDays(today, -30), addDays(today, -30)).all(),
     env.DB.prepare("SELECT * FROM ideas WHERE user_id = ? AND status != 'dropped' ORDER BY created DESC").bind(U).all(),
     env.DB.prepare('SELECT * FROM habits WHERE user_id = ? AND archived = 0 ORDER BY sort, created').bind(U).all(),
     env.DB.prepare('SELECT habit_id, date FROM habit_logs WHERE user_id = ? AND date >= ?').bind(U, addDays(today, -70)).all(),
@@ -254,7 +259,13 @@ function letterOut(r) {
   return { date: r.date, text: r.text, reply: parseJSON(r.reply), energy: r.energy, mood: r.mood, replied_at: r.replied_at, updated_at: r.updated_at };
 }
 function todoOut(r) {
-  return { id: r.id, text: r.text, due: r.due, done: !!r.done, done_at: r.done_at, archived: !!r.archived, source_date: r.source_date, created: r.created };
+  return { id: r.id, text: r.text, due: r.due, done: !!r.done, done_at: r.done_at, archived: !!r.archived, source_date: r.source_date, created: r.created,
+    note: r.note || '', dropped_at: r.dropped_at || null };
+}
+// 回信用：一条带备注的待办写成一行
+function todoNoteLine(t) {
+  const st = t.dropped_at ? '放下了' : t.done ? '已完成' : '还在做';
+  return `${t.text}【${st}】${t.note ? '：' + String(t.note).slice(0, 120) : ''}`;
 }
 function ideaOut(r) {
   return { id: r.id, text: r.text, status: r.status, source_date: r.source_date, created: r.created };
@@ -316,11 +327,15 @@ async function replyTo(env, user, date, clientToday) {
   const letter = await env.DB.prepare('SELECT * FROM letters WHERE user_id = ? AND date = ?').bind(U, date).first();
   if (!letter || !letter.text.trim()) throw new Error('信还是空的');
   const today = isDate(clientToday) ? clientToday : cstDate();
-  const [settings, openTodos, ideas, yday] = await Promise.all([
+  const [settings, openTodos, ideas, yday, noted] = await Promise.all([
     getSettings(env, U),
-    env.DB.prepare('SELECT id, text, due, source_date, created FROM todos WHERE user_id = ? AND done = 0 AND archived = 0').bind(U).all(),
+    env.DB.prepare('SELECT id, text, due, source_date, created FROM todos WHERE user_id = ? AND done = 0 AND archived = 0 AND dropped_at IS NULL').bind(U).all(),
     env.DB.prepare("SELECT id, text, source_date, created FROM ideas WHERE user_id = ? AND status = 'open' ORDER BY created DESC LIMIT 40").bind(U).all(),
     env.DB.prepare('SELECT reply FROM letters WHERE user_id = ? AND date = ?').bind(U, addDays(date, -1)).first(),
+    // 最近一周写过备注、或放下的待办：让回信知道他自己是怎么说的
+    env.DB.prepare(`SELECT text, done, dropped_at, note FROM todos WHERE user_id = ? AND archived = 0
+      AND (dropped_at >= ? OR (note != '' AND updated_at >= ?)) ORDER BY updated_at DESC LIMIT 15`)
+      .bind(U, addDays(date, -7), addDays(date, -7)).all(),
   ]);
 
   const aiEnv = await withUserAI(env, U);
@@ -328,13 +343,15 @@ async function replyTo(env, user, date, clientToday) {
     name: user.name, date, today, backfill: date !== today, text: letter.text,
     questions: settings.questions,
     openTodos: openTodos.results.map(t => t.text),
+    notes: noted.results.map(todoNoteLine),
     ideas: ideas.results.map(t => t.text),
     yesterday: yday && parseJSON(yday.reply, {}) ? (parseJSON(yday.reply, {}).summary || '') : '',
   });
 
   // 拆出来的待办 / 点子入库（按文字去重）
   const now = nowIso();
-  const haveT = new Set(openTodos.results.map(t => norm(t.text)));
+  // 最近放下的事也算「已经有了」，免得回信又把它加回待办
+  const haveT = new Set([...openTodos.results, ...noted.results.filter(t => t.dropped_at)].map(t => norm(t.text)));
   const haveI = new Set(ideas.results.map(t => norm(t.text)));
   const stmts = [];
   // 同一封信重新要回信时（比如上一次网络断了但其实写成了），之前从这封信拆出的事仍算在这封回信里
@@ -397,8 +414,13 @@ async function makeDigest(env, user, kind, key) {
     const body = kind === 'week' ? l.text : (rp.summary || l.text);
     lines.push(`${l.date}${l.energy ? ` · 精力 ${l.energy}/5` : ''}${l.mood ? ` · ${l.mood}` : ''}\n${String(body).slice(0, per)}`);
   }
-  const done = (await env.DB.prepare('SELECT text FROM todos WHERE user_id = ? AND done = 1 AND done_at BETWEEN ? AND ?').bind(U, start, end).all()).results;
-  lines.push(`【完成的待办】${done.length ? '\n' + done.map(t => '- ' + t.text).join('\n') : '（无）'}`);
+  const done = (await env.DB.prepare('SELECT text, note FROM todos WHERE user_id = ? AND done = 1 AND done_at BETWEEN ? AND ?').bind(U, start, end).all()).results;
+  lines.push(`【完成的待办】${done.length ? '\n' + done.map(t => '- ' + t.text + (t.note ? `（他的备注：${t.note.slice(0, 120)}）` : '')).join('\n') : '（无）'}`);
+  const dropped = (await env.DB.prepare('SELECT text, note FROM todos WHERE user_id = ? AND dropped_at BETWEEN ? AND ?').bind(U, start, end).all()).results;
+  if (dropped.length) lines.push('【放下的待办（决定不做或做不了）】\n' + dropped.map(t => '- ' + t.text + (t.note ? `（原因 / 备注：${t.note.slice(0, 120)}）` : '')).join('\n'));
+  const pending = (await env.DB.prepare(`SELECT text, note FROM todos WHERE user_id = ? AND done = 0 AND dropped_at IS NULL AND note != ''
+    AND substr(updated_at, 1, 10) BETWEEN ? AND ?`).bind(U, start, end).all()).results;
+  if (pending.length) lines.push('【还在做的待办和他写的备注】\n' + pending.map(t => `- ${t.text}：${t.note.slice(0, 120)}`).join('\n'));
   const habits = (await env.DB.prepare(`SELECT h.name, COUNT(l.date) AS n FROM habits h LEFT JOIN habit_logs l ON l.habit_id = h.id AND l.date BETWEEN ? AND ?
     WHERE h.user_id = ? AND h.archived = 0 GROUP BY h.id`).bind(start, end, U).all()).results;
   const days = Math.round((new Date(end) - new Date(start)) / 86400e3) + 1;

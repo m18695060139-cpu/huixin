@@ -424,7 +424,7 @@
     return { cls: '', label: n < 7 ? '周' + wd(td.due) : cn(td.due), rank: 3 };
   }
   function openTodos(t) {
-    return S.todos.filter(x => !x.done && !x.archived && visibleFrom(x)).sort((a, b) => {
+    return S.todos.filter(x => !x.done && !x.archived && !x.dropped_at && visibleFrom(x)).sort((a, b) => {
       const da = dueInfo(a, t), db = dueInfo(b, t);
       const ra = da ? da.rank : 4, rb = db ? db.rank : 4;
       if (ra !== rb) return ra - rb;
@@ -443,10 +443,15 @@
   function todoRow(x, t) {
     const d = dueInfo(x, t);
     const s = srcLine(x, t);
-    const tail = x.done ? `<span class="pill green">${x.done_at ? cn(x.done_at) + ' 完成' : '完成'}</span>` : d ? `<span class="pill ${d.cls}">${d.label}</span>` : '';
+    const tail = x.dropped_at ? `<span class="pill">${cn(x.dropped_at)} 放下</span>`
+      : x.done ? `<span class="pill green">${x.done_at ? cn(x.done_at) + ' 完成' : '完成'}</span>` : d ? `<span class="pill ${d.cls}">${d.label}</span>` : '';
+    const note = x.note ? `<span class="sub todo-note">${esc(x.note)}</span>` : '';
+    const ck = x.dropped_at
+      ? `<span class="ck dropped" aria-hidden="true"><i>${ICON.x}</i></span>`
+      : `<button class="ck ${x.done ? 'on' : ''}" data-act="todo-toggle" data-v="${x.id}" aria-pressed="${x.done}" aria-label="${x.done ? '标为未完成' : '完成'}：${esc(x.text)}"><i>${ICON.checkSm}</i></button>`;
     return `<div class="row">
-      <button class="ck ${x.done ? 'on' : ''}" data-act="todo-toggle" data-v="${x.id}" aria-pressed="${x.done}" aria-label="${x.done ? '标为未完成' : '完成'}：${esc(x.text)}"><i>${ICON.checkSm}</i></button>
-      <button class="row-main ${x.done ? 'done' : ''}" data-act="todo-edit" data-v="${x.id}"><span>${esc(x.text)}</span><span class="sub ${x.done ? '' : s.cls}">${s.text}</span></button>
+      ${ck}
+      <button class="row-main ${x.done || x.dropped_at ? 'done' : ''}" data-act="todo-edit" data-v="${x.id}"><span>${esc(x.text)}</span>${note}<span class="sub ${x.done || x.dropped_at ? '' : s.cls}">${s.text}</span></button>
       ${tail}</div>`;
   }
   function ideaRow(i, opts = {}) {
@@ -467,9 +472,13 @@
     const showT = todos.slice(0, 4);
     const st = staleIdeas(t);
     const showI = st.length ? [st[hash(t) % st.length]] : [];
-    const recentDone = S.todos.filter(x => x.done && x.done_at === t && visibleFrom(x));
+    // 今天完成的：刚勾掉的那几条留几秒（点错了能撤回），其余合成一行
+    const recentDone = S.todos.filter(x => x.done && x.done_at === t && !x.dropped_at && visibleFrom(x));
+    const justDone = recentDone.filter(x => V.justDone && V.justDone[x.id] > Date.now());
+    const doneLine = recentDone.length > justDone.length
+      ? `<button class="row done-line" data-act="lists" data-v="done"><span class="ck on" aria-hidden="true"><i>${ICON.checkSm}</i></span><span class="row-main"><span>今天完成了 ${recentDone.length} 件</span></span><span class="lk muted">查看 ›</span></button>` : '';
     const body = (showT.length || showI.length || recentDone.length)
-      ? showT.map(x => todoRow(x, t)).join('') + recentDone.map(x => todoRow(x, t)).join('') + showI.map(i => ideaRow(i)).join('')
+      ? showT.map(x => todoRow(x, t)).join('') + justDone.map(x => todoRow(x, t)).join('') + doneLine + showI.map(i => ideaRow(i)).join('')
       : `<div class="empty">没有待处理的事。写信时提到要做的事、冒出的点子，回信会自动放到这里。</div>`;
     const more = todos.length - showT.length + ideas.length - showI.length;
     const env = V._env && S.letters[V._env] ? (S.letters[V._env].reply.todos || []).length : 0;
@@ -612,7 +621,7 @@
       const rows = tds.map((x, i) => {
         const live = S.todos.find(y => y.id === x.id) || x;
         const due = live.due;
-        const badge = live.done ? '已完成' : due && due <= t ? '已放进今天' : '已加入待办';
+        const badge = live.dropped_at ? '已放下' : live.done ? '已完成' : due && due <= t ? '已放进今天' : '已加入待办';
         return `<div class="row"><span class="ic">${ICON.check}</span>
           <span class="row-main"><span>${esc(x.text)}</span><span class="sub">待办${due ? ' · ' + (due === t ? '今天' : cn(due)) : ''}</span></span>
           <span class="pill green pop" style="animation-delay:${0.6 + i * 0.2}s">${badge}</span></div>`;
@@ -850,7 +859,7 @@
     }
     if (s.type === 'lists') {
       const tab = s.tab || 'todos';
-      const seg = `<div class="seg three" role="tablist">${[['todos', '待办'], ['ideas', '点子'], ['done', '已完成']].map(([k, n]) => `<button role="tab" aria-selected="${tab === k}" data-act="lists-tab" data-v="${k}">${n}</button>`).join('')}</div>`;
+      const seg = `<div class="seg three" role="tablist">${[['todos', '待办'], ['ideas', '点子'], ['done', '完成 / 放下']].map(([k, n]) => `<button role="tab" aria-selected="${tab === k}" data-act="lists-tab" data-v="${k}">${n}</button>`).join('')}</div>`;
       let rows;
       if (tab === 'todos') {
         const l = openTodos(t);
@@ -859,8 +868,10 @@
         const l = openIdeas();
         rows = (l.length ? l.map(i => ideaRow(i, { drop: true })).join('') : '<div class="empty">点子库是空的。写信时冒出的想法，回信会收到这里。</div>') + `<div class="row foot"><button class="lk" data-act="idea-new">＋ 记一个点子</button></div>`;
       } else {
-        const l = S.todos.filter(x => x.done).sort((a, b) => ((a.done_at || '') < (b.done_at || '') ? 1 : -1));
+        const l = S.todos.filter(x => x.done && !x.dropped_at).sort((a, b) => ((a.done_at || '') < (b.done_at || '') ? 1 : -1));
         rows = l.length ? l.map(x => todoRow(x, t)).join('') : '<div class="empty">最近 30 天还没有完成的待办。</div>';
+        const dr = S.todos.filter(x => x.dropped_at).sort((a, b) => (a.dropped_at < b.dropped_at ? 1 : -1));
+        if (dr.length) return seg + `<div class="card mt">${rows}</div><div class="gh"><h2>放下的</h2><span>决定不做或做不了的，点开可以恢复</span></div><div class="card">${dr.map(x => todoRow(x, t)).join('')}</div>`;
       }
       return seg + `<div class="card mt">${rows}</div>`;
     }
@@ -870,8 +881,12 @@
       return `<form id="todo-form">
         <div class="field"><label for="tf-text">要做的事</label><textarea class="input" id="tf-text" rows="2" required>${esc(x.text)}</textarea></div>
         <div class="field"><label for="tf-due">截止日期</label><input class="input" id="tf-due" type="date" value="${esc(x.due || '')}"></div>
+        <div class="field"><label for="tf-note">备注</label><textarea class="input" id="tf-note" rows="3" maxlength="500" placeholder="进展、新想法，做完的感受，或者为什么做不了，都可以写。回信和周信会看到。">${esc(x.note || '')}</textarea></div>
+        ${x.dropped_at ? `<p class="note">${cn(x.dropped_at)} 放下了这件事</p>` : ''}
         ${x.source_date ? `<p class="note">来自 ${cn(x.source_date)} 的信</p>` : ''}
-        <div style="display:flex;gap:10px;margin-top:26px"><button class="btn" type="submit">保存</button>
+        <div style="display:flex;gap:10px;margin-top:26px;flex-wrap:wrap"><button class="btn" type="submit">保存</button>
+        ${s.id && x.dropped_at ? `<button class="btn ghost" type="button" data-act="todo-undrop" data-v="${x.id}">恢复成待办</button>` : ''}
+        ${s.id && !x.dropped_at && !x.done ? `<button class="btn ghost" type="button" data-act="todo-drop" data-v="${x.id}">放下</button>` : ''}
         ${s.id ? `<button class="btn ghost" type="button" data-act="todo-del" data-v="${x.id}">删除</button>` : ''}</div></form>`;
     }
     if (s.type === 'idea') {
@@ -976,12 +991,13 @@
       e.preventDefault();
       const s = V.sheets[V.sheets.length - 1];
       const text = $('#tf-text').value.trim(); const due = $('#tf-due').value || null;
+      const note = $('#tf-note').value.trim();
       if (!text) return;
       if (s.id) {
-        const x = S.todos.find(y => y.id === s.id); Object.assign(x, { text, due });
-        queue('PUT', '/todos/' + x.id, { text, due });
+        const x = S.todos.find(y => y.id === s.id); Object.assign(x, { text, due, note });
+        queue('PUT', '/todos/' + x.id, { text, due, note });
       } else {
-        const x = { id: uid('t'), text, due, done: false, created: today() };
+        const x = { id: uid('t'), text, due, note, done: false, created: today() };
         S.todos.push(x);
         queue('PUT', '/todos/' + x.id, x);
       }
@@ -1164,7 +1180,18 @@
       case 'todo-toggle': {
         const x = S.todos.find(y => y.id === v); if (!x) return;
         x.done = !x.done; x.done_at = x.done ? t : null;
+        V.justDone = V.justDone || {};
+        if (x.done) { V.justDone[x.id] = Date.now() + 5000; setTimeout(() => { if (V.tab === 'today' && !V.sheets.length) render(); }, 5100); }
+        else delete V.justDone[x.id];
         queue('PUT', '/todos/' + v, { done: x.done, done_at: x.done_at }); toCache(); render(); break;
+      }
+      case 'todo-drop': case 'todo-undrop': {
+        const x = S.todos.find(y => y.id === v); if (!x) return;
+        const note = $('#tf-note') ? $('#tf-note').value.trim() : (x.note || '');
+        const drop = act === 'todo-drop';
+        Object.assign(x, { note, dropped_at: drop ? t : null, done: false, done_at: null });
+        queue('PUT', '/todos/' + v, { note, dropped: drop, dropped_at: x.dropped_at });
+        toCache(); closeSheet(); toast(drop ? '已放下' : '已恢复成待办'); break;
       }
       case 'todo-edit': openSheet({ type: 'todo', id: v }); break;
       case 'todo-new': openSheet({ type: 'todo' }); break;
