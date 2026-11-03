@@ -84,6 +84,8 @@ h2 { margin: 0; font-size: 20px; font-weight: 700; }
 .card.pad { padding: 16px; }
 .gh { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 22px 4px 8px; }
 .gh span { font-size: 13px; color: var(--sub); }
+.gh-links { display: flex; gap: 2px; }
+.gh-links .lk { font-size: 13px; padding: 6px 6px; margin: -6px 0; }
 .mt { margin-top: 14px; }
 .row { display: flex; align-items: center; gap: 12px; padding: 0 16px; min-height: 56px; width: 100%; border: none; background: none; text-align: left; color: var(--text); text-decoration: none; }
 .row + .row, .row + details, details + .row { border-top: .5px solid var(--sep); }

@@ -482,7 +482,7 @@
       : `<div class="empty">没有待处理的事。写信时提到要做的事、冒出的点子，回信会自动放到这里。</div>`;
     const more = todos.length - showT.length + ideas.length - showI.length;
     const env = V._env && S.letters[V._env] ? (S.letters[V._env].reply.todos || []).length : 0;
-    return `<div class="gh"><h2>${h >= 4 && h < 12 ? '今天要做的' : '待处理'}</h2><span>${env ? `拆信后再加 ${env} 件` : `待办 ${todos.length} · 点子 ${ideas.length}`}</span></div>
+    return `<div class="gh"><h2>${h >= 4 && h < 12 ? '今天要做的' : '待处理'}</h2>${env ? `<span>拆信后再加 ${env} 件</span>` : `<span class="gh-links"><button class="lk muted" data-act="lists" data-v="todos">待办 ${todos.length} ›</button><button class="lk muted" data-act="lists" data-v="ideas">点子 ${ideas.length} ›</button></span>`}</div>
       <div class="card">${body}
         <div class="row foot"><button class="lk" data-act="todo-new">＋ 加一件事</button>
         <button class="lk muted" data-act="lists" data-v="todos">${more > 0 ? `还有 ${more} 项 ›` : '全部 ›'}</button></div></div>`;
