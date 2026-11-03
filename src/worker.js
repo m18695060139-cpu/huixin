@@ -8,6 +8,9 @@ import {
   json, err, cstDate, addDays, weekKey, quarterKey, periodRange, uid, nowIso, norm, parseJSON, isDate,
 } from './util.js';
 
+// 示例账号：别人登录演示时不能改 AI 设置（Key 是站点的）
+const DEMO_USERS = ['huixin-demo'];
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -193,7 +196,7 @@ async function api(req, env, ctx, url) {
 
   // ── 自己的 AI（OpenAI 兼容接口） ──
   if (p === '/ai-config' && m === 'GET') return json(await aiConfigOut(env, U));
-  if (p.startsWith('/ai-config') && m !== 'GET' && user.username === 'demo') return err('示例账号不能修改 AI 设置');
+  if (p.startsWith('/ai-config') && m !== 'GET' && DEMO_USERS.includes(user.username)) return err('示例账号不能修改 AI 设置');
   if (p === '/ai-config' && m === 'PUT') {
     const cfg = await aiConfigIn(env, U, body);
     if (cfg.error) return err(cfg.error);

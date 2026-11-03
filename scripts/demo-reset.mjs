@@ -1,4 +1,4 @@
-// 重置示例账号：按「今天」的日期重新铺一套演示数据（信、回信、待办、点子、习惯、周信、季信）
+// 重置示例账号：按「今天」的日期重新铺一套演示数据（信、回信、待办和备注、放下的事、点子、习惯、周信、季信）
 // 只动这个账号的数据，账号和密码不变。演示前跑一次，「昨晚的你来信了」就会在任何设备上重新出现。
 //
 // 用法：
@@ -78,19 +78,34 @@ for (const t of ['letters', 'todos', 'ideas', 'habits', 'habit_logs', 'digests',
 const todos = [], ideas = [];
 const attach = {};   // 天数 → { todos: [], ideas: [] }
 const addTodo = (text, due, src, opt = {}) => { const id = uid('t'); todos.push({ id, text, due, src, ...opt }); if (src != null) (attach[src] = attach[src] || { todos: [], ideas: [] }).todos.push({ id, text }); };
-const addIdea = (text, src, opt = {}) => { const id = uid('i'); ideas.push({ id, text, src, ...opt }); (attach[src] = attach[src] || { todos: [], ideas: [] }).ideas.push({ id, text }); };
+const addIdea = (text, src, opt = {}) => { const id = uid('i'); ideas.push({ id, text, src, ...opt }); if (!opt.status) (attach[src] = attach[src] || { todos: [], ideas: [] }).ideas.push({ id, text }); };
+// 还没做的
 addTodo('给妈妈打电话问复查', day(0), 1);
-addTodo('找组长聊周会改站会', day(0), 1);
+addTodo('找组长聊周会改站会', day(0), 1, { note: '先把这两周的会议时长列出来，聊的时候有数据' });
 addTodo('预约牙医', day(-3), 6);
-addTodo('把会议纪要发给组里', day(-4), 5, { done: day(-4) });
-addTodo('给小林回读书会播客的大纲', day(3), 9);
+addTodo('给小林回读书会播客的大纲', day(3), 9, { note: '想好了三个选题，还差开场' });
 addTodo('交周报', day(1), null);
 addTodo('续办健身卡', day(9), null);
-addTodo('订读书会的场地', day(-8), 31, { done: day(-9) });
+// 做完的：分散在最近几周，「完成 / 放下」里能看到按周分组；有几条写了完成时的备注
+addTodo('把会议纪要发给组里', day(-4), 5, { done: day(-4), note: '这次只用了十分钟，模板好用' });
+addTodo('订读书会的场地', day(-8), 31, { done: day(-9), note: '定了图书馆二楼的小会议室，免费' });
+addTodo('整理这个月的开销', day(-12), null, { done: day(-12) });
+addTodo('把拖了一周的数据报表做完', day(-16), null, { done: day(-16), note: '下午效率出奇地高' });
+addTodo('给老同学发消息约饭', day(-15), 14, { done: day(-14) });
+addTodo('换掉跑步鞋', day(-20), null, { done: day(-21) });
+addTodo('交季度复盘', day(-24), null, { done: day(-25) });
+addTodo('给小林发读书会播客的消息', day(-9), null, { done: day(-9), note: '把「算了」改成了「试试」，她说好' });
+// 放下的：带着原因
+addTodo('报名下个月的半马', day(-6), null, { dropped: day(-5), note: '膝盖还没完全好，明年春天再说' });
+addTodo('每天学半小时日语', day(-18), null, { dropped: day(-17), note: '同时开的事太多了，先把读书会做好' });
+// 点子：最近冒出来的在前，也有放了很久没动的
+addIdea('周会改成三十分钟站会', 5);
 addIdea('和小林一起做读书会播客', 9);
 addIdea('每个月约一位老朋友吃饭', 14);
+addIdea('把读过的书做成一张年度书单海报', 3);
+addIdea('周末骑车去江边看银杏', 6);
 addIdea('读书会办一次线下活动', 31);
-addIdea('周会改成三十分钟站会', 5);
+addIdea('给妈妈买一个护膝', 1, { status: 'dropped' });
 
 let ci = 0, written = 0;
 for (let n = SPAN; n >= 1; n--) {
@@ -107,10 +122,11 @@ for (let n = SPAN; n >= 1; n--) {
 }
 for (const t of todos) {
   const src = t.src == null ? null : day(-t.src);
-  out.push(`INSERT INTO todos (id, user_id, text, due, done, done_at, archived, source_date, created, updated_at) SELECT ${q(t.id)}, id, ${q(t.text)}, ${q(t.due)}, ${t.done ? 1 : 0}, ${q(t.done || null)}, 0, ${q(src)}, ${q(src || day(-5))}, ${q(now)} FROM users WHERE username = ${q(username)};`);
+  const created = src || (t.due < TODAY ? day(Math.round((new Date(t.due) - new Date(TODAY)) / 864e5) - 2) : day(-5));
+  out.push(`INSERT INTO todos (id, user_id, text, due, done, done_at, archived, source_date, created, updated_at, note, dropped_at) SELECT ${q(t.id)}, id, ${q(t.text)}, ${q(t.due)}, ${t.done ? 1 : 0}, ${q(t.done || null)}, 0, ${q(src)}, ${q(created)}, ${q(now)}, ${q(t.note || '')}, ${q(t.dropped || null)} FROM users WHERE username = ${q(username)};`);
 }
 for (const i of ideas) {
-  out.push(`INSERT INTO ideas (id, user_id, text, status, source_date, created, updated_at) SELECT ${q(i.id)}, id, ${q(i.text)}, 'open', ${q(day(-i.src))}, ${q(day(-i.src))}, ${q(now)} FROM users WHERE username = ${q(username)};`);
+  out.push(`INSERT INTO ideas (id, user_id, text, status, source_date, created, updated_at) SELECT ${q(i.id)}, id, ${q(i.text)}, ${q(i.status || 'open')}, ${q(day(-i.src))}, ${q(day(-i.src))}, ${q(now)} FROM users WHERE username = ${q(username)};`);
 }
 
 // 习惯：早睡 / 跑步 / 读书，最近 40 天打卡有疏有密；昨天三个都打了
@@ -131,7 +147,7 @@ const w1 = addD(wk, -7);   // 上周一
 const digest = (kind, key, c) => out.push(`INSERT INTO digests (user_id, kind, key, content, created_at) SELECT id, ${q(kind)}, ${q(key)}, ${q(JSON.stringify(c))}, ${q(now)} FROM users WHERE username = ${q(username)};`);
 digest('week', w1, {
   title: '这一周，会议吃掉了你最多的精力，跑步把它还了回来。',
-  letter: hi + '这一周你写了 6 封信。三次提到会议拖长，两次写到跑完步之后变轻松；周三那封里，你把「算了」改成了「试试」，给小林发了那条消息。\n\n精力在周中最低，周末回升。你在信里反复提到的，是想把时间从会议里拿回来。',
+  letter: hi + '这一周你写了 6 封信。三次提到会议拖长，两次写到跑完步之后变轻松；周三那封里，你把「算了」改成了「试试」，给小林发了那条消息。\n\n你放下了报名半马，备注里写着「膝盖还没完全好，明年春天再说」。会议纪要这次只用了十分钟，你说模板好用。\n\n精力在周中最低，周末回升。你在信里反复提到的，是想把时间从会议里拿回来。',
   stats: { letters: 6, days: 7, energyAvg: 3.2, todosDone: 4 }, range: [w1, addD(w1, 6)],
   energy_note: '加班和长会的那几天精力最低，运动后的晚上最好。', forgotten: ['预约牙医'], next: '找组长聊一次周会改成站会。',
   lenses: { health: '跑了两次步，有一天牙疼。', energy: '周中最低，周末回升。', career: '会议多，想到改站会。', relation: '和小林约好做播客。' },
