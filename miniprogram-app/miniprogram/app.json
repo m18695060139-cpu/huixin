@@ -1,0 +1,31 @@
+{
+  "pages": [
+    "pages/today/today",
+    "pages/write/write",
+    "pages/mailbox/mailbox",
+    "pages/letter/letter",
+    "pages/lists/lists",
+    "pages/settings/settings",
+    "pages/privacy/privacy"
+  ],
+  "window": {
+    "navigationStyle": "custom",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F2F2F7",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#6C6C70",
+    "selectedColor": "#D0402B",
+    "backgroundColor": "#F2F2F7",
+    "borderStyle": "white",
+    "list": [
+      { "pagePath": "pages/today/today", "text": "今天" },
+      { "pagePath": "pages/write/write", "text": "写信" },
+      { "pagePath": "pages/mailbox/mailbox", "text": "信箱" }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

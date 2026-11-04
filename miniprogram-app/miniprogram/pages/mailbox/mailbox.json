@@ -1,0 +1,7 @@
+{
+  "usingComponents": {
+    "toast": "/components/toast/toast"
+  },
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark"
+}

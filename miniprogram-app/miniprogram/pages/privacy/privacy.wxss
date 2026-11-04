@@ -1,0 +1,2 @@
+.privacy-body text { display: block; }
+.privacy-body .bullet { margin-top: 8px; }

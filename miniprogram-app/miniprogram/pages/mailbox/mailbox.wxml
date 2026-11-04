@@ -1,0 +1,83 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <view class="page">
+    <view class="head">
+      <view class="head-l">
+        <text class="eyebrow">{{eyebrow}}</text>
+        <text class="h1">信箱</text>
+      </view>
+      <button class="round-btn" hover-class="none" bindtap="goSettings" aria-label="设置">
+        <view class="i i-gear"></view>
+      </button>
+    </view>
+    <view class="offline" wx:if="{{!online}}">离线中 · 改动会在联网后自动同步</view>
+
+    <view class="seg" style="grid-template-columns: 1fr 1fr;">
+      <button class="{{tab !== 'week' ? 'on' : ''}}" hover-class="none" data-tab="all" bindtap="onTab">时间线</button>
+      <button class="{{tab === 'week' ? 'on' : ''}}" hover-class="none" data-tab="week" bindtap="onTab">本周</button>
+    </view>
+
+    <view class="tiles">
+      <button wx:for="{{tiles}}" wx:key="key" class="tile" hover-class="none" data-key="{{item.key}}" bindtap="goLists">
+        <text>{{item.label}}</text>
+        <text class="b">{{item.n}}</text>
+      </button>
+    </view>
+
+    <block wx:if="{{tab === 'week'}}">
+      <view class="gh"><text class="h2">本周小结</text><text class="gh-s">{{week.range}}</text></view>
+      <view class="card pad">
+        <text class="note" style="margin:0 0 12px;">只统计数字，不写总结。</text>
+        <view class="stats" style="padding:0;">
+          <view class="stat"><text>写了</text><text class="b">{{week.letters}}<text class="unit"> 天</text></text></view>
+          <view class="stat"><text>平均精力</text><text class="b">{{week.energy}}</text></view>
+          <view class="stat"><text>完成待办</text><text class="b">{{week.todosDone}}</text></view>
+        </view>
+        <view class="kv" wx:if="{{week.habits}}"><text>习惯</text><text class="b">{{week.habits}}</text></view>
+      </view>
+    </block>
+
+    <block wx:else>
+      <view class="gh"><text class="h2">状态</text><text class="gh-s">近 30 天</text></view>
+      <view wx:if="{{!state.ready}}" class="card empty">{{state.empty}}</view>
+      <view wx:else class="card pad">
+        <view class="big-num">
+          <text class="small muted" style="font-weight:600;">平均精力</text>
+          <text class="b">{{state.avg}}</text>
+          <text class="small muted">/ 5</text>
+          <text wx:if="{{state.trend}}" class="{{state.trendCls === 'down' ? 'down' : 'up'}}" style="{{state.trendCls === 'flat' ? 'color:var(--sub);' : ''}}">{{state.trend}}</text>
+        </view>
+        <view class="chart-box">
+          <canvas type="2d" id="energy" class="chart"></canvas>
+        </view>
+        <view class="chart-x"><text>{{state.start}}</text><text>今天</text></view>
+        <view class="kv" wx:if="{{state.top}}"><text>出现最多的心情</text><text class="b">{{state.top}}</text></view>
+        <view class="kv" wx:if="{{state.rates}}"><text>习惯完成率</text><text class="b">{{state.rates}}</text></view>
+      </view>
+
+      <view wx:if="{{empty}}" class="card empty mt">信箱还是空的。今晚写第一封信吧。
+        <button class="lk" hover-class="none" data-date="{{writeDate}}" bindtap="goWrite">去写信 ›</button>
+      </view>
+
+      <block wx:for="{{groups}}" wx:key="wk">
+        <view class="gh"><text class="h2">{{item.title}}</text><text class="gh-s">{{item.range}}</text></view>
+        <view class="card">
+          <button wx:for="{{item.rows}}" wx:for-item="row" wx:key="date" class="row day {{row.kind === 'gap' ? 'gapday' : ''}}" hover-class="none" data-date="{{row.date}}" data-kind="{{row.kind}}" bindtap="onRow">
+            <view class="dt {{row.kind === 'gap' ? 'gap' : ''}}">
+              <text class="num">{{row.num}}</text>
+              <text class="wd">{{row.wd}}</text>
+            </view>
+            <view class="row-main">
+              <text class="row-t one-line">{{row.kind === 'gap' ? '这天没有写信' : row.line}}</text>
+              <text class="sub">{{row.kind === 'gap' ? '点一下补写' : row.meta}}</text>
+            </view>
+            <text class="chev">›</text>
+          </button>
+        </view>
+      </block>
+      <view wx:if="{{more}}" style="text-align:center;margin-top:20px;">
+        <button class="btn ghost sm" hover-class="none" bindtap="older">更早的信</button>
+      </view>
+    </block>
+  </view>
+  <toast id="toast" />
+</view>

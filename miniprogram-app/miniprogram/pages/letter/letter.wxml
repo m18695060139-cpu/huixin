@@ -1,0 +1,53 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <view class="subpage-bar sheet-bar">
+    <view>
+      <view class="sp"></view>
+      <text class="t">一封信</text>
+      <button class="x" hover-class="none" bindtap="back" aria-label="关闭">×</button>
+    </view>
+  </view>
+  <view class="page" style="padding-top: 8px;">
+    <view wx:if="{{letter.missing}}" class="card empty">找不到这封信。</view>
+    <block wx:else>
+      <view class="head">
+        <view class="head-l">
+          <text class="eyebrow">{{letter.eyebrow}}</text>
+          <text class="h1 sm">{{letter.title}}</text>
+        </view>
+      </view>
+      <view wx:if="{{letter.hideBody}}" class="card hero mt">
+        <view class="hero-top">
+          <view class="hero-ic"><view class="i i-box"></view></view>
+          <view>
+            <text class="hero-t">还封着</text>
+            <text class="hero-s">{{letter.note}}</text>
+          </view>
+        </view>
+        <button class="btn full" hover-class="none" bindtap="takeBack">拿回来改</button>
+      </view>
+      <block wx:else>
+        <view class="card paper mt">
+          <text class="letter-text">{{letter.text}}</text>
+        </view>
+        <view class="card stats mt" wx:if="{{letter.energy || letter.mood}}">
+          <view class="stat"><text>精力</text><text class="b">{{letter.energy || '—'}}</text></view>
+          <view class="stat"><text>心情</text><text class="b">{{letter.mood || '—'}}</text></view>
+          <view class="stat"><text>字数</text><text class="b">{{letter.chars}}</text></view>
+        </view>
+        <text class="note" wx:if="{{letter.note}}">{{letter.note}}</text>
+        <view style="padding:0 4px;margin-top:8px;">
+          <button class="lk" hover-class="none" bindtap="takeBack">在写信里打开</button>
+        </view>
+        <view wx:if="{{letter.sentences.length}}" class="gh"><text class="h2">摘成待办</text><text class="gh-s">点一句</text></view>
+        <view wx:if="{{letter.sentences.length}}" class="card">
+          <button wx:for="{{letter.sentences}}" wx:key="*this" class="row" hover-class="none" data-text="{{item}}" bindtap="pickSentence">
+            <text class="row-main"><text class="row-t">{{item}}</text></text>
+            <text class="lk">做成待办</text>
+          </button>
+        </view>
+      </block>
+    </block>
+  </view>
+  <toast id="toast" bind:act="onToastAct" />
+  <editor show="{{ed.show}}" mode="{{ed.mode}}" item="{{ed.item}}" token="{{ed.token}}" theme="{{theme}}" bind:close="closeEditor" bind:submit="onEditorSubmit" />
+</view>

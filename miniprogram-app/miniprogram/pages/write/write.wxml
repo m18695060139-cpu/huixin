@@ -1,0 +1,119 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <view class="page {{editing ? 'bare' : ''}}" style="{{editing ? 'padding-bottom: calc(var(--safe-bottom) + 220px);' : ''}}">
+    <view class="wbar">
+      <button wx:if="{{editing}}" class="round-btn" hover-class="none" bindtap="closeWrite" aria-label="关闭">×</button>
+      <view wx:else style="width:40px;"></view>
+      <view class="daynav">
+        <button class="nav-btn" hover-class="none" bindtap="onPrev" aria-label="前一天">‹</button>
+        <view class="lab">
+          <text>{{meta.label}}</text>
+          <text class="sub">{{meta.sub}}</text>
+        </view>
+        <button class="nav-btn" hover-class="none" bindtap="onNext" disabled="{{!meta.canNext}}" aria-label="后一天">›</button>
+      </view>
+      <text class="save-state">{{editing ? saveState : ''}}</text>
+    </view>
+    <view class="offline" wx:if="{{!online}}">离线中 · 改动会在联网后自动同步</view>
+
+    <view class="card paper">
+      <view class="paper-h">
+        <text class="paper-label">{{meta.to}}</text>
+        <text class="no-tag">No.{{meta.no}}</text>
+      </view>
+      <textarea wx:if="{{editing}}" class="editor" value="{{text}}" bindinput="onInput" maxlength="20000" auto-height="true" placeholder="今天过得怎么样？做了什么、想到什么、哪里卡住了，随便写。&#10;&#10;写完点「寄出」。明早拆开的，是这封你写给自己的信。" placeholder-class="ph" />
+      <text wx:else class="letter-text">{{meta.text}}</text>
+    </view>
+    <view class="warn" wx:if="{{warn}}">{{warn}} 草稿还在，改一改再存。</view>
+
+    <view wx:if="{{editing}}" class="chips">
+      <button wx:for="{{meta.questions}}" wx:key="*this" class="chip" hover-class="none" data-q="{{item}}" bindtap="onChip">
+        <view class="chip-dot"></view>
+        <text>{{item}}</text>
+      </button>
+    </view>
+
+    <view wx:if="{{meta.showHabits}}" class="card habits">
+      <text class="habit-lab">{{meta.habitLabel}}</text>
+      <button wx:for="{{meta.habits}}" wx:key="id" class="hb {{item.on ? 'on' : ''}}" hover-class="none" data-id="{{item.id}}" bindtap="onHabit">
+        <view class="tick" wx:if="{{item.on}}"></view>
+        <text>{{item.name}}</text>
+      </button>
+    </view>
+
+    <view wx:if="{{editing}}" class="card mood-box">
+      <text class="lab">心情 · 自己选</text>
+      <view class="chips">
+        <button wx:for="{{moods}}" wx:key="id" class="chip {{item.on ? 'on' : ''}}" hover-class="none" data-id="{{item.id}}" bindtap="onMood">{{item.id}}</button>
+      </view>
+      <text class="lab">精力 · 1 到 5</text>
+      <view class="energy">
+        <button wx:for="{{energies}}" wx:key="n" class="hb {{item.on ? 'on' : ''}}" hover-class="none" data-n="{{item.n}}" bindtap="onEnergy">{{item.n}}</button>
+      </view>
+    </view>
+
+    <block wx:if="{{!editing && meta.sent}}">
+      <view class="card stats mt" wx:if="{{meta.energy || meta.mood}}">
+        <view class="stat"><text>精力</text><text class="b">{{meta.energy || '—'}}<text class="unit" wx:if="{{meta.energy}}"> / 5</text></text></view>
+        <view class="stat"><text>心情</text><text class="b">{{meta.mood || '—'}}</text></view>
+        <view class="stat"><text>字数</text><text class="b">{{meta.chars}}</text></view>
+      </view>
+      <view wx:if="{{meta.sealed}}" class="card hero sealed">
+        <view class="hero-top">
+          <view class="hero-ic"><view class="i i-box"></view></view>
+          <view>
+            <text class="hero-t">已寄出</text>
+            <text class="hero-s">明早 6:00 可以拆开</text>
+          </view>
+        </view>
+      </view>
+      <view style="padding:0 4px;">
+        <button class="lk" hover-class="none" bindtap="takeBack">修改这封信</button>
+        <button class="lk" hover-class="none" bindtap="openLetter">在信里查看</button>
+      </view>
+      <view wx:if="{{meta.sentences.length}}" class="card mt">
+        <view class="row foot"><text class="sub">把一句摘成待办</text></view>
+        <button wx:for="{{meta.sentences}}" wx:key="*this" class="row" hover-class="none" data-text="{{item}}" bindtap="pickSentence">
+          <text class="row-main"><text class="row-t">{{item}}</text></text>
+          <text class="lk">做成待办</text>
+        </button>
+      </view>
+    </block>
+  </view>
+
+  <view wx:if="{{editing}}" class="send-bar">
+    <view class="send-inner">
+      <view class="send-row">
+        <button class="btn" hover-class="none" bindtap="onSend" disabled="{{!canSend}}">{{meta.sendLabel || '寄出'}}</button>
+      </view>
+      <text class="send-note">{{meta.note}}</text>
+    </view>
+  </view>
+
+  <view class="sent" wx:if="{{sentShow}}">
+    <view class="env-wrap">
+      <view class="env-big">
+        <view class="env-big-flap"></view>
+        <view class="env-stamp">回</view>
+        <view class="pm-stamp">
+          <text>{{sentDate}}</text>
+          <text>No.{{sentNo}}</text>
+        </view>
+        <text class="env-big-to">致 明早的我</text>
+      </view>
+    </view>
+    <text class="h1">已寄出</text>
+    <text class="lead">好好睡一觉。明早拆开的，是你自己写的这封信。</text>
+    <view class="steps">
+      <view class="row"><view class="dot ok"><view class="tick"></view></view><text class="t">信已寄出</text><text class="tm">{{sentTime}}</text></view>
+      <view class="row"><view class="dot ok"><view class="tick"></view></view><text class="t">封好了</text></view>
+      <view class="row"><view class="dot"><view class="sent-steps-clock"></view></view><text class="t dim">明早 6:00 拆开</text></view>
+    </view>
+    <view class="sent-btns">
+      <button class="btn dark" hover-class="none" bindtap="takeBack">拿回来改</button>
+      <button class="btn light" hover-class="none" bindtap="sentClose">晚安</button>
+    </view>
+  </view>
+
+  <toast id="toast" bind:act="onToastAct" />
+  <editor show="{{ed.show}}" mode="{{ed.mode}}" item="{{ed.item}}" token="{{ed.token}}" theme="{{theme}}" bind:close="closeEditor" bind:submit="onEditorSubmit" />
+</view>

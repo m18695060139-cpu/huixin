@@ -1,0 +1,26 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <view class="subpage-bar sheet-bar">
+    <view>
+      <view class="sp"></view>
+      <text class="t">隐私说明</text>
+      <button class="x" hover-class="none" bindtap="back" aria-label="关闭">×</button>
+    </view>
+  </view>
+  <view class="page" style="padding-top: 8px;">
+    <view class="card pad privacy-body">
+      <text class="h">这是给你自己用的记录本</text>
+      <text class="bullet">回信不提供分享、广场或别人可见的页面。右上角菜单里的转发已关闭。</text>
+      <text class="h">会保存什么</text>
+      <text class="bullet">你写下的信、待办、点子、习惯名、称呼和自省提示，以及你自己选的心情和精力。</text>
+      <text class="bullet">微信云开发用来识别「这是你的数据」的 openid。不收集手机号、头像、昵称、位置和通讯录。</text>
+      <text class="bullet">从聊天里选择 JSON 文件时，只会读取你点中的那一个文件，用来导入。</text>
+      <text class="h">存在哪里</text>
+      <text class="bullet">存在微信云开发。数据库权限是「仅创建者可读写」，别人的小程序登录读不到你的记录。</text>
+      <text class="bullet">保存文字前会做内容安全检查。若被拦住，会提示你修改，已经写在输入框里的字不会被清掉。</text>
+      <text class="h">你可以删掉</text>
+      <text class="bullet">设置里的「清空我的全部数据」会删除云端和这台手机上的记录。</text>
+      <text class="h">和网页版</text>
+      <text class="bullet">网页版在另一处，数据不自动同步。只有你主动导入时，才会把导出文件里的内容抄过来。</text>
+    </view>
+  </view>
+</view>

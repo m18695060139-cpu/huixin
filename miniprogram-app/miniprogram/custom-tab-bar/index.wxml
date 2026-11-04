@@ -1,0 +1,16 @@
+<view class="tabbar theme-{{theme}} {{hidden ? 'hide-m' : ''}}">
+  <view class="nav">
+    <view class="tab {{selected === 0 ? 'on' : ''}}" data-i="0" bindtap="go" aria-label="今天">
+      <view class="i i-today"></view>
+      <text>今天</text>
+      <view class="badge-dot" wx:if="{{badge && selected !== 0}}"></view>
+    </view>
+    <view class="tab write {{selected === 1 ? 'on' : ''}}" data-i="1" bindtap="go" aria-label="写信">
+      <view class="i i-pen"></view>
+    </view>
+    <view class="tab {{selected === 2 ? 'on' : ''}}" data-i="2" bindtap="go" aria-label="信箱">
+      <view class="i i-box"></view>
+      <text>信箱</text>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,38 @@
+:host {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 0;
+  overflow: visible;
+  background: transparent;
+  z-index: 10;
+}
+.tabbar .tab {
+  flex: 1;
+  height: 54px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  color: var(--tab);
+  font-size: 10px;
+  font-weight: 500;
+}
+.tabbar .tab.on { color: var(--ink); font-weight: 600; }
+.tabbar .tab.write {
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border-radius: 26px;
+  background: var(--ink);
+  color: var(--on-ink);
+  margin: 0 6px;
+}
+.tabbar nav, .tabbar .nav {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
