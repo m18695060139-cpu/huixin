@@ -1,5 +1,6 @@
 const config = require('./config');
 const state = require('./utils/state');
+const chrome = require('./utils/chrome');
 const { BG, front } = require('./utils/theme');
 
 App({
@@ -32,11 +33,10 @@ App({
   },
   readSystem() {
     try {
+      const box = chrome.measure();
+      this.globalData.statusBar = box.statusBar;
+      this.globalData.safeBottom = box.safeBottom;
       const sys = wx.getSystemInfoSync();
-      this.globalData.statusBar = sys.statusBarHeight || 20;
-      if (sys.safeArea && sys.screenHeight) {
-        this.globalData.safeBottom = Math.max(0, sys.screenHeight - sys.safeArea.bottom);
-      }
       this.globalData.systemDark = sys.theme === 'dark';
     } catch (e) { /* 用默认安全区 */ }
   },

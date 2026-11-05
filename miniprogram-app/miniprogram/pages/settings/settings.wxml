@@ -9,8 +9,27 @@
   <view class="page" style="padding-top: 8px;">
     <view class="offline" wx:if="{{!online}}">云端还没连上 · 先存在这台手机</view>
     <view class="field">
-      <text class="lab">怎么称呼你</text>
-      <input class="input" value="{{name}}" bindblur="onName" maxlength="20" placeholder="比如：非云。用在「致 明早的你」" placeholder-class="ph" />
+      <text class="lab">回信怎么称呼你</text>
+      <input class="input" value="{{name}}" bindblur="onName" maxlength="20" placeholder="比如：非云" placeholder-class="ph" />
+    </view>
+    <view class="field">
+      <text class="lab">回信什么时候送到</text>
+      <view class="group opts">
+        <view class="opt" data-v="morning" bindtap="onDeliver">
+          <view class="opt-main">
+            <text>明早 6:00 拆信</text>
+            <text class="opt-sub">今晚寄出的信，封到第二天早上；补写的信马上可以回看</text>
+          </view>
+          <text class="tick-mark" wx:if="{{deliver !== 'now'}}">✓</text>
+        </view>
+        <view class="opt" data-v="now" bindtap="onDeliver">
+          <view class="opt-main">
+            <text>寄出后马上</text>
+            <text class="opt-sub">写完就能看到这封信</text>
+          </view>
+          <text class="tick-mark" wx:if="{{deliver === 'now'}}">✓</text>
+        </view>
+      </view>
     </view>
     <view class="field">
       <text class="lab">外观</text>
@@ -39,27 +58,31 @@
       </view>
     </view>
     <view class="field">
-      <text class="lab">写信时的提示（一行一个）</text>
+      <text class="lab">回信写信时会想着的问题（一行一个）</text>
       <textarea class="input" value="{{qText}}" bindinput="onQ" maxlength="1200" auto-height="true" placeholder-class="ph" />
       <button class="btn sm ghost" hover-class="none" style="align-self:flex-start;" bindtap="onSaveQ">保存问题</button>
     </view>
     <view class="field">
-      <text class="lab">从网页版导入</text>
-      <text class="note" style="margin:0;">网页版和这里是两本独立的本子。把网页版导出的 JSON 发到「文件传输助手」，再从这里选中。回信、周信不会带过来。</text>
-      <button class="btn sm ghost" hover-class="none" style="align-self:flex-start;" bindtap="onImport">选择 JSON 文件</button>
+      <text class="lab">账号</text>
+      <view class="group">
+        <view class="row">
+          <view class="row-main">
+            <text class="row-t">微信登录</text>
+            <text class="sub">内容只给你自己看，没有另外的账号密码</text>
+          </view>
+        </view>
+        <view class="row" bindtap="goPrivacy">
+          <text class="row-main"><text class="row-t">用户隐私保护指引</text></text>
+          <text class="chev">›</text>
+        </view>
+        <view class="row" bindtap="onImport">
+          <text class="row-main"><text class="row-t">从网页版导入 JSON</text></text>
+          <text class="chev">›</text>
+        </view>
+      </view>
+      <button class="btn ghost" hover-class="none" style="margin-top:12px;" bindtap="onWipe">清空我的全部数据</button>
     </view>
-    <view class="field">
-      <text class="lab">隐私</text>
-      <button class="row" hover-class="none" bindtap="goPrivacy" style="background:var(--card);border-radius:14px;">
-        <text class="row-main"><text class="row-t">用户隐私保护指引</text><text class="sub">只保存你自己写下的内容</text></text>
-        <text class="chev">›</text>
-      </button>
-    </view>
-    <view class="field">
-      <text class="lab">数据</text>
-      <button class="btn ghost" hover-class="none" bindtap="onWipe">清空我的全部数据</button>
-    </view>
-    <text class="note" style="margin-top:40px;text-align:center;">回信 · 今晚写给明早的自己 · 只有你自己看得到</text>
+    <text class="note" style="margin-top:40px;text-align:center;">回信 Re: · 今晚写给明早的自己</text>
   </view>
   <toast id="toast" />
 </view>

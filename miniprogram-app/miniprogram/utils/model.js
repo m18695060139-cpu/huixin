@@ -18,7 +18,12 @@ function hasSent(S, d) {
   return !!(hasText(S, d) && l.sent_at);
 }
 
+function deliverNow(S) {
+  return !!(S.settings && S.settings.deliver === 'now');
+}
+
 function isSealed(S, d, now) {
+  if (deliverNow(S)) return false;
   const l = letterOf(S, d);
   if (!l || !l.sent_at || l.opened) return false;
   now = now || new Date();
@@ -205,7 +210,7 @@ function writeHero(S, d, label) {
     date: d,
     label: label,
     title: label + '的信还没写',
-    sub: (habits.length ? '写信时顺手打卡 · ' : '') + '明早 6:00 可以拆开自己的信',
+    sub: (habits.length ? '写信时顺手打卡 · ' : '') + (deliverNow(S) ? '寄出后马上可以回看' : '回信明早 6:00 送到'),
   };
 }
 
@@ -291,7 +296,7 @@ function writeMeta(S, day, now) {
   const label = isToday ? ((h >= 17 || h < 4) ? '今晚' : '今天') : (day === date.addDays(ld, -1) ? '补写昨天' : '补写');
   const name = (S.settings && S.settings.name || '').trim();
   const l = letterOf(S, day) || {};
-  const questions = (S.settings && S.settings.questions && S.settings.questions.length) ? S.settings.questions.slice(0, 10) : [];
+  const tonight = !deliverNow(S) && date.sendsTonight(day, now);
   return {
     date: day,
     label: label,
@@ -303,9 +308,8 @@ function writeMeta(S, day, now) {
     sealed: isSealed(S, day, now),
     opened: !!l.opened,
     sendLabel: l.sent_at ? '重新寄出' : '寄出',
-    note: date.sendsTonight(day, now) ? '明早 6:00 可以拆开自己的信 · 拆开前都可以拿回来改' : '存好之后马上可以回看',
-    tonight: date.sendsTonight(day, now),
-    questions: questions,
+    note: tonight ? '回信明早 6:00 送到 · 送到前都可以拿回来改' : '寄出后马上可以回看',
+    tonight: tonight,
     habits: habitItems(S, day),
     showHabits: activeHabits(S).length > 0 && day >= date.addDays(t, -6),
     habitLabel: day === t ? '今天的习惯' : date.cn(day) + '的习惯',
@@ -481,8 +485,8 @@ function mailboxModel(S, now, ui) {
     }));
   }
   return {
-    eyebrow: days ? ('已经写下 ' + days + ' 天 · ' + dates.length + ' 封信') : '还没有信',
-    tab: ui.tab === 'week' ? 'week' : 'all',
+    eyebrow: days ? ('已经往来 ' + days + ' 天 · ' + dates.length + ' 封信') : '还没有信',
+    tab: (ui.tab === 'week' || ui.tab === 'quarter' || ui.tab === 'year') ? ui.tab : 'all',
     tiles: [
       { key: 'todos', label: '待办', n: openTodos(S, t).length, link: true },
       { key: 'ideas', label: '点子', n: openIdeas(S).length, link: true },

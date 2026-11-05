@@ -1,15 +1,15 @@
 <view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
   <view class="page {{editing ? 'bare' : ''}}" style="{{editing ? 'padding-bottom: calc(var(--safe-bottom) + 220px);' : ''}}">
     <view class="wbar">
-      <button wx:if="{{editing}}" class="round-btn" hover-class="none" bindtap="closeWrite" aria-label="关闭">×</button>
-      <view wx:else style="width:40px;"></view>
+      <view wx:if="{{editing}}" class="round-btn" bindtap="closeWrite" aria-label="关闭">×</view>
+      <view wx:else class="round-btn ghost"></view>
       <view class="daynav">
-        <button class="nav-btn" hover-class="none" bindtap="onPrev" aria-label="前一天">‹</button>
+        <view class="nav-btn" bindtap="onPrev" aria-label="前一天">‹</view>
         <view class="lab">
-          <text>{{meta.label}}</text>
+          <text class="day-title">{{meta.label}}</text>
           <text class="sub">{{meta.sub}}</text>
         </view>
-        <button class="nav-btn" hover-class="none" bindtap="onNext" disabled="{{!meta.canNext}}" aria-label="后一天">›</button>
+        <view class="nav-btn {{meta.canNext ? '' : 'off'}}" bindtap="onNext" aria-label="后一天">›</view>
       </view>
       <text class="save-state">{{editing ? saveState : ''}}</text>
     </view>
@@ -20,16 +20,16 @@
         <text class="paper-label">{{meta.to}}</text>
         <text class="no-tag">No.{{meta.no}}</text>
       </view>
-      <textarea wx:if="{{editing}}" class="editor" value="{{text}}" bindinput="onInput" maxlength="20000" auto-height="true" placeholder="今天过得怎么样？做了什么、想到什么、哪里卡住了，随便写。&#10;&#10;写完点「寄出」。明早拆开的，是这封你写给自己的信。" placeholder-class="ph" />
+      <textarea wx:if="{{editing}}" class="editor" value="{{text}}" bindinput="onInput" maxlength="20000" auto-height="true" placeholder="{{placeholder}}" placeholder-class="ph" />
       <text wx:else class="letter-text">{{meta.text}}</text>
     </view>
     <view class="warn" wx:if="{{warn}}">{{warn}} 草稿还在，改一改再存。</view>
 
     <view wx:if="{{editing}}" class="chips">
-      <button wx:for="{{meta.questions}}" wx:key="*this" class="chip" hover-class="none" data-q="{{item}}" bindtap="onChip">
+      <view wx:for="{{prompts}}" wx:key="*this" class="chip" data-q="{{item}}" bindtap="onChip">
         <view class="chip-dot"></view>
         <text>{{item}}</text>
-      </button>
+      </view>
     </view>
 
     <view wx:if="{{meta.showHabits}}" class="card habits">
@@ -40,15 +40,12 @@
       </button>
     </view>
 
-    <view wx:if="{{editing}}" class="card mood-box">
-      <text class="lab">心情 · 自己选</text>
-      <view class="chips">
-        <button wx:for="{{moods}}" wx:key="id" class="chip {{item.on ? 'on' : ''}}" hover-class="none" data-id="{{item.id}}" bindtap="onMood">{{item.id}}</button>
-      </view>
-      <text class="lab">精力 · 1 到 5</text>
-      <view class="energy">
-        <button wx:for="{{energies}}" wx:key="n" class="hb {{item.on ? 'on' : ''}}" hover-class="none" data-n="{{item.n}}" bindtap="onEnergy">{{item.n}}</button>
-      </view>
+    <view wx:if="{{editing}}" class="chips">
+      <view wx:for="{{moods}}" wx:key="id" class="chip {{item.on ? 'on' : ''}}" data-id="{{item.id}}" bindtap="onMood">{{item.id}}</view>
+    </view>
+    <view wx:if="{{editing}}" class="card habits">
+      <text class="habit-lab">精力</text>
+      <view wx:for="{{energies}}" wx:key="n" class="hb {{item.on ? 'on' : ''}}" data-n="{{item.n}}" bindtap="onEnergy">{{item.n}}</view>
     </view>
 
     <block wx:if="{{!editing && meta.sent}}">

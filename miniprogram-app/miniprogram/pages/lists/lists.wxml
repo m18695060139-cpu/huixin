@@ -8,9 +8,9 @@
   </view>
   <view class="page" style="padding-top: 8px;">
     <view class="seg three">
-      <button class="{{tab === 'todos' ? 'on' : ''}}" hover-class="none" data-tab="todos" bindtap="onTab">待办</button>
-      <button class="{{tab === 'ideas' ? 'on' : ''}}" hover-class="none" data-tab="ideas" bindtap="onTab">点子</button>
-      <button class="{{tab === 'done' ? 'on' : ''}}" hover-class="none" data-tab="done" bindtap="onTab">完成 / 放下</button>
+      <view class="seg-btn {{tab === 'todos' ? 'on' : ''}}" data-tab="todos" bindtap="onTab">待办</view>
+      <view class="seg-btn {{tab === 'ideas' ? 'on' : ''}}" data-tab="ideas" bindtap="onTab">点子</view>
+      <view class="seg-btn {{tab === 'done' ? 'on' : ''}}" data-tab="done" bindtap="onTab">完成 / 放下</view>
     </view>
 
     <view wx:if="{{tab === 'todos'}}" class="card mt">
@@ -57,8 +57,8 @@
 
     <block wx:if="{{tab === 'done'}}">
       <view class="mini-seg">
-        <button class="{{done.mode === 'done' ? 'on' : ''}}" hover-class="none" data-mode="done" bindtap="onDoneMode">完成 {{done.doneCount}}</button>
-        <button class="{{done.mode === 'dropped' ? 'on' : ''}}" hover-class="none" data-mode="dropped" bindtap="onDoneMode">放下 {{done.dropCount}}</button>
+        <view class="seg-btn {{done.mode === 'done' ? 'on' : ''}}" data-mode="done" bindtap="onDoneMode">完成 {{done.doneCount}}</view>
+        <view class="seg-btn {{done.mode === 'dropped' ? 'on' : ''}}" data-mode="dropped" bindtap="onDoneMode">放下 {{done.dropCount}}</view>
       </view>
       <view wx:if="{{done.empty}}" class="card"><view class="empty">{{done.emptyText}}</view></view>
       <view wx:for="{{done.groups}}" wx:key="key" class="card grp">

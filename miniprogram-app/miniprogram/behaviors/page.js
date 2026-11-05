@@ -37,8 +37,6 @@ module.exports = Behavior({
           badge: badge,
         });
       }
-      if (visible) wx.showTabBar({ animation: false, fail: function () {} });
-      else wx.hideTabBar({ animation: false, fail: function () {} });
     },
     toast(msg, act) {
       const c = this.selectComponent('#toast');
@@ -54,12 +52,14 @@ module.exports = Behavior({
           token: Date.now(),
         },
       });
-      wx.hideTabBar({ animation: false, fail: function () {} });
+      const bar = typeof this.getTabBar === 'function' && this.getTabBar();
+      if (bar) bar.setData({ hidden: true });
     },
     closeEditor() {
       this.setData({ 'ed.show': false });
       if (typeof this.tabShouldShow === 'function' && !this.tabShouldShow()) return;
-      wx.showTabBar({ animation: false, fail: function () {} });
+      const bar = typeof this.getTabBar === 'function' && this.getTabBar();
+      if (bar) bar.setData({ hidden: false });
     },
     async onEditorSubmit(e) {
       const d = e.detail || {};

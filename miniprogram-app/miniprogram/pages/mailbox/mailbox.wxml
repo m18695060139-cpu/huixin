@@ -5,15 +5,17 @@
         <text class="eyebrow">{{eyebrow}}</text>
         <text class="h1">信箱</text>
       </view>
-      <button class="round-btn" hover-class="none" bindtap="goSettings" aria-label="设置">
+      <view class="round-btn" bindtap="goSettings" aria-label="设置">
         <view class="i i-gear"></view>
-      </button>
+      </view>
     </view>
     <view class="offline" wx:if="{{!online}}">离线中 · 改动会在联网后自动同步</view>
 
-    <view class="seg" style="grid-template-columns: 1fr 1fr;">
-      <button class="{{tab !== 'week' ? 'on' : ''}}" hover-class="none" data-tab="all" bindtap="onTab">时间线</button>
-      <button class="{{tab === 'week' ? 'on' : ''}}" hover-class="none" data-tab="week" bindtap="onTab">本周</button>
+    <view class="seg">
+      <view class="seg-btn {{tab === 'all' ? 'on' : ''}}" data-tab="all" bindtap="onTab">全部</view>
+      <view class="seg-btn {{tab === 'week' ? 'on' : ''}}" data-tab="week" bindtap="onTab">周信</view>
+      <view class="seg-btn {{tab === 'quarter' ? 'on' : ''}}" data-tab="quarter" bindtap="onTab">季信</view>
+      <view class="seg-btn {{tab === 'year' ? 'on' : ''}}" data-tab="year" bindtap="onTab">年信</view>
     </view>
 
     <view class="tiles">
@@ -23,10 +25,10 @@
       </button>
     </view>
 
-    <block wx:if="{{tab === 'week'}}">
-      <view class="gh"><text class="h2">本周小结</text><text class="gh-s">{{week.range}}</text></view>
-      <view class="card pad">
-        <text class="note" style="margin:0 0 12px;">只统计数字，不写总结。</text>
+    <block wx:if="{{tab === 'week' || tab === 'quarter' || tab === 'year'}}">
+      <text class="note" style="margin-top:18px;">{{tab === 'week' ? '本周只统计数字，不生成周信。' : (tab === 'quarter' ? '季信是网页版的功能，这里不生成文字。' : '年信是网页版的功能，这里不生成文字。')}}</text>
+      <view wx:if="{{tab === 'week'}}" class="card pad mt">
+        <view class="big-num"><text class="small muted" style="font-weight:600;">{{week.range}}</text></view>
         <view class="stats" style="padding:0;">
           <view class="stat"><text>写了</text><text class="b">{{week.letters}}<text class="unit"> 天</text></text></view>
           <view class="stat"><text>平均精力</text><text class="b">{{week.energy}}</text></view>
@@ -34,6 +36,7 @@
         </view>
         <view class="kv" wx:if="{{week.habits}}"><text>习惯</text><text class="b">{{week.habits}}</text></view>
       </view>
+      <view wx:else class="card empty mt">还没有{{tab === 'quarter' ? '季信' : '年信'}}。</view>
     </block>
 
     <block wx:else>

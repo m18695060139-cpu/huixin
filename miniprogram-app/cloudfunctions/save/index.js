@@ -204,8 +204,10 @@ async function saveSettings(openid, payload) {
     theme: THEMES[payload.theme] ? payload.theme : (THEMES[cur.theme] ? cur.theme : 'auto'),
     name: ('name' in payload) ? clip(payload.name, 20).trim() : (cur.name || ''),
     questions: Array.isArray(cur.questions) ? cur.questions : [],
+    deliver: cur.deliver === 'now' ? 'now' : 'morning',
     updated_at: new Date().toISOString(),
   };
+  if (payload.deliver === 'now' || payload.deliver === 'morning') data.deliver = payload.deliver;
   if ('name' in payload) parts.push(data.name);
   if (Array.isArray(payload.questions)) {
     const qs = payload.questions.map(s => clip(s, 120).trim()).filter(Boolean).slice(0, 10);

@@ -1,4 +1,6 @@
-.daynav .lab text:first-child { font-size: 16px; font-weight: 600; display: block; text-align: center; }
+.day-title { font-size: 16px; font-weight: 600; display: block; text-align: center; }
+.nav-btn.off { color: var(--ring); }
+.round-btn.ghost { background: transparent; }
 .sent .tick {
   width: 8px; height: 5px; border-left: 2px solid #000000; border-bottom: 2px solid #000000;
   transform: rotate(-45deg); margin-top: -2px;

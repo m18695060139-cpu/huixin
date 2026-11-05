@@ -1,4 +1,10 @@
-.seg button.on, .mini-seg button.on {
+.seg.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.seg .seg-btn, .mini-seg .seg-btn {
+  height: 32px; border-radius: 8px; font-size: 13px;
+  display: flex; align-items: center; justify-content: center;
+}
+.mini-seg .seg-btn { height: auto; padding: 6px 14px; }
+.seg-btn.on, .mini-seg .seg-btn.on {
   background: var(--card);
   color: var(--text);
   font-weight: 600;

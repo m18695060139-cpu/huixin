@@ -5,7 +5,7 @@ const { THEMES } = require('../../utils/theme');
 
 Page({
   behaviors: [behavior],
-  data: { themes: [], habits: [], name: '', qText: '', habitName: '', themeId: 'auto' },
+  data: { themes: [], habits: [], name: '', qText: '', habitName: '', themeId: 'auto', deliver: 'morning' },
   onShow() {
     this.hideShare();
     this.syncChrome();
@@ -19,6 +19,7 @@ Page({
     const themeId = s.theme || 'auto';
     const patch = {
       themeId: themeId,
+      deliver: s.deliver === 'now' ? 'now' : 'morning',
       themes: THEMES.map(t => ({
         id: t.id,
         name: t.name,
@@ -46,6 +47,10 @@ Page({
   },
   onTheme(e) {
     actions.saveSettings({ theme: e.currentTarget.dataset.id });
+  },
+  onDeliver(e) {
+    const v = e.currentTarget.dataset.v === 'now' ? 'now' : 'morning';
+    actions.saveSettings({ deliver: v });
   },
   onQ(e) { this.setData({ qText: e.detail.value }); },
   onSaveQ() {

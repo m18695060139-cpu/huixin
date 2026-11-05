@@ -5,7 +5,7 @@ const model = require('../../utils/model');
 
 Page({
   behaviors: [behavior],
-  data: { mb: 'all', limit: 140 },
+  data: { mb: 'all', limit: 140, tab: 'all' },
   onShow() {
     this.hideShare();
     this.unsub = state.subscribe(() => this.paint());
@@ -30,8 +30,8 @@ Page({
     }
   },
   onTab(e) {
-    this.setData({ mb: e.currentTarget.dataset.tab });
-    this.paint();
+    const tab = e.currentTarget.dataset.tab;
+    this.setData({ mb: tab }, () => this.paint());
   },
   older() {
     this.setData({ limit: (this.data.limit || 140) + 140 });

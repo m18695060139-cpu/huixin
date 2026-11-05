@@ -10,7 +10,7 @@ const held = {};
 
 function blank() {
   return {
-    settings: { theme: 'auto', questions: DEFAULT_QUESTIONS.slice(), name: '' },
+    settings: { theme: 'auto', questions: DEFAULT_QUESTIONS.slice(), name: '', deliver: 'morning' },
     letters: {},
     todos: [],
     ideas: [],
@@ -319,6 +319,7 @@ function applyCloud(bundle) {
       _id: s._id,
       theme: s.theme || data.settings.theme || 'auto',
       name: s.name || '',
+      deliver: s.deliver === 'now' ? 'now' : 'morning',
       questions: (Array.isArray(s.questions) && s.questions.length) ? s.questions : data.settings.questions,
     };
   }
