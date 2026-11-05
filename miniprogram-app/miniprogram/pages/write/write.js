@@ -58,8 +58,6 @@ Page({
       warn: state.get().warn || '',
       sentShow: false,
       meta: meta,
-      moods: MOODS.map(id => ({ id: id, on: id === mood })),
-      energies: [1, 2, 3, 4, 5].map(n => ({ n: n, on: n === Number(energy) })),
     });
     this.setTab(1, !showEditor);
   },
@@ -94,24 +92,6 @@ Page({
     }
     this.setData({ saveState: r && r.local ? '存在本机' : '已存', warn: '' });
     this.paintAround();
-  },
-  onMood(e) {
-    const id = e.currentTarget.dataset.id;
-    const mood = this.data.mood === id ? '' : id;
-    this.setData({
-      mood: mood,
-      moods: MOODS.map(m => ({ id: m, on: m === mood })),
-    });
-    actions.writeDraft(this.data.date, { text: this._text || '', mood: mood, energy: this.data.energy });
-  },
-  onEnergy(e) {
-    const n = Number(e.currentTarget.dataset.n);
-    const energy = this.data.energy === n ? 0 : n;
-    this.setData({
-      energy: energy,
-      energies: [1, 2, 3, 4, 5].map(x => ({ n: x, on: x === energy })),
-    });
-    actions.writeDraft(this.data.date, { text: this._text || '', mood: this.data.mood, energy: energy });
   },
   onPrev() { this.shift(-1); },
   onNext() { if (this.data.meta.canNext) this.shift(1); },

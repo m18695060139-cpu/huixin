@@ -41,6 +41,47 @@
   color: var(--on-ink, #FFFFFF);
   margin: 0 11.538rpx;
 }
+.sun {
+  width: 44rpx;
+  height: 44rpx;
+  position: relative;
+  flex: none;
+  color: inherit;
+}
+.sun-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 16rpx;
+  height: 16rpx;
+  margin-left: -8rpx;
+  margin-top: -8rpx;
+  border: 3rpx solid var(--tab, #6C6C70);
+  border-radius: 50%;
+  box-sizing: border-box;
+  background: transparent;
+}
+.tab.on .sun-core { border-color: var(--ink, #D0402B); }
+.sun-ray {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3rpx;
+  height: 8rpx;
+  margin-left: -1.5rpx;
+  margin-top: -21rpx;
+  background: var(--tab, #6C6C70);
+  border-radius: 2rpx;
+  transform-origin: 1.5rpx 21rpx;
+}
+.tab.on .sun-ray { background: var(--ink, #D0402B); }
+.sun-ray.d45 { transform: rotate(45deg); }
+.sun-ray.d90 { transform: rotate(90deg); }
+.sun-ray.d135 { transform: rotate(135deg); }
+.sun-ray.d180 { transform: rotate(180deg); }
+.sun-ray.d225 { transform: rotate(225deg); }
+.sun-ray.d270 { transform: rotate(270deg); }
+.sun-ray.d315 { transform: rotate(315deg); }
 .tabbar .nav {
   flex: 1;
   display: flex;

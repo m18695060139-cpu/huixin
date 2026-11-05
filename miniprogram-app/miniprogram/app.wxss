@@ -258,7 +258,7 @@ details.mine .letter-text { padding: 0 30.769rpx 30.769rpx; font-size: 28.846rpx
 .fresh { animation: drop .6s both; }
 
 /* ── 信箱 ── */
-.seg { margin-top: 30.769rpx; background: var(--tile); border-radius: 19.231rpx; padding: 3.846rpx; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.seg { margin-top: 30.769rpx; background: var(--tile); border-radius: 19.231rpx; padding: 3.846rpx; display: flex; width: 100%; box-sizing: border-box; }
 .theme-ink .seg, .theme-mono .seg { background: #E3E3E8; }
 .seg.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg button { height: 61.538rpx; border: none; border-radius: 15.385rpx; background: transparent; font-size: 25rpx; }
@@ -323,7 +323,11 @@ details.mine .letter-text { padding: 0 30.769rpx 30.769rpx; font-size: 28.846rpx
 .sheet.enter { animation: sheetin .28s cubic-bezier(.2,.8,.2,1); }
 @keyframes sheetin { from { transform: translateY(76.923rpx); opacity: 0 } to { transform: none; opacity: 1 } }
 /* 顶栏和页面同色，跟状态栏连成一片；内容滚上来时半透明模糊 */
-.sheet-bar { position: sticky; top: 0; z-index: 2; background: var(--bg); background: var(--bg); padding-top: var(--safe-top); }
+.sheet-bar { position: sticky; top: 0; z-index: 40; background: var(--bg); padding-top: var(--safe-top); }
+.subpage-bar.sheet-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 40;
+  background: var(--bg);
+}
 .sheet-bar > div { max-width: 1076.923rpx; margin: 0 auto; height: 100rpx; display: flex; align-items: center; justify-content: space-between; gap: 15.385rpx; padding: 0 30.769rpx; }
 .sheet-bar .t { font-weight: 600; font-size: 32.692rpx; flex: 1; text-align: center; }
 .sheet-bar .x { width: 65.385rpx; height: 65.385rpx; border-radius: 32.692rpx; border: none; background: var(--card); box-shadow: 0 1.923rpx 5.769rpx rgba(0,0,0,.08); color: var(--sub); display: grid; place-items: center; padding: 0; flex: none; }
@@ -346,10 +350,10 @@ textarea.input { line-height: 1.6; resize: vertical; }
 .opt small { display: block; font-size: 23.077rpx; color: var(--sub); }
 .opt .tick { margin-left: auto; color: var(--ink); visibility: hidden; }
 .opt[aria-pressed="true"] .tick { visibility: visible; }
-.themes { display: grid; grid-template-columns: repeat(auto-fill, minmax(184.615rpx, 1fr)); gap: 19.231rpx; }
-.theme-opt { border: 3.846rpx solid transparent; border-radius: 26.923rpx; padding: 11.538rpx; background: var(--card); display: flex; flex-direction: column; gap: 11.538rpx; align-items: stretch; font-size: 25rpx; }
+.themes { display: flex; flex-wrap: wrap; gap: 19.231rpx; width: 100%; }
+.theme-opt { border: 3.846rpx solid transparent; border-radius: 26.923rpx; padding: 11.538rpx; background: var(--card); display: flex; flex-direction: column; gap: 11.538rpx; align-items: stretch; font-size: 25rpx; width: calc((100% - 38.462rpx) / 3); box-sizing: border-box; }
 .theme-opt[aria-pressed="true"] { border-color: var(--ink); font-weight: 600; }
-.swatch { height: 107.692rpx; border-radius: 17.308rpx; display: flex; flex-direction: column; justify-content: flex-end; padding: 15.385rpx; gap: 7.692rpx; border: 0.962rpx solid rgba(0,0,0,.08); }
+.swatch { width: 100%; height: 107.692rpx; border-radius: 17.308rpx; display: flex; flex-direction: column; justify-content: flex-end; padding: 15.385rpx; gap: 7.692rpx; border: 0.962rpx solid rgba(0,0,0,.08); box-sizing: border-box; overflow: hidden; }
 .swatch i { height: 7.692rpx; border-radius: 3.846rpx; display: block; }
 
 /* ── 登录 ── */
@@ -409,6 +413,7 @@ button::after { display: none; border: none; }
 .screen {
   min-height: 100vh; background: var(--bg); color: var(--text);
   font-family: var(--sans); font-size: 32.692rpx; line-height: 1.45;
+  overflow-x: hidden;
 }
 .ck .box {
   width: 50rpx; height: 50rpx; border-radius: var(--check); border: 3.846rpx solid var(--ring);
@@ -508,7 +513,7 @@ button::after { display: none; border: none; }
 .h1 { margin: 0; font-family: var(--title-font); font-size: 65.385rpx; font-weight: 700; letter-spacing: -0.962rpx; line-height: 1.2; display: block; }
 .h2 { margin: 0; font-size: 38.462rpx; font-weight: 700; display: block; }
 .h1.sm { font-size: 53.846rpx; }
-.row-t { font-size: 30.769rpx; line-height: 1.35; display: block; }
+.row-t { font-size: 30.769rpx; line-height: 1.35; display: block; width: 100%; text-align: left; }
 .row-main.done .row-t { color: var(--sub); text-decoration: line-through; }
 .row.day .row-t { font-size: 28.846rpx; }
 .row.gapday .row-t { color: var(--sub); }
@@ -559,6 +564,51 @@ button.card, button.envelope, button.tile, button.row, button.digest {
   margin-right: 0;
   text-align: left;
   align-items: stretch;
+}
+button.envelope {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: center;
+}
+button.envelope .env-t, button.envelope .env-s, button.envelope .env-btn { width: 100%; text-align: center; }
+button.row-main {
+  flex: 1 1 0;
+  width: 0;
+  min-width: 0;
+  max-width: 100%;
+  margin: 0;
+  align-items: stretch;
+  justify-content: center;
+  text-align: left;
+}
+button.row-main .row-t, button.row-main .sub { width: 100%; text-align: left; }
+button.ck {
+  flex: none;
+  width: 84.615rpx;
+  min-width: 84.615rpx;
+  margin: 0;
+  align-items: center;
+  justify-content: center;
+}
+button.lk {
+  width: auto;
+  flex: none;
+  margin: 0;
+  align-items: center;
+  justify-content: flex-start;
+  text-align: left;
+}
+button.theme-opt {
+  width: calc((100% - 38.462rpx) / 3);
+  flex: 0 0 calc((100% - 38.462rpx) / 3);
+  min-width: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  overflow: hidden;
 }
 button.card { background-color: var(--card); }
 button.envelope { background-color: var(--ink); color: var(--on-ink); margin-top: 30.769rpx; }
@@ -638,7 +688,8 @@ button.chip, .chip {
 .wbar .daynav { flex: 1; min-width: 0; justify-content: center; }
 .daynav .lab { min-width: 0; }
 .seg button, .mini-seg button, .seg .seg-btn {
-  width: 100%;
+  flex: 1 1 0;
+  width: 0;
   min-width: 0;
   margin: 0;
   height: 61.538rpx;
@@ -646,6 +697,10 @@ button.chip, .chip {
   background-color: transparent;
   font-size: 25rpx;
   padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
 }
 .sheet-bar .x, button.x {
   width: 65.385rpx;

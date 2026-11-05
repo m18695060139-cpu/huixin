@@ -1,12 +1,12 @@
 <view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
-  <view class="subpage-bar sheet-bar">
+  <view class="subpage-bar sheet-bar" style="padding-top: {{statusBar}}px;">
     <view>
       <view class="sp"></view>
       <text class="t">待办与点子</text>
       <button class="x" hover-class="none" bindtap="back" aria-label="关闭">×</button>
     </view>
   </view>
-  <view class="page" style="padding-top: 15.385rpx;">
+  <view class="page" style="padding-top: {{statusBar + 58}}px;">
     <view class="seg three">
       <view class="seg-btn {{tab === 'todos' ? 'on' : ''}}" data-tab="todos" bindtap="onTab">待办</view>
       <view class="seg-btn {{tab === 'ideas' ? 'on' : ''}}" data-tab="ideas" bindtap="onTab">点子</view>

@@ -1,5 +1,5 @@
 <view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
-  <view class="page {{editing ? 'bare' : ''}}" style="{{editing ? 'padding-bottom: calc(var(--safe-bottom) + 423.077rpx);' : ''}}">
+  <view class="page {{editing ? 'bare' : ''}}" style="padding-top: {{statusBar + 16}}px; {{editing ? 'padding-bottom: calc(var(--safe-bottom) + 423.077rpx);' : ''}}">
     <view class="wbar">
       <view wx:if="{{editing}}" class="round-btn" bindtap="closeWrite" aria-label="关闭">×</view>
       <view wx:else class="round-btn ghost"></view>

@@ -44,7 +44,10 @@ Page({
     }
     const c = row.content || {};
     const kindName = { week: '周信', quarter: '季信', year: '年信' }[row.kind] || '信';
-    let range = row.kind === 'week' ? (date.cn(row.key) + ' – ' + date.cn(date.addDays(row.key, 6))) : row.key;
+    let range = row.key;
+    if (row.kind === 'week') range = date.cn(row.key) + ' – ' + date.cn(date.addDays(row.key, 6));
+    else if (row.kind === 'quarter') range = String(row.key).replace('-', ' 年 ');
+    else if (row.kind === 'year') range = row.key + ' 年';
     if (c.range && c.range[0] && c.range[1]) range = date.cn(c.range[0]) + ' – ' + date.cn(c.range[1]);
     const st = c.stats || null;
     const paras = String(c.letter || '').split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);

@@ -1,12 +1,12 @@
 <view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
-  <view class="subpage-bar sheet-bar">
+  <view class="subpage-bar sheet-bar" style="padding-top: {{statusBar}}px;">
     <view>
       <view class="sp"></view>
       <text class="t"></text>
       <button class="x" hover-class="none" bindtap="back" aria-label="关闭">×</button>
     </view>
   </view>
-  <view class="page" style="padding-top: 15.385rpx;">
+  <view class="page" style="padding-top: {{statusBar + 58}}px;">
     <view wx:if="{{letter.missing}}" class="card empty">找不到这封信。</view>
     <block wx:else>
       <view class="head">

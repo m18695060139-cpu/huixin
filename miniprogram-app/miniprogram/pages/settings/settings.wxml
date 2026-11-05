@@ -1,12 +1,12 @@
 <view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
-  <view class="subpage-bar sheet-bar">
+  <view class="subpage-bar sheet-bar" style="padding-top: {{statusBar}}px;">
     <view>
       <view class="sp"></view>
       <text class="t">设置</text>
       <button class="x" hover-class="none" bindtap="back" aria-label="关闭">×</button>
     </view>
   </view>
-  <view class="page" style="padding-top: 15.385rpx;">
+  <view class="page" style="padding-top: {{statusBar + 58}}px;">
     <view class="offline" wx:if="{{!online}}">云端还没连上 · 先存在这台手机</view>
     <view class="field">
       <text class="lab">回信怎么称呼你</text>
