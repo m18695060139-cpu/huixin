@@ -1,7 +1,7 @@
 // 清空当前微信用户在六个集合里的全部记录。云函数有管理员权限，所以必须自己按 OPENID 过滤。
 const cloud = require('wx-server-sdk');
 
-cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
+cloud.init({ env: 'huixin-d1g2tdmkz68dc5a5d' });
 const db = cloud.database();
 
 const COLLECTIONS = ['letters', 'todos', 'ideas', 'habits', 'habit_logs', 'settings'];

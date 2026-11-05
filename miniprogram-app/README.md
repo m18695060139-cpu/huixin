@@ -1,6 +1,6 @@
-# 回信 · 微信小程序
+# 回信小记 · 微信小程序
 
-这是「回信」的**微信小程序版**，给个人主体、类目「工具 - 备忘录」用。它只跑在微信里，后端是**微信云开发**（云函数 + 云数据库），不需要自己的域名。
+这是网页版「回信」的**微信小程序**，登记名称是**回信小记**。个人主体，类目「工具 - 备忘录」。它只跑在微信里，后端是**微信云开发**（云函数 + 云数据库），不需要自己的域名。
 
 网页版（Cloudflare Workers）在仓库的 `main` 分支。两边是两本独立的本子：**不要把这个分支合并进 main**，也不要在这边改 `src/`、`public/` 那些网页文件。
 
@@ -22,13 +22,13 @@
 
 | 路径 | 内容 |
 |---|---|
-| `miniprogram/` | 小程序前端。`config.js` 里的 `ENV_ID` 要改成你的云环境 |
+| `miniprogram/` | 小程序前端。`config.js` 的 `ENV_ID` 为 `huixin-d1g2tdmkz68dc5a5d` |
 | `miniprogram/pages/` | 今天、写信、信箱，以及信、列表、设置、隐私说明 |
 | `cloudfunctions/` | `login`、`save`、`importFromWeb`、`wipe` |
 | `docs/用户隐私保护指引.md` | 填到公众平台的隐私指引草稿 |
 | `docs/数据库权限.json` | 六个集合的「仅创建者可读写」规则 |
 | `scripts/upload.js` | 用 miniprogram-ci 上传代码并部署云函数 |
-| `project.config.json` | AppID 目前是占位 `touristappid` |
+| `project.config.json` | AppID `wxb0105fcabc5187be`。`miniprogramRoot` 是 `miniprogram/`，`cloudfunctionRoot` 是 `cloudfunctions/`，用开发者工具直接打开本目录即可 |
 
 每日一句来自网页版 `public/poems.js`，原样放在 `miniprogram/data/poems.js`。外观变量来自 `public/app.css` 的四套主题：回信红、夜信、信笺、素笺，外加跟随系统。
 
@@ -55,13 +55,12 @@
 ## 在微信开发者工具里打开
 
 1. 安装[微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)。
-2. 导入项目，目录选本文件夹 `miniprogram-app`（里面有 `project.config.json`）。
-3. 还没有 AppID 时，工具会用 `touristappid` 做游客预览，**云开发不可用**，数据只在本机。
-4. 注册个人小程序、拿到 AppID 后，改 `project.config.json` 的 `appid`，用你的微信号登录开发者工具。
-5. 开通云开发**免费环境**（活动写到 2026-12-31；未发布可以先不付费）。把环境 ID 写进 `miniprogram/config.js` 的 `ENV_ID`。
-6. 工具里对 `cloudfunctions` 下四个函数「上传并部署：云端安装依赖」。或用下面的上传脚本。
-7. 云开发控制台新建集合（第一次写入有时会自动出现）：`letters`、`todos`、`ideas`、`habits`、`habit_logs`、`settings`。权限全部选 **仅创建者可读写**。规则原文在 `docs/数据库权限.json`。
-8. 查询若提示缺索引，按开发者工具里的链接创建即可。建议字段也写在那份 JSON 里。
+2. 导入项目，目录选本文件夹 `miniprogram-app`（里面有 `project.config.json`）。`miniprogramRoot` 指向 `miniprogram/`，`cloudfunctionRoot` 指向 `cloudfunctions/`，不用再改目录。
+3. AppID 已写成 `wxb0105fcabc5187be`。用管理员微信登录开发者工具即可。
+4. 云环境 ID 已写成 `huixin-d1g2tdmkz68dc5a5d`（`miniprogram/config.js`，四个云函数的 `cloud.init` 也是这个环境）。
+5. 工具里对 `cloudfunctions` 下四个函数「上传并部署：云端安装依赖」。或用下面的上传脚本。
+6. 云开发控制台新建集合（第一次写入有时会自动出现）：`letters`、`todos`、`ideas`、`habits`、`habit_logs`、`settings`。权限全部选 **仅创建者可读写**。规则原文在 `docs/数据库权限.json`。
+7. 查询若提示缺索引，按开发者工具里的链接创建即可。建议字段也写在那份 JSON 里。
 
 保存文字时，云函数 `save` 会调用 `cloud.openapi.security.msgSecCheck`（场景值 1，version 2）。判定为 risky：提示「内容包含不适合保存的信息，请修改后再存」，草稿留在输入框。review 或接口故障：仍保存，并在记录上做标记，不因为接口挡住你。
 
@@ -81,10 +80,10 @@
 
 ```bash
 npm install
-export APPID=wx你的AppID
-export ENV_ID=云环境ID
+export APPID=wxb0105fcabc5187be
+export ENV_ID=huixin-d1g2tdmkz68dc5a5d
 export PRIVATE_KEY_PATH=/绝对路径/private.key
-# ENV_ID 必须和 miniprogram/config.js 里的值相同
+# APPID、ENV_ID 必须和 project.config.json、miniprogram/config.js 里的值相同
 npm run upload
 ```
 
@@ -98,15 +97,13 @@ npm run upload
 
 只给自己用、不提交审核时，可以停留在体验版。一旦要公开发布，需要先完成个人小程序备案，并在提审备注里写明：个人每日记录与待办；内容仅当前用户可见；无分享、无社区；数据库按 openid 隔离；保存前已接入 msgSecCheck。
 
-## 还要你提供的值
+## 已填入的登记信息
 
-代码里这些仍是占位，不填就不能连上你的云环境，也不能上传：
+- 小程序名称：**回信小记**（导航栏标题和隐私指引）。应用里说「写信 / 拆信 / 回信红」时，仍用「回信」指这封信。
+- AppID：`wxb0105fcabc5187be`
+- 云环境 ID：`huixin-d1g2tdmkz68dc5a5d`
 
-1. **AppID**：替换 `project.config.json` 的 `touristappid`，上传时传给环境变量 `APPID`。
-2. **云环境 ID**：替换 `miniprogram/config.js` 的 `YOUR_ENV_ID`，并作为环境变量 `ENV_ID`（两者必须一致）。
-3. **代码上传密钥文件路径**：环境变量 `PRIVATE_KEY_PATH`。
-4. 隐私指引里的**联系邮箱**（或其他联系方式）。
-5. 若「回信」这个名字已被占用：小程序登记名称、图标、简介（建议写成「每日记录与待办工具，内容仅自己可见」）。
+上传还需要你本机的**代码上传密钥路径**（环境变量 `PRIVATE_KEY_PATH`）。隐私指引里的联系邮箱仍待填写。
 
 ## 本地检查
 

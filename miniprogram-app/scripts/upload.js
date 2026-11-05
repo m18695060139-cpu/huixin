@@ -1,10 +1,11 @@
 // 用 miniprogram-ci 上传小程序代码，并部署云函数。
 // 环境变量：APPID、ENV_ID、PRIVATE_KEY_PATH。可选 VERSION、DESC、ROBOT。
-// 上传前请把 miniprogram/config.js 里的 ENV_ID 改成同一个环境 ID。
+// 上传前请确认环境变量 ENV_ID 与 miniprogram/config.js 一致，APPID 与 project.config.json 一致。
 
 const path = require('path');
 const ci = require('miniprogram-ci');
 const config = require('../miniprogram/config');
+const projectConfig = require('../project.config.json');
 
 const FUNCTIONS = ['login', 'save', 'importFromWeb', 'wipe'];
 
@@ -25,8 +26,8 @@ async function main() {
     console.error('miniprogram/config.js 的 ENV_ID 是「' + config.ENV_ID + '」，和环境变量 ENV_ID 不一致。先改 config.js 再上传，否则体验版连不上这个云环境。');
     process.exit(1);
   }
-  if (appid === 'touristappid') {
-    console.error('APPID 还是游客号，不能上传。换成小程序后台的 AppID，并同步改 project.config.json。');
+  if (appid !== projectConfig.appid) {
+    console.error('环境变量 APPID（' + appid + '）和 project.config.json 的 appid（' + projectConfig.appid + '）不一致。');
     process.exit(1);
   }
 
@@ -39,7 +40,7 @@ async function main() {
   });
 
   const version = process.env.VERSION || '0.1.0';
-  const desc = process.env.DESC || '回信小程序体验版';
+  const desc = process.env.DESC || '回信小记体验版';
   const uploaded = await ci.upload({
     project: project,
     version: version,

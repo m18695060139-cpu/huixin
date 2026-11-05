@@ -9,7 +9,7 @@
   <view class="page" style="padding-top: 8px;">
     <view class="card pad privacy-body">
       <text class="h">这是给你自己用的记录本</text>
-      <text class="bullet">回信不提供分享、广场或别人可见的页面。右上角菜单里的转发已关闭。</text>
+      <text class="bullet">回信小记不提供分享、广场或别人可见的页面。右上角菜单里的转发已关闭。</text>
       <text class="h">会保存什么</text>
       <text class="bullet">你写下的信、待办、点子、习惯名、称呼和自省提示，以及你自己选的心情和精力。</text>
       <text class="bullet">微信云开发用来识别「这是你的数据」的 openid。不收集手机号、头像、昵称、位置和通讯录。</text>

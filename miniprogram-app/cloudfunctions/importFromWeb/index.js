@@ -2,7 +2,7 @@
 const cloud = require('wx-server-sdk');
 const { guard } = require('./sec');
 
-cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
+cloud.init({ env: 'huixin-d1g2tdmkz68dc5a5d' });
 const db = cloud.database();
 
 const MOODS = { '平静': 1, '专注': 1, '振奋': 1, '疲惫': 1, '焦虑': 1, '低落': 1, '烦躁': 1, '感激': 1 };

@@ -9,6 +9,7 @@
     "pages/privacy/privacy"
   ],
   "window": {
+    "navigationBarTitleText": "回信小记",
     "navigationStyle": "custom",
     "navigationBarTextStyle": "black",
     "backgroundColor": "#F2F2F7",

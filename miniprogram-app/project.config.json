@@ -1,5 +1,5 @@
 {
-  "description": "回信微信小程序。个人主体、工具-备忘录、仅自己可见。与网页版（main 分支）独立，请勿合并。",
+  "description": "回信小记。个人主体、工具-备忘录、仅自己可见。与网页版（main 分支）独立，请勿合并。",
   "packOptions": {
     "ignore": [
       { "type": "folder", "value": "node_modules" },
@@ -43,7 +43,7 @@
   },
   "compileType": "miniprogram",
   "libVersion": "3.6.5",
-  "appid": "touristappid",
+  "appid": "wxb0105fcabc5187be",
   "projectname": "huixin-miniprogram",
   "condition": {},
   "miniprogramRoot": "miniprogram/",

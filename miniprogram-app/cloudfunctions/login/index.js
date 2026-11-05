@@ -1,7 +1,7 @@
 // 用云函数上下文里的 OPENID 识别「这是谁」。不收集昵称、头像、手机号。
 const cloud = require('wx-server-sdk');
 
-cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV });
+cloud.init({ env: 'huixin-d1g2tdmkz68dc5a5d' });
 
 exports.main = async () => {
   const { OPENID } = cloud.getWXContext();

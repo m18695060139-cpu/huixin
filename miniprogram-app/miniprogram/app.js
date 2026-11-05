@@ -12,7 +12,7 @@ App({
   onLaunch() {
     this.readSystem();
     this.hideShare();
-    if (wx.cloud && config.ENV_ID && config.ENV_ID !== 'YOUR_ENV_ID') {
+    if (wx.cloud && config.ENV_ID) {
       wx.cloud.init({ env: config.ENV_ID, traceUser: false });
       this.globalData.cloudReady = true;
       wx.cloud.callFunction({ name: 'login', data: {} }).catch(() => {});
