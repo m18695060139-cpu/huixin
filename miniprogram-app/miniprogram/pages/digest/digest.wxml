@@ -6,7 +6,7 @@
       <button class="x" hover-class="none" bindtap="back" aria-label="关闭">×</button>
     </view>
   </view>
-  <view class="page" style="padding-top: {{statusBar + 58}}px;">
+  <view class="page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
     <view wx:if="{{missing}}" class="card empty">找不到这封信。</view>
     <block wx:else>
       <view class="head">

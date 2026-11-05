@@ -67,10 +67,28 @@ button:active:not(:disabled), .tap:active { transform: scale(.97); opacity: .85;
 
 .page {
   max-width: 1076.923rpx; margin: 0 auto;
-  padding: calc(var(--safe-top) + 38.462rpx) 30.769rpx calc(var(--safe-bottom) + 230.769rpx);
+  padding: 0 30.769rpx calc(env(safe-area-inset-bottom) + 40px);
   min-height: 100vh;
 }
-.page.bare { padding-bottom: calc(var(--safe-bottom) + 46.154rpx); }
+/* 三个 tab 页：底栏约 64px 胶囊 + 上下外边距，再留一截空，最后一张卡要完整露在底栏上面 */
+.page.tab-pad { padding-bottom: calc(env(safe-area-inset-bottom) + 136px); }
+.page.bare { padding-bottom: calc(env(safe-area-inset-bottom) + 220px); }
+.stick-top {
+  position: -webkit-sticky;
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--bg);
+  padding-bottom: 15.385rpx;
+}
+.top-shield {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 39;
+  background: var(--bg);
+}
 
 /* ── 标题区 ── */
 .head { display: flex; justify-content: space-between; align-items: flex-end; gap: 23.077rpx; padding: 0 7.692rpx; }
@@ -413,7 +431,6 @@ button::after { display: none; border: none; }
 .screen {
   min-height: 100vh; background: var(--bg); color: var(--text);
   font-family: var(--sans); font-size: 32.692rpx; line-height: 1.45;
-  overflow-x: hidden;
 }
 .ck .box {
   width: 50rpx; height: 50rpx; border-radius: var(--check); border: 3.846rpx solid var(--ring);
@@ -712,4 +729,8 @@ button.chip, .chip {
   padding: 0;
 }
 .head { align-items: flex-end; }
+.head.stick-top, .wbar.stick-top {
+  padding-bottom: 15.385rpx;
+  background: var(--bg);
+}
 .memo, button.memo { width: 100%; align-items: flex-start; }

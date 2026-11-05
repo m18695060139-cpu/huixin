@@ -1,6 +1,7 @@
 <view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
-  <view class="page" style="padding-top: {{statusBar + 16}}px;">
-    <view class="head">
+  <view class="top-shield" style="height: {{statusBar}}px;"></view>
+  <view class="page tab-pad">
+    <view class="head stick-top" style="padding-top: {{statusBar + 12}}px;">
       <view class="head-l">
         <text class="eyebrow">{{dateLabel}}</text>
         <text class="h1">{{hello}}</text>
