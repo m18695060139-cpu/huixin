@@ -270,6 +270,8 @@ function applyCloud(bundle) {
       sent_at: row.sent_at || '',
       opened: !!row.opened,
       updated_at: row.updated_at || '',
+      reply: row.reply && row.reply.summary ? row.reply : ((prev && prev.reply) || null),
+      replied_at: row.replied_at || (prev && prev.replied_at) || '',
     };
     if (held[row.date] && prev) next.text = prev.text;
     letters[row.date] = next;

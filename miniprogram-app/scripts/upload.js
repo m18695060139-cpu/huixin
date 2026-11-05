@@ -7,7 +7,7 @@ const ci = require('miniprogram-ci');
 const config = require('../miniprogram/config');
 const projectConfig = require('../project.config.json');
 
-const FUNCTIONS = ['login', 'save', 'importFromWeb', 'wipe'];
+const FUNCTIONS = ['login', 'save', 'importFromWeb', 'wipe', 'reply'];
 
 function need(name) {
   const value = process.env[name];

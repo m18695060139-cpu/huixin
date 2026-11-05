@@ -510,14 +510,18 @@ function letterModel(S, day, now) {
   const sealed = isSealed(S, day, now);
   const opened = !!l.opened;
   const hideBody = sealed && !opened;
+  const reply = (!hideBody && l.reply && l.reply.summary) ? replyBlock(S, l, t) : null;
   let title = date.cn(day) + '的信';
-  if (!hideBody && opened && day === yday) title = '昨晚的信';
+  if (reply && day === yday) title = '昨晚的回信';
+  else if (reply && day === t) title = '今天的回信';
+  else if (reply) title = date.cn(day) + '的回信';
+  else if (!hideBody && opened && day === yday) title = '昨晚的信';
   else if (!hideBody && !sealed && !opened && (day === yday || day === t)) title = '昨晚的你来信了';
   return {
     missing: false,
     date: day,
     no: letterNo(S, day),
-    eyebrow: 'No.' + letterNo(S, day) + ' · 星期' + date.wd(day),
+    eyebrow: (reply ? 'Re: ' : '') + 'No.' + letterNo(S, day) + ' · 星期' + date.wd(day),
     title: title,
     text: hideBody ? '' : (l.text || ''),
     hideBody: hideBody,
@@ -528,7 +532,55 @@ function letterModel(S, day, now) {
     mood: l.mood || '',
     energy: l.energy || 0,
     chars: String(l.text || '').trim().length,
-    sentences: hideBody ? [] : sentencesOf(l.text || ''),
+    sentences: hideBody || reply ? [] : sentencesOf(l.text || ''),
+    hasReply: !!reply,
+    canAsk: !!(l.sent_at && !hideBody && !sealed && !reply),
+    reply: reply,
+  };
+}
+
+function replyBlock(S, l, t) {
+  const r = l.reply;
+  const paras = String(r.summary || '').split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
+  const mine = String(l.text || '').split('\n').map(s => s.trim()).find(Boolean) || '';
+  const lenses = [
+    ['health', '健康', '#FF2D55'],
+    ['energy', '精力', '#E07A00'],
+    ['career', '事业', '#007AFF'],
+    ['relation', '关系', '#248A3D'],
+  ].map(row => ({
+    key: row[0],
+    name: row[1],
+    mark: row[1].slice(0, 1),
+    color: row[2],
+    text: (r.lenses && r.lenses[row[0]]) || '',
+  })).filter(row => row.text);
+  const todos = (r.todos || []).map(x => {
+    const live = (S.todos || []).find(y => y.id === x.id) || x;
+    let badge = '已加入待办';
+    if (live.dropped_at) badge = '已放下';
+    else if (live.done) badge = '已完成';
+    else if (live.due && live.due <= t) badge = '已放进今天';
+    const due = live.due ? (live.due === t ? '今天' : date.cn(live.due)) : '';
+    return { id: x.id, text: x.text, due: due, badge: badge };
+  });
+  const ideas = (r.ideas || []).map(x => ({ id: x.id, text: x.text }));
+  let when = '';
+  if (l.replied_at) {
+    const at = new Date(l.replied_at);
+    if (!isNaN(at.getTime())) when = date.cn(date.localDate(at)) + ' ' + date.hm(at) + ' 收到';
+  }
+  return {
+    paras: paras,
+    mine: mine,
+    when: when,
+    energy: r.energy || 0,
+    mood: r.mood || '',
+    highlight: r.highlight || '',
+    lenses: lenses,
+    todos: todos,
+    ideas: ideas,
+    engine: r.engine || '',
   };
 }
 

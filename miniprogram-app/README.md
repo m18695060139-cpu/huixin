@@ -24,7 +24,7 @@
 |---|---|
 | `miniprogram/` | 小程序前端。`config.js` 的 `ENV_ID` 为 `huixin-d1g2tdmkz68dc5a5d` |
 | `miniprogram/pages/` | 今天、写信、信箱，以及信、列表、设置、隐私说明 |
-| `cloudfunctions/` | `login`、`save`、`importFromWeb`、`wipe` |
+| `cloudfunctions/` | `login`、`save`、`importFromWeb`、`wipe`、`reply`（混元回信，体验版） |
 | `docs/用户隐私保护指引.md` | 填到公众平台的隐私指引草稿 |
 | `docs/数据库权限.json` | 六个集合的「仅创建者可读写」规则 |
 | `scripts/upload.js` | 用 miniprogram-ci 上传代码并部署云函数 |
@@ -87,9 +87,23 @@ export PRIVATE_KEY_PATH=/绝对路径/private.key
 npm run upload
 ```
 
-脚本使用 `miniprogram-ci`：上传代码，再对四个云函数 `uploadFunction`（云端安装依赖）。上传成功后，到公众平台 **管理 → 版本管理**，把该版本设为**体验版**。要打开的人加为体验成员（个人主体最多 15 人）。
+脚本使用 `miniprogram-ci`：上传代码，再对 `login`、`save`、`importFromWeb`、`wipe`、`reply` 做 `uploadFunction`（云端安装依赖）。`reply` 也可以在开发者工具里对 `cloudfunctions/reply` 右键上传。上传成功后，到公众平台 **管理 → 版本管理**，把该版本设为**体验版**。要打开的人加为体验成员（个人主体最多 15 人）。
 
 代码上传密钥在公众平台「开发管理 → 开发设置」生成，不要提交到仓库。
+
+## 混元回信（仅体验版）
+
+个人主体不能把 AI 功能提交审核。开关只有一个：`miniprogram/config.js` 里的 `AI_ENABLED`，默认 `true`。送审前改成 `false`，拆信时就不会再请求回信，页面上也不出现回信块。
+
+回信在云函数 `reply` 里生成，提示词不下发到手机。模型提供方是 `cloudbase`，对话模型常量是 **`hy3`**（成长计划第二期的文本模型）。若环境还不认 `hy3`，函数会再试一次文档示例里的 `hy3-preview`。信要到第二天 6:00 解锁后，用户点「拆开」才现写；失败或额度用完时，自己写的信还在，并可以再试。
+
+周信、季信、年信先不做（云函数文件顶部有 TODO）。
+
+要在开发者工具里启用：
+
+1. 打开本目录，在 `cloudfunctions/reply` 上右键 **上传并部署：云端安装依赖**。这一次必须做，否则拆信时找不到 `reply`。依赖要用 `wx-server-sdk` 4.0.1 及以上，`package.json` 里已经写了。
+2. 云开发控制台确认这个环境开了 AI / 大模型，并且混元可用。小程序成长计划的免费 token 要发到环境 `huixin-d1g2tdmkz68dc5a5d` 才不会报额度用完。入口一般在开发者工具的「云开发」面板，或 [云开发 AI 文档](https://developers.weixin.qq.com/miniprogram/dev/wxcloudservice/wxcloud/guide/extensions/extend/ai/model.html) 里写的控制台。
+3. 云函数调用文档（服务端 `cloud.ai().createModel('cloudbase')`）：https://developers.weixin.qq.com/miniprogram/dev/wxcloudservice/wxcloud/reference-sdk-api/extend/ai/server.html
 
 ## 隐私与备案
 
