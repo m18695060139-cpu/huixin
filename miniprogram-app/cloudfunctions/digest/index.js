@@ -1,4 +1,4 @@
-// 周信 / 季信 / 年信。每天北京时间 7:00 触发：周一送上周，季初送上季，元旦送去年。
+// 周信 / 季信 / 年信。每天北京时间 6:00 触发：周一送上周，季初送上季，元旦送去年。
 // 提示词与网页版 src/ai.js 的 DIGEST_SYSTEM 一致。也可以由小程序手动让它现在写。
 const cloud = require('wx-server-sdk');
 const { guard } = require('./sec');

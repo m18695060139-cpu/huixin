@@ -536,9 +536,9 @@ function mailboxModel(S, now, ui) {
 
 function kindHead(tab, t) {
   const names = {
-    week: ['周信', '每周一早上 7 点', '本周'],
-    quarter: ['季信', '每季度第一天早上 7 点', '这一季'],
-    year: ['年信', '每年元旦早上 7 点', '今年'],
+    week: ['周信', '每周一早上 6 点', '本周'],
+    quarter: ['季信', '每季度第一天早上 6 点', '这一季'],
+    year: ['年信', '每年元旦早上 6 点', '今年'],
   };
   const n = names[tab];
   if (!n) return null;

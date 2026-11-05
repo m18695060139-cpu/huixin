@@ -6,9 +6,9 @@
   "memorySize": 256,
   "triggers": [
     {
-      "name": "digestAt7",
+      "name": "digestAt6",
       "type": "timer",
-      "config": "0 0 7 * * * *"
+      "config": "0 0 6 * * * *"
     }
   ]
 }
