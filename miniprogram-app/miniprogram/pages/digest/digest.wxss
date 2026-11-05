@@ -1,0 +1,2 @@
+.reply-p { display: block; margin: 0 0 23.077rpx; }
+.reply-p:last-child { margin-bottom: 0; }

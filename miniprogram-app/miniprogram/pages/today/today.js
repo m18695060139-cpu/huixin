@@ -6,7 +6,7 @@ const { today } = require('../../utils/date');
 
 Page({
   behaviors: [behavior],
-  data: { poemOffset: 0, memoryOffset: 0 },
+  data: { memoryOffset: 0 },
   onShow() {
     this.hideShare();
     this._just = this._just || {};
@@ -21,17 +21,12 @@ Page({
   paint() {
     const view = model.todayModel(state.get(), new Date(), {
       justDone: this._just || {},
-      poemOffset: this.data.poemOffset || 0,
       memoryOffset: this.data.memoryOffset || 0,
     });
     this.setData(view);
     this.setTab(0, true);
   },
   tabShouldShow() { return true; },
-  nextPoem() {
-    this.setData({ poemOffset: (this.data.poemOffset || 0) + 1 });
-    this.paint();
-  },
   nextMemory() {
     this.setData({ memoryOffset: (this.data.memoryOffset || 0) + 1 });
     this.paint();

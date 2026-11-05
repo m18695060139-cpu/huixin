@@ -6,7 +6,7 @@
       <button class="x" hover-class="none" bindtap="back" aria-label="关闭">×</button>
     </view>
   </view>
-  <view class="page" style="padding-top: 8px;">
+  <view class="page" style="padding-top: 15.385rpx;">
     <view class="seg three">
       <view class="seg-btn {{tab === 'todos' ? 'on' : ''}}" data-tab="todos" bindtap="onTab">待办</view>
       <view class="seg-btn {{tab === 'ideas' ? 'on' : ''}}" data-tab="ideas" bindtap="onTab">点子</view>
@@ -31,7 +31,7 @@
       <view class="card mt">
         <view wx:if="{{!ideas.length}}" class="empty">点子库是空的。想到什么，记在这里。</view>
         <view class="row" wx:for="{{ideas}}" wx:key="id">
-          <view class="ic sm idea"><view class="i i-bulb" style="width:14px;height:14px;"></view></view>
+          <view class="ic sm idea"><view class="i i-bulb" style="width:26.923rpx;height:26.923rpx;"></view></view>
           <button class="row-main" hover-class="none" data-id="{{item.id}}" bindtap="editIdea">
             <text class="row-t">{{item.text}}</text>
             <text class="sub {{item.subCls}}">{{item.sub}}</text>
@@ -45,7 +45,7 @@
       <view wx:if="{{showDropped}}" class="card">
         <view wx:if="{{!dropped.length}}" class="empty">还没有放下的点子。</view>
         <view class="row" wx:for="{{dropped}}" wx:key="id">
-          <view class="ic sm idea dim"><view class="i i-bulb" style="width:14px;height:14px;"></view></view>
+          <view class="ic sm idea dim"><view class="i i-bulb" style="width:26.923rpx;height:26.923rpx;"></view></view>
           <view class="row-main done">
             <text class="row-t">{{item.text}}</text>
             <text class="sub">{{item.droppedLabel}}</text>

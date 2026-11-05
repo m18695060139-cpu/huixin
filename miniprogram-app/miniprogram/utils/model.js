@@ -1,7 +1,6 @@
 // 把本机数据收成各页要用的结构。不读 wx，方便用 node 核对「明早拆信」。
 
 const date = require('./date');
-const { dailyPoem } = require('./poem');
 const { INK, SEP, CARD } = require('./theme');
 
 function letterOf(S, d) {
@@ -70,8 +69,12 @@ function dueInfo(td, t) {
   return { cls: '', label: n < 7 ? '周' + date.wd(td.due) : date.cn(td.due), rank: 3 };
 }
 
+function sourceHidden(S, x) {
+  return !!(x && x.source_date && isSealed(S, x.source_date, new Date()));
+}
+
 function openTodos(S, t) {
-  return (S.todos || []).filter(x => !x.done && !x.archived && !x.dropped_at).sort((a, b) => {
+  return (S.todos || []).filter(x => !x.done && !x.archived && !x.dropped_at && !sourceHidden(S, x)).sort((a, b) => {
     const da = dueInfo(a, t);
     const db = dueInfo(b, t);
     const ra = da ? da.rank : 4;
@@ -86,7 +89,7 @@ function openTodos(S, t) {
 }
 
 function openIdeas(S) {
-  return (S.ideas || []).filter(i => i.status === 'open');
+  return (S.ideas || []).filter(i => i.status === 'open' && !sourceHidden(S, i));
 }
 
 function srcLine(x, t) {
@@ -165,8 +168,8 @@ function heroBlock(S, now) {
     return {
       type: 'envelope',
       date: u.date,
-      title: (u.date === yday || u.date === t) ? '昨晚的你来信了' : date.cn(u.date) + '的信到了',
-      sub: 'No.' + letterNo(S, u.date) + (u.mood ? ' · ' + u.mood : ''),
+      title: (u.date === yday || u.date === t) ? '昨晚的你来信了' : date.cn(u.date) + '的回信到了',
+      sub: 'No.' + letterNo(S, u.date) + ((u.reply && u.reply.todos && u.reply.todos.length) ? (' · ' + u.reply.todos.length + ' 件待办') : '') + ((u.reply && u.reply.ideas && u.reply.ideas.length) ? (' · ' + u.reply.ideas.length + ' 个点子') : ''),
     };
   }
   if (hasSent(S, ld) && isSealed(S, ld, now)) {
@@ -174,7 +177,7 @@ function heroBlock(S, now) {
       type: 'sealed',
       date: ld,
       title: ld === date.letterDay(now) ? '今晚的信已寄出' : date.cn(ld) + '的信已寄出',
-      sub: '明早 6:00 可以拆开',
+      sub: '回信明早 6:00 送到',
     };
   }
   const skip = S.skip || {};
@@ -183,15 +186,17 @@ function heroBlock(S, now) {
       type: 'backfill',
       date: yday,
       title: '昨晚没有写信',
-      sub: '现在补上也来得及。补上的信存好之后，马上可以回看。',
+      sub: '现在补上也来得及。补写的信寄出后，回信马上送到，拆出来的事直接放进今天。',
     };
   }
   if (!hasText(S, ld) && night) return writeHero(S, ld, '今晚');
   const last = [ld, yday].filter(d => hasSent(S, d) && S.letters[d].opened && !isSealed(S, d, now))[0];
   if (last) {
     const l = S.letters[last];
-    const line = firstLine(l.text);
-    const who = last === yday ? '昨晚的信' : last === t ? '今天的信' : date.cn(last) + '的信';
+    const line = (l.reply && l.reply.summary)
+      ? (String(l.reply.summary).split(/[。！？\n]/).map(s => s.trim()).filter(Boolean).pop() || '')
+      : firstLine(l.text);
+    const who = last === yday ? '昨晚的回信' : last === t ? '今天的回信' : date.cn(last) + '的回信';
     return {
       type: 'read',
       date: last,
@@ -214,8 +219,10 @@ function writeHero(S, d, label) {
   };
 }
 
+// 旧信里翻出来的一句话（30 天以前写的）。点一下换一封信里的句子。
+// 没有满 30 天的信，或那封信里没有 8–60 字的句子时，整张卡片不出现。
 function memoryBlock(S, t, offset) {
-  const old = Object.keys(S.letters || {}).filter(d => hasText(S, d) && date.diffDays(t, d) >= 30).map(d => S.letters[d]);
+  const old = Object.keys(S.letters || {}).map(d => S.letters[d]).filter(l => l && l.text && l.date && date.diffDays(t, l.date) >= 30);
   if (!old.length) return null;
   const l = old[(date.hash(t) + (offset || 0)) % old.length];
   const sents = String(l.text).split(/[。！？!?\n]/).map(s => s.trim()).filter(s => s.length >= 8 && s.length <= 60);
@@ -261,23 +268,22 @@ function todayModel(S, now, opts) {
       total: ideas.length,
     };
   }
-  const moodForPoem = (function () {
-    const y = letterOf(S, date.addDays(t, -1));
-    const cur = letterOf(S, t);
-    return (cur && cur.mood) || (y && y.mood) || '';
-  })();
   return {
     dateLabel: date.cn(t) + ' 星期' + date.wd(t),
     hello: (h >= 4 && h < 11) ? '早上好' : '今天',
     count: totalLetters(S),
     todoTitle: (h >= 4 && h < 12) ? '今天要做的' : '待处理',
     hero: heroBlock(S, now),
-    poem: dailyPoem(t, moodForPoem, opts.poemOffset || 0),
     todos: showT,
     justDone: justList,
     todoMore: Math.max(0, todos.length - showT.length),
     todoMoreLabel: (todos.length - showT.length) > 0 ? ('还有 ' + (todos.length - showT.length) + ' 项 ›') : '全部 ›',
     todoOpen: todos.length,
+    pendingExtra: (function () {
+      const u = unopenedLetter(S, t, now);
+      const n = u && u.reply && u.reply.todos ? u.reply.todos.length : 0;
+      return n ? ('拆信后再加 ' + n + ' 件') : '';
+    })(),
     doneCount: recentDone.length,
     showDoneLine: recentDone.length > justList.length,
     habits: habitItems(S, t),
@@ -399,18 +405,16 @@ function dayRow(S, d, now) {
   const sealed = isSealed(S, d, now);
   let line;
   let meta;
+  const r = l.reply || {};
   if (sealed) {
-    line = '封存中 · 明早 6:00 拆开';
+    line = '回信封存中 · 明早 6:00 送到';
     meta = 'No.' + letterNo(S, d);
   } else if (!l.sent_at) {
     line = firstLine(l.text) || '草稿';
     meta = '还没寄出';
-  } else if (!l.opened) {
-    line = '待拆开';
-    meta = 'No.' + letterNo(S, d) + (l.mood ? ' · ' + l.mood : '');
   } else {
-    line = firstLine(l.text);
-    meta = 'No.' + letterNo(S, d) + (l.energy ? ' · 精力 ' + l.energy : '') + (l.mood ? ' · ' + l.mood : '');
+    line = firstLine(r.summary || l.text);
+    meta = l.energy ? ('No.' + letterNo(S, d) + ' · 精力 ' + l.energy + (l.mood ? ' · ' + l.mood : '')) : (r.imported ? '旧信' : '还没有回信');
   }
   return { kind: 'day', date: d, num: num, wd: w, line: line, meta: meta, sealed: sealed };
 }
@@ -450,6 +454,27 @@ function weekSummary(S, now) {
   };
 }
 
+function digestCard(d) {
+  const c = d.content || {};
+  const st = c.stats || {};
+  const kindN = { week: '周信', quarter: '季信', year: '年信' }[d.kind] || '信';
+  let lab = d.key;
+  if (d.kind === 'week' && /^\d{4}-\d{2}-\d{2}$/.test(d.key)) lab = date.cn(d.key) + ' 那一周';
+  else if (d.kind === 'quarter') lab = String(d.key).replace('-', ' 年 ');
+  else if (d.kind === 'year') lab = d.key + ' 年';
+  return {
+    kind: d.kind,
+    key: d.key,
+    title: c.title || '',
+    badge: kindN + (st.letters ? (' · ' + st.letters + ' 封信') : ''),
+    read: '读完整的' + kindN + ' ›',
+    lab: lab,
+    energy: st.energyAvg != null ? st.energyAvg : '—',
+    todos: st.todosDone || 0,
+    forgotten: (c.forgotten || []).length,
+  };
+}
+
 function mailboxModel(S, now, ui) {
   ui = ui || {};
   now = now || new Date();
@@ -477,12 +502,18 @@ function mailboxModel(S, now, ui) {
     }
     more = last > oldest;
     const thisWk = date.weekKey(t);
-    groups = groups.map(g => ({
-      wk: g.wk,
-      title: g.wk === thisWk ? '本周' : (g.wk === date.addDays(thisWk, -7) ? '上周' : date.cn(g.wk) + ' 那一周'),
-      range: date.cn(g.wk) + ' – ' + date.cn(date.addDays(g.wk, 6)),
-      rows: g.days.map(d => dayRow(S, d, now)),
-    }));
+    const digests = S.digests || [];
+    groups = groups.map(g => {
+      const found = digests.find(d => d.kind === 'week' && d.key === g.wk);
+      return {
+        wk: g.wk,
+        title: g.wk === thisWk ? '本周' : (g.wk === date.addDays(thisWk, -7) ? '上周' : date.cn(g.wk) + ' 那一周'),
+        range: date.cn(g.wk) + ' – ' + date.cn(date.addDays(g.wk, 6)),
+        rows: g.days.map(d => dayRow(S, d, now)),
+        digest: found ? digestCard(found) : null,
+        canGen: g.wk < thisWk && !found,
+      };
+    });
   }
   return {
     eyebrow: days ? ('已经往来 ' + days + ' 天 · ' + dates.length + ' 封信') : '还没有信',
@@ -498,6 +529,28 @@ function mailboxModel(S, now, ui) {
     more: more,
     week: weekSummary(S, now),
     writeDate: date.letterDay(now),
+    kindDigests: (S.digests || []).filter(d => d.kind === ((ui.tab === 'week' || ui.tab === 'quarter' || ui.tab === 'year') ? ui.tab : '')).map(digestCard),
+    kindHead: kindHead((ui.tab === 'week' || ui.tab === 'quarter' || ui.tab === 'year') ? ui.tab : '', t),
+  };
+}
+
+function kindHead(tab, t) {
+  const names = {
+    week: ['周信', '每周一早上 7 点', '本周'],
+    quarter: ['季信', '每季度第一天早上 7 点', '这一季'],
+    year: ['年信', '每年元旦早上 7 点', '今年'],
+  };
+  const n = names[tab];
+  if (!n) return null;
+  let key = t.slice(0, 4);
+  if (tab === 'week') key = date.weekKey(t);
+  else if (tab === 'quarter') key = t.slice(0, 4) + '-Q' + (Math.floor((Number(t.slice(5, 7)) - 1) / 3) + 1);
+  return {
+    note: n[0] + '会在' + n[1] + '自动送达。也可以现在就让回信先写一封' + n[2] + '到目前为止的。',
+    gen: '现在写' + n[2] + '的' + n[0] + ' ›',
+    empty: '还没有' + n[0] + '。',
+    kind: tab,
+    key: key,
   };
 }
 
@@ -523,12 +576,12 @@ function letterModel(S, day, now) {
     no: letterNo(S, day),
     eyebrow: (reply ? 'Re: ' : '') + 'No.' + letterNo(S, day) + ' · 星期' + date.wd(day),
     title: title,
-    text: hideBody ? '' : (l.text || ''),
+    text: l.text || '',
     hideBody: hideBody,
     sealed: sealed,
     opened: opened,
     sent: !!l.sent_at,
-    note: sealed ? ('这封信封到 ' + date.cn(date.addDays(day, 1)) + ' 早上 6:00。到时从首页拆开，看到的是你自己写的。') : '',
+    note: sealed ? ('回信已经写好，封存到 ' + date.cn(date.addDays(day, 1)) + ' 早上 6:00。') : ((!reply && l.sent_at) ? '这封信还没有回信。' : ''),
     mood: l.mood || '',
     energy: l.energy || 0,
     chars: String(l.text || '').trim().length,
@@ -581,6 +634,7 @@ function replyBlock(S, l, t) {
     todos: todos,
     ideas: ideas,
     engine: r.engine || '',
+    fb: r.fb || 0,
   };
 }
 

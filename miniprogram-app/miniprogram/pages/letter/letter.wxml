@@ -2,11 +2,11 @@
   <view class="subpage-bar sheet-bar">
     <view>
       <view class="sp"></view>
-      <text class="t">一封信</text>
+      <text class="t"></text>
       <button class="x" hover-class="none" bindtap="back" aria-label="关闭">×</button>
     </view>
   </view>
-  <view class="page" style="padding-top: 8px;">
+  <view class="page" style="padding-top: 15.385rpx;">
     <view wx:if="{{letter.missing}}" class="card empty">找不到这封信。</view>
     <block wx:else>
       <view class="head">
@@ -16,21 +16,10 @@
         </view>
       </view>
 
-      <view wx:if="{{letter.hideBody}}" class="card hero mt">
-        <view class="hero-top">
-          <view class="hero-ic"><view class="i i-box"></view></view>
-          <view>
-            <text class="hero-t">还封着</text>
-            <text class="hero-s">{{letter.note}}</text>
-          </view>
-        </view>
-        <button class="btn full" hover-class="none" bindtap="takeBack">拿回来改</button>
-      </view>
-
-      <block wx:elif="{{letter.hasReply}}">
+      <block wx:if="{{letter.hasReply}}">
         <view class="card mine mt">
           <view class="row" bindtap="toggleMine">
-            <view class="ic gray"><view class="i i-pen" style="width:16px;height:16px;"></view></view>
+            <view class="ic gray"><view class="i i-pen" style="width:30.769rpx;height:30.769rpx;"></view></view>
             <view class="row-main">
               <text class="row-t" style="font-weight:600;">你写的信</text>
               <text class="sub one-line">{{letter.reply.mine}}</text>
@@ -52,7 +41,7 @@
           <view class="gh"><text class="h2">附件</text><text class="gh-s">从你的信里整理出来的</text></view>
           <view class="card">
             <view class="row" wx:for="{{letter.reply.todos}}" wx:key="id">
-              <view class="ic"><view class="i i-today" style="width:14px;height:14px;"></view></view>
+              <view class="ic"><view class="i i-today" style="width:26.923rpx;height:26.923rpx;"></view></view>
               <view class="row-main">
                 <text class="row-t">{{item.text}}</text>
                 <text class="sub">待办{{item.due ? ' · ' + item.due : ''}}</text>
@@ -60,7 +49,7 @@
               <text class="pill green">{{item.badge}}</text>
             </view>
             <view class="row" wx:for="{{letter.reply.ideas}}" wx:key="id">
-              <view class="ic idea"><view class="i i-bulb" style="width:14px;height:14px;"></view></view>
+              <view class="ic idea"><view class="i i-bulb" style="width:26.923rpx;height:26.923rpx;"></view></view>
               <view class="row-main">
                 <text class="row-t">{{item.text}}</text>
                 <text class="sub">点子</text>
@@ -77,7 +66,7 @@
         </view>
 
         <block wx:if="{{letter.reply.lenses.length}}">
-          <view class="gh"><text class="h2">四个角度</text></view>
+          <view class="gh"><text class="h2">四个角度</text><text class="gh-s" style="color:var(--ink);font-weight:600;">实验</text></view>
           <view class="card">
             <view class="row lens" wx:for="{{letter.reply.lenses}}" wx:key="key">
               <view class="ic" style="background: {{item.color}};">{{item.mark}}</view>
@@ -86,10 +75,17 @@
                 <text class="lens-v">{{item.text}}</text>
               </view>
             </view>
+            <view class="row foot">
+              <text class="small muted">这部分对你有用吗？</text>
+              <view class="seg2">
+                <view class="seg2-btn {{letter.reply.fb > 0 ? 'on' : ''}}" data-x="1" bindtap="onFb">有用</view>
+                <view class="seg2-btn {{letter.reply.fb < 0 ? 'on' : ''}}" data-x="-1" bindtap="onFb">没用</view>
+              </view>
+            </view>
           </view>
         </block>
 
-        <view style="padding:0 4px;margin-top:8px;">
+        <view style="padding:0 7.692rpx;margin-top:15.385rpx;">
           <button class="lk" hover-class="none" bindtap="takeBack">在写信里打开</button>
         </view>
       </block>
@@ -102,24 +98,17 @@
           <text>{{letter.fail}}</text>
           <button class="btn sm" hover-class="none" bindtap="retryReply">再试一次</button>
         </view>
-        <view class="card paper mt">
+        <view wx:if="{{!letter.loading}}" class="card paper mt">
           <text class="letter-text">{{letter.text}}</text>
         </view>
-        <view class="card stats mt" wx:if="{{letter.energy || letter.mood}}">
+        <view class="card stats mt" wx:if="{{!letter.sealed && (letter.energy || letter.mood)}}">
           <view class="stat"><text>精力</text><text class="b">{{letter.energy || '—'}}</text></view>
           <view class="stat"><text>心情</text><text class="b">{{letter.mood || '—'}}</text></view>
           <view class="stat"><text>字数</text><text class="b">{{letter.chars}}</text></view>
         </view>
         <text class="note" wx:if="{{letter.note}}">{{letter.note}}</text>
-        <view style="padding:0 4px;margin-top:8px;">
+        <view style="padding:0 7.692rpx;margin-top:15.385rpx;">
           <button class="lk" hover-class="none" bindtap="takeBack">在写信里打开</button>
-        </view>
-        <view wx:if="{{letter.sentences.length}}" class="gh"><text class="h2">摘成待办</text><text class="gh-s">点一句</text></view>
-        <view wx:if="{{letter.sentences.length}}" class="card">
-          <button wx:for="{{letter.sentences}}" wx:key="*this" class="row" hover-class="none" data-text="{{item}}" bindtap="pickSentence">
-            <text class="row-main"><text class="row-t">{{item}}</text></text>
-            <text class="lk">做成待办</text>
-          </button>
         </view>
       </block>
     </block>

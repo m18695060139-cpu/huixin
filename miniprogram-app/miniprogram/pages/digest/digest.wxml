@@ -1,0 +1,74 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <view class="subpage-bar sheet-bar">
+    <view>
+      <view class="sp"></view>
+      <text class="t"></text>
+      <button class="x" hover-class="none" bindtap="back" aria-label="关闭">×</button>
+    </view>
+  </view>
+  <view class="page" style="padding-top: 15.385rpx;">
+    <view wx:if="{{missing}}" class="card empty">找不到这封信。</view>
+    <block wx:else>
+      <view class="head">
+        <view class="head-l">
+          <text class="eyebrow">{{eyebrow}}</text>
+          <text class="h1" style="font-size:50rpx;">{{title}}</text>
+        </view>
+      </view>
+      <view class="card stats mt" wx:if="{{stats}}">
+        <view class="stat"><text>写了</text><text class="b">{{stats.letters}}<text class="unit"> 封</text></text></view>
+        <view class="stat"><text>平均精力</text><text class="b">{{stats.energy}}</text></view>
+        <view class="stat"><text>完成待办</text><text class="b">{{stats.todos}}</text></view>
+      </view>
+      <view class="card reply-letter">
+        <text wx:for="{{paras}}" wx:key="*this" class="reply-p">{{item}}</text>
+      </view>
+      <block wx:if="{{energyNote}}">
+        <view class="gh"><text class="h2">精力的规律</text></view>
+        <view class="card pad" style="font-size:28.846rpx;line-height:1.6;">{{energyNote}}</view>
+      </block>
+      <block wx:if="{{forgotten.length}}">
+        <view class="gh"><text class="h2">可能漏掉的</text></view>
+        <view class="card pad" style="font-size:28.846rpx;line-height:1.6;">
+          <text wx:for="{{forgotten}}" wx:key="*this" style="display:block;">· {{item}}</text>
+        </view>
+      </block>
+      <block wx:if="{{next}}">
+        <view class="gh"><text class="h2">{{nextTitle}}</text></view>
+        <view class="card pad" style="font-size:28.846rpx;line-height:1.6;">{{next}}</view>
+      </block>
+      <block wx:if="{{lenses.length}}">
+        <view class="gh"><text class="h2">四个角度</text></view>
+        <view class="card">
+          <view class="row lens" wx:for="{{lenses}}" wx:key="key">
+            <view class="ic" style="background: {{item.color}};">{{item.mark}}</view>
+            <view class="row-main">
+              <text class="lens-k">{{item.name}}</text>
+              <text class="lens-v">{{item.text}}</text>
+            </view>
+          </view>
+        </view>
+      </block>
+      <block wx:if="{{plans.length}}">
+        <view class="gh"><text class="h2">下个季度的四条小规划</text></view>
+        <view class="card">
+          <view class="row lens" wx:for="{{plans}}" wx:key="key">
+            <view class="ic" style="background: {{item.color}};">{{item.mark}}</view>
+            <view class="row-main">
+              <text class="lens-k">{{item.name}}</text>
+              <text class="lens-v">{{item.text}}</text>
+            </view>
+          </view>
+        </view>
+      </block>
+      <block wx:if="{{themes}}">
+        <view class="gh"><text class="h2">这一年反复出现的主题</text></view>
+        <view class="card pad" style="font-size:28.846rpx;line-height:1.6;">{{themes}}</view>
+      </block>
+      <view wx:if="{{!imported}}" style="margin-top:50rpx;">
+        <button class="btn ghost sm" hover-class="none" bindtap="rewrite" disabled="{{busy}}">让回信重写这封{{kindName}}</button>
+      </view>
+    </block>
+  </view>
+  <toast id="toast" />
+</view>

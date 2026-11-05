@@ -78,6 +78,19 @@ Page({
     this.setData({ mineOpen: !this.data.mineOpen });
     this.paint();
   },
+  onFb(e) {
+    const v = Number(e.currentTarget.dataset.x) || 0;
+    const cur = (state.get().letters || {})[this.data.date];
+    if (!cur || !cur.reply) return;
+    const reply = Object.assign({}, cur.reply, { fb: v });
+    state.upsertLetter(this.data.date, { reply: reply });
+    if (wx.cloud) {
+      wx.cloud.callFunction({
+        name: 'reply',
+        data: { date: this.data.date, feedback: { block: 'lenses', value: v } },
+      }).catch(() => {});
+    }
+  },
   back() { wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/today/today' }) }); },
   takeBack() {
     state.setWriteTarget(this.data.date, true);

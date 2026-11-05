@@ -4,6 +4,7 @@
     "pages/write/write",
     "pages/mailbox/mailbox",
     "pages/letter/letter",
+    "pages/digest/digest",
     "pages/lists/lists",
     "pages/settings/settings",
     "pages/privacy/privacy"

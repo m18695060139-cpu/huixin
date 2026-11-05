@@ -26,17 +26,25 @@
     </view>
 
     <block wx:if="{{tab === 'week' || tab === 'quarter' || tab === 'year'}}">
-      <text class="note" style="margin-top:18px;">{{tab === 'week' ? '本周只统计数字，不生成周信。' : (tab === 'quarter' ? '季信是网页版的功能，这里不生成文字。' : '年信是网页版的功能，这里不生成文字。')}}</text>
-      <view wx:if="{{tab === 'week'}}" class="card pad mt">
-        <view class="big-num"><text class="small muted" style="font-weight:600;">{{week.range}}</text></view>
-        <view class="stats" style="padding:0;">
-          <view class="stat"><text>写了</text><text class="b">{{week.letters}}<text class="unit"> 天</text></text></view>
-          <view class="stat"><text>平均精力</text><text class="b">{{week.energy}}</text></view>
-          <view class="stat"><text>完成待办</text><text class="b">{{week.todosDone}}</text></view>
-        </view>
-        <view class="kv" wx:if="{{week.habits}}"><text>习惯</text><text class="b">{{week.habits}}</text></view>
+      <text class="note" style="margin-top:34.615rpx;">{{kindHead.note}}</text>
+      <view style="padding:0 7.692rpx;">
+        <button class="lk" hover-class="none" data-kind="{{kindHead.kind}}" data-key="{{kindHead.key}}" bindtap="genDigest">{{kindHead.gen}}</button>
       </view>
-      <view wx:else class="card empty mt">还没有{{tab === 'quarter' ? '季信' : '年信'}}。</view>
+      <block wx:if="{{kindDigests.length}}">
+        <view wx:for="{{kindDigests}}" wx:key="key" style="margin-top:23.077rpx;">
+          <view class="digest" data-kind="{{item.kind}}" data-key="{{item.key}}" bindtap="openDigest">
+            <view class="digest-h"><text class="badge">{{item.badge}}</text><text>{{item.lab}}</text></view>
+            <text class="digest-t" wx:if="{{item.title}}">{{item.title}}</text>
+            <view class="digest-stats">
+              <view><text>平均精力</text><text class="b">{{item.energy}}</text></view>
+              <view><text>完成待办</text><text class="b">{{item.todos}}</text></view>
+              <view><text>可能漏掉</text><text class="b">{{item.forgotten}}</text></view>
+            </view>
+            <text class="digest-more">{{item.read}}</text>
+          </view>
+        </view>
+      </block>
+      <view wx:else class="card empty mt">{{kindHead.empty}}</view>
     </block>
 
     <block wx:else>
@@ -53,7 +61,7 @@
           <canvas type="2d" id="energy" class="chart"></canvas>
         </view>
         <view class="chart-x"><text>{{state.start}}</text><text>今天</text></view>
-        <view class="kv" wx:if="{{state.top}}"><text>出现最多的心情</text><text class="b">{{state.top}}</text></view>
+        <view class="kv" wx:if="{{state.top}}"><text>出现最多的情绪</text><text class="b">{{state.top}}</text></view>
         <view class="kv" wx:if="{{state.rates}}"><text>习惯完成率</text><text class="b">{{state.rates}}</text></view>
       </view>
 
@@ -63,6 +71,16 @@
 
       <block wx:for="{{groups}}" wx:key="wk">
         <view class="gh"><text class="h2">{{item.title}}</text><text class="gh-s">{{item.range}}</text></view>
+        <view wx:if="{{item.digest}}" class="digest" style="margin-bottom:23.077rpx;" data-kind="{{item.digest.kind}}" data-key="{{item.digest.key}}" bindtap="openDigest">
+          <view class="digest-h"><text class="badge">{{item.digest.badge}}</text><text>{{item.digest.lab}}</text></view>
+          <text class="digest-t" wx:if="{{item.digest.title}}">{{item.digest.title}}</text>
+          <view class="digest-stats">
+            <view><text>平均精力</text><text class="b">{{item.digest.energy}}</text></view>
+            <view><text>完成待办</text><text class="b">{{item.digest.todos}}</text></view>
+            <view><text>可能漏掉</text><text class="b">{{item.digest.forgotten}}</text></view>
+          </view>
+          <text class="digest-more">{{item.digest.read}}</text>
+        </view>
         <view class="card">
           <button wx:for="{{item.rows}}" wx:for-item="row" wx:key="date" class="row day {{row.kind === 'gap' ? 'gapday' : ''}}" hover-class="none" data-date="{{row.date}}" data-kind="{{row.kind}}" bindtap="onRow">
             <view class="dt {{row.kind === 'gap' ? 'gap' : ''}}">
@@ -75,9 +93,12 @@
             </view>
             <text class="chev">›</text>
           </button>
+          <view class="row foot" wx:if="{{item.canGen}}">
+            <button class="lk" hover-class="none" data-kind="week" data-key="{{item.wk}}" bindtap="genDigest">让回信写这一周的周信 ›</button>
+          </view>
         </view>
       </block>
-      <view wx:if="{{more}}" style="text-align:center;margin-top:20px;">
+      <view wx:if="{{more}}" style="text-align:center;margin-top:38.462rpx;">
         <button class="btn ghost sm" hover-class="none" bindtap="older">更早的信</button>
       </view>
     </block>

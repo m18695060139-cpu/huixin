@@ -53,6 +53,31 @@ Page({
     state.setWriteTarget(e.currentTarget.dataset.date, true);
     wx.switchTab({ url: '/pages/write/write' });
   },
+  openDigest(e) {
+    const kind = e.currentTarget.dataset.kind;
+    const key = e.currentTarget.dataset.key;
+    wx.navigateTo({ url: '/pages/digest/digest?kind=' + kind + '&key=' + encodeURIComponent(key) });
+  },
+  async genDigest(e) {
+    if (this._gen) return;
+    if (!wx.cloud) { this.toast('云端还没连上'); return; }
+    const kind = e.currentTarget.dataset.kind;
+    const key = e.currentTarget.dataset.key;
+    this._gen = true;
+    wx.showLoading({ title: '正在写', mask: true });
+    try {
+      const res = await wx.cloud.callFunction({ name: 'digest', data: { kind: kind, key: key } });
+      const body = (res && res.result) || {};
+      wx.hideLoading();
+      if (!body.ok) { this.toast(body.message || '没写成'); return; }
+      await state.refresh();
+      this.toast('写好了');
+    } catch (err) {
+      wx.hideLoading();
+      this.toast('没写成，稍后再试');
+    }
+    this._gen = false;
+  },
   async openDay(e) {
     const d = e.currentTarget.dataset.date;
     const row = (this.data.groups || []).reduce((found, g) => {

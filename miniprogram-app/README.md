@@ -4,7 +4,7 @@
 
 网页版（Cloudflare Workers）在仓库的 `main` 分支。两边是两本独立的本子：**不要把这个分支合并进 main**，也不要在这边改 `src/`、`public/` 那些网页文件。
 
-本分支定位是**只有自己看得见**的每日记录：写信、待办、点子、习惯、信箱和外观。没有分享、没有广场、没有 AI 回信、周信、季信、年信。
+本分支定位是**只有自己看得见**的每日记录：写信、回信、待办、点子、习惯、信箱和外观。没有分享、没有广场。回信、周信、季信、年信由云开发里的混元来写，只在体验版使用。
 
 ## 和网页版的差别
 
@@ -13,10 +13,10 @@
 | 代码 | `miniprogram-app/` | `public/`、`src/`、`migrations/` |
 | 登录 | 微信 OpenID，云函数里读取 | 账号密码 |
 | 数据 | 微信云开发，境内 | Cloudflare D1 |
-| 回信 | 明早拆开的是**你昨晚自己写的信** | AI 写的回信 |
-| 心情 / 精力 | 寄出前自己选 | AI 打分 |
-| 待办 / 点子 | 自己加，或从信里摘一句 | 可由 AI 从信里拆出 |
-| 周信季信年信 | 没有。信箱「本周」只统计数字 | AI 生成 |
+| 回信 | 云函数 `reply` 调混元，提示词与网页版相同 | 网页版自己的模型 |
+| 心情 / 精力 | 回信写完后写入这封信 | AI 打分 |
+| 待办 / 点子 | 回信拆出来，也可以自己加 | 同一套 |
+| 周信季信年信 | 云函数 `digest`，每天 7:00（北京时间）定时 | 同一套，Cloudflare cron |
 
 ## 目录
 
@@ -24,13 +24,13 @@
 |---|---|
 | `miniprogram/` | 小程序前端。`config.js` 的 `ENV_ID` 为 `huixin-d1g2tdmkz68dc5a5d` |
 | `miniprogram/pages/` | 今天、写信、信箱，以及信、列表、设置、隐私说明 |
-| `cloudfunctions/` | `login`、`save`、`importFromWeb`、`wipe`、`reply`（混元回信，体验版） |
+| `cloudfunctions/` | `login`、`save`、`importFromWeb`、`wipe`、`reply`、`digest`、`demoSeed` |
 | `docs/用户隐私保护指引.md` | 填到公众平台的隐私指引草稿 |
 | `docs/数据库权限.json` | 六个集合的「仅创建者可读写」规则 |
 | `scripts/upload.js` | 用 miniprogram-ci 上传代码并部署云函数 |
 | `project.config.json` | AppID `wxb0105fcabc5187be`。`miniprogramRoot` 是 `miniprogram/`，`cloudfunctionRoot` 是 `cloudfunctions/`，用开发者工具直接打开本目录即可 |
 
-每日一句来自网页版 `public/poems.js`，原样放在 `miniprogram/data/poems.js`。外观变量来自 `public/app.css` 的四套主题：回信红、夜信、信笺、素笺，外加跟随系统。
+外观变量来自 `public/app.css` 的四套主题：回信红、夜信、信笺、素笺，外加跟随系统。长度按 390 宽换算，`1px = 750/390 rpx`。首页底部的摘句是 30 天前自己信里的一句话（`.memo`），没有诗句库。
 
 ## 页面对照
 
@@ -38,28 +38,29 @@
 
 | 网页版 | 小程序 |
 |---|---|
-| 今天（信封、待办、点子、旧信摘句） | `pages/today`。另外固定放「每日一句」，有习惯时显示今天的打卡 |
-| 写信（纸、提示、习惯条、寄出、已寄出夜色页） | `pages/write`。寄出前自己选心情和精力。没有语音、没有 AI 整理步骤 |
-| 信箱（状态曲线、按周的时间线） | `pages/mailbox`。分段是「时间线 / 本周」。本周只有写了几天、习惯完成率、完成的待办，不生成文字 |
-| 拆信 / 看某一天 | `pages/letter`。封到第二天 6:00 之前，首页信封拆开才看到正文 |
+| 今天（信封、待办、点子、30 天前的一句） | `pages/today`。没有诗句卡，习惯打卡在写信页 |
+| 写信（纸、提示、习惯条、寄出、已寄出夜色页） | `pages/write`。寄出后后台写回信。没有语音 |
+| 信箱（状态曲线、全部 / 周信 / 季信 / 年信） | `pages/mailbox`。周信卡片和「让回信写这一周的周信」 |
+| 拆信 / 看某一天 | `pages/letter`。回信、附件、精力情绪高光、四个角度和有用 / 没用 |
+| 周信 / 季信 / 年信正文 | `pages/digest` |
 | 待办与点子、完成 / 放下 | `pages/lists` |
 | 待办编辑、放下原因、点子编辑 | 组件 `components/editor`，从底部盖住当前页 |
-| 设置（外观、称呼、习惯、问题） | `pages/settings`。没有 AI、没有送达方式、没有账号密码 |
+| 设置（送达、混元说明、外观、习惯、问题、账号） | `pages/settings`。没有自备 API Key。账号区可以载入或清除示例数据 |
 | （无） | `pages/privacy` 隐私说明；设置里可以导入网页版 JSON、清空全部数据 |
 | 底部胶囊导航 | 自定义 tabBar：今天 / 写信 / 信箱 |
 
-凌晨 4:00 前写的算前一天。当天 4:00 前寄出的信，封到第二天 6:00，首页显示「昨晚的你来信了」。过了 4:00 再补的信，存好就能看。
+凌晨 4:00 前写的算前一天。当天 4:00 前寄出的信，封到第二天 6:00。首页在可以拆的时候显示信封。过了 4:00 再补的信，寄出后马上可以看回信。
 
-写信页可以把信里的一句点成待办（小程序文本框拿不到选区，所以改成点句子）。
+首页「点一下换一句」只在有至少一封 30 天前的信、并且那封信里有 8 到 60 字的句子时出现。没有这样的信，这张卡片不显示。
 
 ## 在微信开发者工具里打开
 
 1. 安装[微信开发者工具](https://developers.weixin.qq.com/miniprogram/dev/devtools/download.html)。
 2. 导入项目，目录选本文件夹 `miniprogram-app`（里面有 `project.config.json`）。`miniprogramRoot` 指向 `miniprogram/`，`cloudfunctionRoot` 指向 `cloudfunctions/`，不用再改目录。
 3. AppID 已写成 `wxb0105fcabc5187be`。用管理员微信登录开发者工具即可。
-4. 云环境 ID 已写成 `huixin-d1g2tdmkz68dc5a5d`（`miniprogram/config.js`，四个云函数的 `cloud.init` 也是这个环境）。
-5. 工具里对 `cloudfunctions` 下四个函数「上传并部署：云端安装依赖」。或用下面的上传脚本。
-6. 云开发控制台新建集合（第一次写入有时会自动出现）：`letters`、`todos`、`ideas`、`habits`、`habit_logs`、`settings`。权限全部选 **仅创建者可读写**。规则原文在 `docs/数据库权限.json`。
+4. 云环境 ID 已写成 `huixin-d1g2tdmkz68dc5a5d`（`miniprogram/config.js`，云函数的 `cloud.init` 也是这个环境）。
+5. 工具里对 `cloudfunctions` 下每个函数右键「上传并部署：云端安装依赖」。`reply`、`digest`、`demoSeed` 各做一次，否则拆信、周信和示例数据会找不到函数。或用下面的上传脚本。
+6. 云开发控制台新建集合（第一次写入有时会自动出现）：`letters`、`todos`、`ideas`、`habits`、`habit_logs`、`settings`、`digests`。权限全部选 **仅创建者可读写**。规则原文在 `docs/数据库权限.json`。
 7. 查询若提示缺索引，按开发者工具里的链接创建即可。建议字段也写在那份 JSON 里。
 
 保存文字时，云函数 `save` 会调用 `cloud.openapi.security.msgSecCheck`（场景值 1，version 2）。判定为 risky：提示「内容包含不适合保存的信息，请修改后再存」，草稿留在输入框。review 或接口故障：仍保存，并在记录上做标记，不因为接口挡住你。
@@ -70,7 +71,7 @@
 
 网页版这个分支**没有**加导出按钮（不能改网页版文件）。在已登录的网页版里打开浏览器开发工具，请求 `GET /api/bootstrap`，把返回的 JSON 存成文件，发到微信「文件传输助手」。小程序「设置 → 选择 JSON 文件」会交给云函数 `importFromWeb`。
 
-导入保留：信的正文、心情、精力、待办、点子、习惯和打卡、称呼、外观、自省问题。丢掉：AI 回信、周信季信年信、有用/没用、账号密码。同一天的信、同一个 id 再导一次会覆盖更新，不会复制出两份。
+导入保留：信的正文、心情、精力、待办、点子、习惯和打卡、称呼、外观、自省问题。丢掉：回信正文、周信季信年信、账号密码。同一天的信、同一个 id 再导一次会覆盖更新，不会复制出两份。想看带回复的整套示例，用设置里的「载入示例数据」。
 
 `/api/bootstrap` 只含最近大约 120 天的信和未完成的待办。文件里有多少，就进多少。
 
@@ -87,7 +88,7 @@ export PRIVATE_KEY_PATH=/绝对路径/private.key
 npm run upload
 ```
 
-脚本使用 `miniprogram-ci`：上传代码，再对 `login`、`save`、`importFromWeb`、`wipe`、`reply` 做 `uploadFunction`（云端安装依赖）。`reply` 也可以在开发者工具里对 `cloudfunctions/reply` 右键上传。上传成功后，到公众平台 **管理 → 版本管理**，把该版本设为**体验版**。要打开的人加为体验成员（个人主体最多 15 人）。
+脚本使用 `miniprogram-ci`：上传代码，再对 `login`、`save`、`importFromWeb`、`wipe`、`reply`、`digest`、`demoSeed` 做 `uploadFunction`（云端安装依赖）。上传成功后，到公众平台 **管理 → 版本管理**，把该版本设为**体验版**。要打开的人加为体验成员（个人主体最多 15 人）。
 
 代码上传密钥在公众平台「开发管理 → 开发设置」生成，不要提交到仓库。
 
@@ -95,15 +96,22 @@ npm run upload
 
 个人主体不能把 AI 功能提交审核。开关只有一个：`miniprogram/config.js` 里的 `AI_ENABLED`，默认 `true`。送审前改成 `false`，拆信时就不会再请求回信，页面上也不出现回信块。
 
-回信在云函数 `reply` 里生成，提示词不下发到手机。模型提供方是 `cloudbase`，对话模型常量是 **`hy3`**（成长计划第二期的文本模型）。若环境还不认 `hy3`，函数会再试一次文档示例里的 `hy3-preview`。信要到第二天 6:00 解锁后，用户点「拆开」才现写；失败或额度用完时，自己写的信还在，并可以再试。
+回信在云函数 `reply` 里生成，提示词不下发到手机，和网页版 `src/ai.js` 的回信提示一致。模型提供方是 `cloudbase`，对话模型常量是 **`hy3`**。若环境还不认 `hy3`，函数会再试一次文档示例里的 `hy3-preview`。寄出时就会写回信；若当时没写成，拆开时再试一次。封存到第二天 6:00 之前，首页不展示回信正文。失败或额度用完时，自己写的信还在，并可以再试。心情和精力以回信给出的为准。
 
-周信、季信、年信先不做（云函数文件顶部有 TODO）。
+周信、季信、年信在云函数 `digest`。`config.json` 里的定时触发器是 `0 0 7 * * * *`，每天 07:00（北京时间）。和网页版一样：周一写上一周的周信，季度第一天写上一季，元旦写上一年。信箱里也可以手动让它现在写。
 
 要在开发者工具里启用：
 
-1. 打开本目录，在 `cloudfunctions/reply` 上右键 **上传并部署：云端安装依赖**。这一次必须做，否则拆信时找不到 `reply`。依赖要用 `wx-server-sdk` 4.0.1 及以上，`package.json` 里已经写了。
-2. 云开发控制台确认这个环境开了 AI / 大模型，并且混元可用。小程序成长计划的免费 token 要发到环境 `huixin-d1g2tdmkz68dc5a5d` 才不会报额度用完。入口一般在开发者工具的「云开发」面板，或 [云开发 AI 文档](https://developers.weixin.qq.com/miniprogram/dev/wxcloudservice/wxcloud/guide/extensions/extend/ai/model.html) 里写的控制台。
-3. 云函数调用文档（服务端 `cloud.ai().createModel('cloudbase')`）：https://developers.weixin.qq.com/miniprogram/dev/wxcloudservice/wxcloud/reference-sdk-api/extend/ai/server.html
+1. 在 `cloudfunctions/reply` 和 `cloudfunctions/digest` 上各右键一次 **上传并部署：云端安装依赖**。依赖要用 `wx-server-sdk` 4.0.1 及以上。`digest` 的定时触发器要等这次部署之后才会登记。
+2. 云开发控制台确认这个环境开了 AI / 大模型，并且混元可用。小程序成长计划的免费 token 要发到环境 `huixin-d1g2tdmkz68dc5a5d`。入口一般在开发者工具的「云开发」面板。
+3. 客户端文档（`wx.cloud.extend.AI.createModel`，模型目录里的名字是 `hy3`）：https://developers.weixin.qq.com/miniprogram/dev/wxcloudservice/wxcloud/guide/extensions/extend/ai/model.html
+4. 云函数文档（`cloud.ai().createModel('cloudbase')`）：https://developers.weixin.qq.com/miniprogram/dev/wxcloudservice/wxcloud/reference-sdk-api/extend/ai/server.html
+
+## 示例数据
+
+设置页账号一节最底下有「载入示例数据」和「清除示例数据」。载入会把网页版 `scripts/demo-reset.mjs` 那一套内容写进**当前微信用户**自己的云数据库：信和回信、待办、点子、习惯和打卡、两封周信、一封季信。日期按北京时间的「今天」重算，所以「昨晚的你来信了」会重新出现。每条文档带 `demo: true`。同一天如果已经有你自己的信，就跳过那一天。清除只删 `demo: true` 的文档。
+
+云函数 `demoSeed` 也要在开发者工具里对 `cloudfunctions/demoSeed` 右键 **上传并部署：云端安装依赖** 一次，否则这两个按钮会提示找不到函数。称呼如果还是空的，载入时会设成「非云」，清除时再改回去。
 
 ## 隐私与备案
 

@@ -18,7 +18,7 @@
           <button class="chip" wx:for="{{reasons}}" wx:key="*this" data-v="{{item}}" bindtap="onReason">{{item}}</button>
         </view>
         <text class="note">放下的事会和原因一起留在「完成 / 放下」里，随时可以恢复。</text>
-        <view style="display:flex;gap:10px;margin-top:22px;">
+        <view style="display:flex;gap:19.231rpx;margin-top:42.308rpx;">
           <button class="btn" bindtap="onDrop">放下</button>
           <button class="btn ghost" bindtap="onClose">先不放下</button>
         </view>
@@ -30,7 +30,7 @@
           <textarea class="input" value="{{text}}" bindinput="onText" maxlength="300" placeholder="想到什么就记下" placeholder-class="ph" auto-height="true" />
         </view>
         <text class="note" wx:if="{{item.source}}">{{item.source}}</text>
-        <view style="display:flex;gap:10px;margin-top:26px;flex-wrap:wrap;">
+        <view style="display:flex;gap:19.231rpx;margin-top:50rpx;flex-wrap:wrap;">
           <button class="btn" bindtap="onSave">保存</button>
           <button wx:if="{{item.id}}" class="btn ghost" bindtap="onToTodo">转成待办</button>
           <button wx:if="{{item.id}}" class="btn ghost" bindtap="onIdeaDrop">放下</button>
@@ -55,7 +55,7 @@
         </view>
         <text class="note" wx:if="{{item.dropped_at}}">{{item.dropped_at}} 放下了这件事</text>
         <text class="note" wx:if="{{item.source}}">{{item.source}}</text>
-        <view style="display:flex;gap:10px;margin-top:26px;flex-wrap:wrap;">
+        <view style="display:flex;gap:19.231rpx;margin-top:50rpx;flex-wrap:wrap;">
           <button class="btn" bindtap="onSave">保存</button>
           <button wx:if="{{item.id && item.dropped_at}}" class="btn ghost" bindtap="onUndrop">恢复成待办</button>
           <button wx:if="{{item.id && !item.dropped_at && !item.done}}" class="btn ghost" bindtap="onAskDrop">放下</button>

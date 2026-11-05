@@ -1,5 +1,5 @@
-// 拆开一封已解锁的信时，用云开发里的混元写回信。提示词只在这个函数里。
-// TODO: 周信 / 季信 / 年信先不做。
+// 寄出或拆开时，用云开发里的混元写回信。提示词只在这个函数里。
+// 周信、季信、年信在 cloudfunctions/digest。
 const cloud = require('wx-server-sdk');
 const { guard } = require('./sec');
 const { HUNYUAN_MODEL, HUNYUAN_FALLBACK, DEFAULT_QUESTIONS, buildMessages, normalizeReply } = require('./prompt');
@@ -110,11 +110,19 @@ exports.main = async (event) => {
   try {
     const letter = await findOne('letters', OPENID, { date: date });
     if (!letter || !String(letter.text || '').trim()) return fail('这封信还是空的', 'empty');
+    if (event && event.feedback && event.feedback.block) {
+      const fbLetter = await findOne('letters', OPENID, { date: date });
+      if (!fbLetter || !fbLetter.reply) return fail('还没有回信', 'empty');
+      const reply = fbLetter.reply;
+      const v = Number(event.feedback.value) || 0;
+      reply.fb = v;
+      await db.collection('letters').doc(fbLetter._id).update({ data: { reply: reply } });
+      return { ok: true, reply: reply };
+    }
     if (letter.reply && letter.reply.summary) {
-      return { ok: true, reply: letter.reply, replied_at: letter.replied_at || '', cached: true };
+      return { ok: true, reply: letter.reply, replied_at: letter.replied_at || '', cached: true, sealed: stillSealed(letter, (await findOne('settings', OPENID, {}) || {}).deliver) };
     }
     const settings = await findOne('settings', OPENID, {}) || {};
-    if (stillSealed(letter, settings.deliver)) return fail('这封信还封着，明早 6:00 再拆。', 'sealed');
 
     const todos = await listOwn('todos', OPENID, 100);
     const ideas = await listOwn('ideas', OPENID, 100);
@@ -193,11 +201,22 @@ exports.main = async (event) => {
       ideas: madeIdeas.map(t => ({ id: t.id, text: t.text })),
       engine: '混元 ' + asked.model,
     };
-    const patch = { reply: reply, replied_at: repliedAt, updated_at: repliedAt };
-    if (!letter.mood) patch.mood = made.mood;
-    if (!letter.energy) patch.energy = made.energy;
+    const patch = {
+      reply: reply,
+      replied_at: repliedAt,
+      updated_at: repliedAt,
+      mood: made.mood,
+      energy: made.energy,
+    };
     await db.collection('letters').doc(letter._id).update({ data: patch });
-    return { ok: true, reply: reply, replied_at: repliedAt, todos: madeTodos, ideas: madeIdeas };
+    return {
+      ok: true,
+      reply: reply,
+      replied_at: repliedAt,
+      todos: madeTodos,
+      ideas: madeIdeas,
+      sealed: stillSealed(letter, settings.deliver),
+    };
   } catch (e) {
     console.error(e);
     return fail(friendly(e), /quota|额度|429/.test(String(e && e.message || '')) ? 'quota' : 'ai');

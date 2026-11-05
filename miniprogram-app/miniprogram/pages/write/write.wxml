@@ -1,5 +1,5 @@
 <view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
-  <view class="page {{editing ? 'bare' : ''}}" style="{{editing ? 'padding-bottom: calc(var(--safe-bottom) + 220px);' : ''}}">
+  <view class="page {{editing ? 'bare' : ''}}" style="{{editing ? 'padding-bottom: calc(var(--safe-bottom) + 423.077rpx);' : ''}}">
     <view class="wbar">
       <view wx:if="{{editing}}" class="round-btn" bindtap="closeWrite" aria-label="关闭">×</view>
       <view wx:else class="round-btn ghost"></view>
@@ -40,14 +40,6 @@
       </button>
     </view>
 
-    <view wx:if="{{editing}}" class="chips">
-      <view wx:for="{{moods}}" wx:key="id" class="chip {{item.on ? 'on' : ''}}" data-id="{{item.id}}" bindtap="onMood">{{item.id}}</view>
-    </view>
-    <view wx:if="{{editing}}" class="card habits">
-      <text class="habit-lab">精力</text>
-      <view wx:for="{{energies}}" wx:key="n" class="hb {{item.on ? 'on' : ''}}" data-n="{{item.n}}" bindtap="onEnergy">{{item.n}}</view>
-    </view>
-
     <block wx:if="{{!editing && meta.sent}}">
       <view class="card stats mt" wx:if="{{meta.energy || meta.mood}}">
         <view class="stat"><text>精力</text><text class="b">{{meta.energy || '—'}}<text class="unit" wx:if="{{meta.energy}}"> / 5</text></text></view>
@@ -59,20 +51,13 @@
           <view class="hero-ic"><view class="i i-box"></view></view>
           <view>
             <text class="hero-t">已寄出</text>
-            <text class="hero-s">明早 6:00 可以拆开</text>
+            <text class="hero-s">回信正在连夜整理，明早 6:00 送到</text>
           </view>
         </view>
       </view>
-      <view style="padding:0 4px;">
+      <view style="padding:0 7.692rpx;">
         <button class="lk" hover-class="none" bindtap="takeBack">修改这封信</button>
         <button class="lk" hover-class="none" bindtap="openLetter">在信里查看</button>
-      </view>
-      <view wx:if="{{meta.sentences.length}}" class="card mt">
-        <view class="row foot"><text class="sub">把一句摘成待办</text></view>
-        <button wx:for="{{meta.sentences}}" wx:key="*this" class="row" hover-class="none" data-text="{{item}}" bindtap="pickSentence">
-          <text class="row-main"><text class="row-t">{{item}}</text></text>
-          <text class="lk">做成待办</text>
-        </button>
       </view>
     </block>
   </view>
@@ -99,10 +84,10 @@
       </view>
     </view>
     <text class="h1">已寄出</text>
-    <text class="lead">好好睡一觉。明早拆开的，是你自己写的这封信。</text>
+    <text class="lead">好好睡一觉，剩下的交给回信。</text>
     <view class="steps">
       <view class="row"><view class="dot ok"><view class="tick"></view></view><text class="t">信已寄出</text><text class="tm">{{sentTime}}</text></view>
-      <view class="row"><view class="dot ok"><view class="tick"></view></view><text class="t">封好了</text></view>
+      <view class="row"><view class="dot {{sentReady ? 'ok' : ''}}"><view class="tick" wx:if="{{sentReady}}"></view></view><text class="t">{{sentBusy ? '连夜拆信、整理待办和点子' : (sentReady ? '待办和点子都整理好了' : '整理时出了点问题，明早再试')}}</text></view>
       <view class="row"><view class="dot"><view class="sent-steps-clock"></view></view><text class="t dim">明早 6:00 拆开</text></view>
     </view>
     <view class="sent-btns">

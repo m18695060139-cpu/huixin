@@ -1,6 +1,6 @@
 .seg { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .seg-btn {
-  height: 32px; border-radius: 8px; font-size: 13px;
+  height: 61.538rpx; border-radius: 15.385rpx; font-size: 25rpx;
   display: flex; align-items: center; justify-content: center;
 }
-.seg-btn.on { background: var(--card); box-shadow: 0 1px 3px rgba(0,0,0,.12); font-weight: 600; }
+.seg-btn.on { background: var(--card); box-shadow: 0 1.923rpx 5.769rpx rgba(0,0,0,.12); font-weight: 600; }

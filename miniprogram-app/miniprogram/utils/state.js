@@ -16,6 +16,7 @@ function blank() {
     ideas: [],
     habits: [],
     logs: {},
+    digests: [],
     skip: {},
     ready: false,
     online: true,
@@ -51,6 +52,7 @@ function snapshot() {
     ideas: data.ideas,
     habits: data.habits,
     logs: data.logs,
+    digests: data.digests,
     skip: data.skip,
   };
 }
@@ -88,6 +90,7 @@ function boot(cloudReady) {
     data.ideas = cached.ideas || [];
     data.habits = cached.habits || [];
     data.logs = cached.logs || {};
+    data.digests = cached.digests || [];
     data.skip = cached.skip || {};
   }
   data.ready = true;
@@ -315,6 +318,13 @@ function applyCloud(bundle) {
     if (row.habit_id && row.date && row.done !== false) logs[row.habit_id + '|' + row.date] = true;
   });
   data.logs = logs;
+  data.digests = (bundle.digests || []).map(row => ({
+    _id: row._id,
+    kind: row.kind,
+    key: row.key,
+    content: row.content || {},
+    created_at: row.created_at || '',
+  })).sort((a, b) => String(a.key) < String(b.key) ? 1 : -1);
   const s = (bundle.settings && bundle.settings[0]) || null;
   if (s) {
     data.settings = {
@@ -332,7 +342,7 @@ function applyCloud(bundle) {
 async function refresh() {
   if (!cloud.cloudOn()) return;
   const bundle = {};
-  const names = ['letters', 'todos', 'ideas', 'habits', 'habit_logs', 'settings'];
+  const names = ['letters', 'todos', 'ideas', 'habits', 'habit_logs', 'settings', 'digests'];
   const rows = await Promise.all(names.map(n => fetchAll(n).catch(() => [])));
   bundle.letters = rows[0];
   bundle.todos = rows[1];
@@ -340,6 +350,7 @@ async function refresh() {
   bundle.habits = rows[3];
   bundle.logs = rows[4];
   bundle.settings = rows[5];
+  bundle.digests = rows[6];
   applyCloud(bundle);
   setOnline(true);
 }

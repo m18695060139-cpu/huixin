@@ -3,7 +3,7 @@ const state = require('../../utils/state');
 const actions = require('../../utils/actions');
 const model = require('../../utils/model');
 const { letterDay, addDays, hm } = require('../../utils/date');
-const { MOODS } = require('../../utils/poem');
+const { AI_ENABLED } = require('../../config');
 
 Page({
   behaviors: [behavior],
@@ -18,8 +18,8 @@ Page({
     warn: '',
     sentShow: false,
     meta: {},
-    moods: [],
-    energies: [],
+    sentBusy: false,
+    sentReady: false,
     prompts: ['今天哪一刻最有劲？', '有什么在回避？', '明天要做的事：', '今天想记住的一句话：'],
     placeholder: '今天过得怎么样？做了什么、想到什么、哪里卡住了，随便写。\n\n写完点「寄出」，回信会帮你整理好其余的一切。',
   },
@@ -42,8 +42,8 @@ Page({
     const draft = actions.readDraft(day);
     const saved = meta.text || '';
     const text = draft && draft.text != null ? draft.text : saved;
-    const mood = draft && draft.mood != null ? draft.mood : (meta.mood || '');
-    const energy = draft && draft.energy != null ? Number(draft.energy) : (meta.energy || 0);
+    const mood = meta.mood || '';
+    const energy = meta.energy || 0;
     const dirty = draft && draft.text != null && draft.text !== saved;
     const showEditor = !!editing || !meta.sent || !!dirty;
     this._text = text;
@@ -145,19 +145,44 @@ Page({
       return;
     }
     const meta = model.writeMeta(state.get(), this.data.date, new Date());
-    if (!tonight) await actions.markOpened(this.data.date);
     this.setData({
       editing: false,
       warn: '',
       saveState: r && r.local ? '存在本机' : '已寄出',
       sentShow: !!tonight,
+      sentBusy: !!AI_ENABLED,
+      sentReady: false,
       sentTime: hm(new Date()),
       sentNo: meta.no,
       sentDate: this.data.date.replace(/-/g, '.'),
-      meta: model.writeMeta(state.get(), this.data.date, new Date()),
+      meta: meta,
     });
     this.setTab(1, !tonight);
-    if (!tonight) this.toast('已存好，现在可以回看');
+    if (AI_ENABLED && wx.cloud) {
+      try {
+        const res = await wx.cloud.callFunction({ name: 'reply', data: { date: this.data.date } });
+        const body = (res && res.result) || {};
+        if (body.ok && body.reply) {
+          state.upsertLetter(this.data.date, {
+            reply: body.reply,
+            replied_at: body.replied_at || '',
+            mood: body.reply.mood,
+            energy: body.reply.energy,
+          });
+          (body.todos || []).forEach(t => state.upsertTodo(Object.assign({ done: false, note: '', dropped_at: '' }, t)));
+          (body.ideas || []).forEach(i => state.upsertIdea(Object.assign({ status: 'open', dropped_at: '' }, i)));
+        }
+        this.setData({ sentBusy: false, sentReady: !!body.ok });
+      } catch (e) {
+        this.setData({ sentBusy: false, sentReady: false });
+      }
+    } else {
+      this.setData({ sentBusy: false, sentReady: true });
+    }
+    if (!tonight) {
+      await actions.markOpened(this.data.date);
+      wx.navigateTo({ url: '/pages/letter/letter?date=' + this.data.date });
+    }
   },
   takeBack() {
     this.setData({ sentShow: false, editing: true, text: this._text || this.data.meta.text || '' });
