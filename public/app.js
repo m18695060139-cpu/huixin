@@ -688,6 +688,7 @@
     const sealedOnce = when && when < cutoff(l.date) && deliverMode() === 'morning';
     const whenTxt = r.imported ? '从 Life OS 搬过来的旧信'
       : sealedOnce ? `${cn(addDays(l.date, 1))} 6:00 送到` : when ? `${cn(localDate(when))} ${hm(when)} 收到` : '';
+    if (r.observation) h += `<div class="gh"><h2>我注意到</h2><span>一条可被你纠正的观察</span></div><div class="card pad" style="line-height:1.7">${esc(r.observation)}<div class="sub" style="margin-top:10px">回应方式：${esc(r.mode || '倾听')} · 这只是基于现有信件的观察，不是对你的定论。</div></div>`;
     h += `<article class="card reply-letter">${paras || '<p class="muted">（这封回信没有正文）</p>'}
       <div class="reply-sign"><b>Re: 回信</b><span>${esc(whenTxt)}${r.engine ? ' · ' + esc(r.engine) : ''}</span></div></article>`;
 
@@ -1005,7 +1006,7 @@
           ${opt('morning', '明早 6:00 拆信', '今晚寄出的信，回信封存到第二天早上；补写的信马上送到')}
           ${opt('now', '寄出后马上', '写完就能看到回信')}</div></div>
         ${aiSettings()}
-        <div class="field"><span class="lab">回信的长期记忆</span>
+        <div class="field"><span class="lab">回信的长期记忆</span><div class="group opts"><button class="opt" data-act="memory-toggle" data-v="${S.settings.memory_enabled === false ? 'off' : 'on'}"><span>${S.settings.memory_enabled === false ? '已暂停记忆' : '记忆功能已开启'}<small>关闭后，回信不再检索或提炼长期记忆；已有记忆仍保留，可重新开启。</small></span><span class="tick">${ICON.tick}</span></button></div>
           <div class="note" style="margin:0">回信会从你多天的来信中整理长期目标、偏好和反复出现的主题。每条记忆都保留来源日期；你可以修改或删除。记忆只用于辅助理解，不会覆盖你今天写下的内容。</div>
           <div class="group" style="padding:4px 14px">
             ${(S.memories || []).length ? S.memories.map(x => `<div class="row" style="align-items:flex-start;padding:12px 0"><span class="row-main"><span>${esc(x.content)}</span><span class="sub">${esc(x.category)} · 来源 ${(x.evidence_dates || []).map(esc).join('、') || '待补充'}</span></span><button class="lk" data-act="memory-edit" data-v="${x.id}">修改</button><button class="lk" style="color:var(--danger)" data-act="memory-del" data-v="${x.id}">删除</button></div>`).join('') : '<div class="empty" style="padding:14px">还没有长期记忆。随着你持续写信，回信会逐步整理。</div>'}
@@ -1403,6 +1404,13 @@
         break;
       }
       case 'settings': V.ai = { loading: true }; openSheet({ type: 'settings' }); loadAI(); break;
+      case 'memory-toggle': {
+        const enabled = S.settings.memory_enabled === false;
+        S.settings.memory_enabled = enabled;
+        try { await api('PUT','/settings',{memory_enabled:enabled}); toCache(); render(); toast(enabled ? '长期记忆已开启' : '长期记忆已暂停'); }
+        catch(e){ S.settings.memory_enabled = !enabled; render(); toast(e.message); }
+        break;
+      }
       case 'memory-add': {
         const content = prompt('想让回信长期记住什么？');
         if (!content || !content.trim()) break;
