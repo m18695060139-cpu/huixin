@@ -49,8 +49,9 @@ async function api(req, env, ctx, url) {
   // ── 设置 ──
   if (p === '/settings' && m === 'PUT') {
     const cur = await getSettings(env, U);
-    const next = { ...cur, ...pick(body, ['theme', 'questions', 'deliver']) };
-    if (next.deliver !== 'now') next.deliver = 'morning';   // 回信什么时候送到：明早 6 点，或寄出后马上
+    const next = { ...cur, ...pick(body, ['theme', 'questions', 'deliver', 'memory_enabled']) };
+    if (next.deliver !== 'now') next.deliver = 'morning';
+    if (typeof next.memory_enabled !== 'boolean') next.memory_enabled = true;   // 回信什么时候送到：明早 6 点，或寄出后马上
     if (Array.isArray(next.questions)) next.questions = next.questions.map(s => String(s).slice(0, 120)).filter(Boolean).slice(0, 10);
     await env.DB.prepare('INSERT INTO settings (user_id, json) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET json = excluded.json')
       .bind(U, JSON.stringify(next)).run();
@@ -390,11 +391,11 @@ async function replyTo(env, user, date, clientToday) {
     notes: noted.results.map(todoNoteLine),
     ideas: ideas.results.map(t => t.text),
     yesterday: yday && parseJSON(yday.reply, {}) ? (parseJSON(yday.reply, {}).summary || '') : '',
-    memories: memories.results,
+    memories: settings.memory_enabled === false ? [] : memories.results,
   });
 
   // 用跨日素材更新长期记忆。失败不影响当封回信。
-  try {
+  if (settings.memory_enabled !== false) try {
     const material = history.results.reverse().map(x => {
       const rp = parseJSON(x.reply, {}) || {};
       return x.date + '\n' + String(x.text || '').slice(0, 900) + '\n' + String(rp.summary || '').slice(0, 500);
