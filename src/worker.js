@@ -445,7 +445,7 @@ async function replyTo(env, user, date, clientToday) {
   }
 
   const reply = {
-    summary: r.summary, energy: r.energy, mood: r.mood, highlight: r.highlight,
+    summary: r.summary, observation: r.observation || '', mode: r.mode || '倾听', energy: r.energy, mood: r.mood, highlight: r.highlight,
     questions: settings.questions, lenses: r.lenses,
     todos: madeTodos.map(t => ({ id: t.id, text: t.text })),
     ideas: madeIdeas.map(t => ({ id: t.id, text: t.text })),
