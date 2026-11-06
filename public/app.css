@@ -694,3 +694,82 @@ textarea.input { line-height: 1.6; resize: vertical; }
   .week-stats b { font-size:17px; }
   .mail-month-count { gap:3px; }
 }
+
+
+/* ── 移动端优先适配：保留原有视觉语言，只优化小屏布局与触控 ── */
+:root { --app-height: 100dvh; --keyboard-height: 0px; }
+html, body { min-height: 100%; }
+@media (max-width: 767px) {
+  body { min-height: var(--app-height, 100dvh); }
+  .page {
+    width: 100%;
+    max-width: 560px;
+    min-height: var(--app-height, 100dvh);
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-top: calc(var(--safe-top) + 18px);
+    padding-bottom: calc(var(--safe-bottom) + 112px);
+  }
+  .page.bare { padding-bottom: calc(var(--safe-bottom) + 150px); }
+  .head { gap: 8px; }
+  h1 { font-size: clamp(28px, 8vw, 34px); }
+  .tabbar {
+    left: max(10px, env(safe-area-inset-left));
+    right: max(10px, env(safe-area-inset-right));
+    bottom: calc(var(--safe-bottom) + 8px);
+    width: auto;
+    max-width: 528px;
+    height: 64px;
+    padding-left: 5px;
+    padding-right: 5px;
+  }
+  .tabbar nav { min-width: 0; }
+  .tabbar nav button { min-width: 0; min-height: 48px; font-size: 10px; }
+  .tabbar nav button.write { width: 50px; height: 50px; margin-left: 4px; margin-right: 4px; }
+  .tabbar .brand { display: none; }
+  .sheet {
+    height: var(--app-height, 100dvh);
+    min-height: 0;
+    inset: 0 0 auto;
+    padding-bottom: var(--safe-bottom);
+  }
+  .sheet .page {
+    min-height: 0;
+    padding-bottom: calc(var(--safe-bottom) + 28px);
+  }
+  .sheet-bar { padding-top: var(--safe-top); }
+  .send-bar {
+    bottom: var(--keyboard-height, 0px);
+    padding-left: max(16px, env(safe-area-inset-left));
+    padding-right: max(16px, env(safe-area-inset-right));
+    padding-bottom: max(10px, var(--safe-bottom));
+  }
+  .editor {
+    min-height: 34vh;
+    font-size: 17px;
+    line-height: 1.85;
+    overflow-wrap: anywhere;
+  }
+  .paper { padding-left: 17px; padding-right: 17px; }
+  .mail-recent, .conversation-feature { padding: 15px; }
+  .mailbox-quick button { padding: 11px 10px; }
+  button, .tap { touch-action: manipulation; }
+  input, textarea, select { font-size: 16px; }
+  body.keyboard-open .tabbar { display: none; }
+}
+@media (max-width: 360px) {
+  .page { padding-left: 13px; padding-right: 13px; }
+  .tabbar { left: 7px; right: 7px; }
+  .tabbar nav button { font-size: 9px; }
+  .tabbar nav button.write { width: 46px; height: 46px; margin-left: 2px; margin-right: 2px; }
+  .archive-cover-stats { gap: 12px; }
+  .mail-month-count { flex-direction: column; align-items: flex-end; gap: 0; }
+  .mail-history-row, .conversation-row { gap: 8px; }
+  .mail-speaker { width: 34px; }
+}
+@media (min-width: 768px) and (max-width: 959px) {
+  .page { padding-left: 22px; padding-right: 22px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet.enter { animation: none; }
+}
