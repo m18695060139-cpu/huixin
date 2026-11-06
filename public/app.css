@@ -449,3 +449,45 @@ textarea.input { line-height: 1.6; resize: vertical; }
 @media (min-width: 960px) {
   .tabbar nav button.write { order: 0; }
 }
+
+
+/* ── 新版页面：交流、时间轨迹与自我理解 ── */
+.mail-partner { display:flex; align-items:center; gap:12px; margin-top:16px; }
+.mail-avatar { width:42px; height:42px; border-radius:50%; display:grid; place-items:center; flex:none; color:var(--ink); background:var(--tint); }
+.mail-partner-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:2px; }
+.mail-partner-copy b { font-size:15px; }
+.mail-partner-copy span,.mail-unread { color:var(--sub); font-size:12px; }
+.mail-unread { white-space:nowrap; }
+.mail-latest { display:flex; flex-direction:column; align-items:flex-start; gap:9px; width:100%; margin-top:12px; border:0; color:var(--text); text-align:left; }
+.mail-latest-head { display:flex; justify-content:space-between; align-items:center; gap:10px; width:100%; }
+.mail-kicker { color:var(--ink); font-size:12px; font-weight:700; }
+.mail-date { color:var(--sub); font-size:12px; }
+.mail-latest strong { font-size:18px; line-height:1.35; }
+.mail-excerpt { display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; color:var(--sub); font-size:14px; line-height:1.65; }
+.mail-open { display:flex; align-items:center; gap:4px; color:var(--ink); font-size:13px; font-weight:650; margin-top:2px; }
+.mail-tools { margin-top:18px; }
+.archive-overview { margin-top:16px; }
+.archive-overview-title { display:flex; flex-direction:column; gap:3px; margin-bottom:16px; }
+.archive-overview-title b { font-size:17px; }
+.archive-overview-title span { color:var(--sub); font-size:12px; }
+.archive-month { margin-top:22px; }
+.archive-month-head { display:flex; align-items:baseline; justify-content:space-between; padding:0 4px 9px; }
+.archive-month-head h2 { font-size:20px; }
+.archive-month-head span { color:var(--sub); font-size:12px; }
+.archive-events { padding:0; }
+.archive-event { display:flex; align-items:center; gap:12px; width:100%; padding:14px 14px; border:0; background:transparent; color:var(--text); text-align:left; }
+.archive-event + .archive-event { border-top:.5px solid var(--sep); }
+.archive-date { width:42px; height:46px; flex:none; border-radius:12px; display:flex; flex-direction:column; align-items:center; justify-content:center; background:var(--tile); }
+.archive-date b { font-size:19px; line-height:1.1; font-variant-numeric:tabular-nums; }
+.archive-date small { color:var(--sub); font-size:10px; }
+.archive-event-copy { display:flex; flex-direction:column; gap:4px; min-width:0; flex:1; }
+.archive-event-copy strong { font-size:14px; line-height:1.5; font-weight:600; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+.archive-event-copy small { color:var(--sub); font-size:12px; line-height:1.4; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
+.archive-event-copy em { color:var(--sub); font-size:11px; font-style:normal; }
+.archive-older { display:flex; justify-content:center; margin:22px 0 8px; }
+.self-state { margin-top:16px; }
+.self-state .gh { padding-top:10px; }
+.self-memory-head { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.self-memory-head b { font-size:17px; }
+.self-memory-head span,.self-memory-status { color:var(--sub); font-size:12px; }
+.self-memory-status { display:inline-block; margin:10px 4px 0; padding:4px 8px; border-radius:8px; background:var(--tile); }
