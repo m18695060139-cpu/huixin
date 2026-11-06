@@ -1,4 +1,4 @@
-// 重置示例账号：按「今天」的日期重新铺一套演示数据（信、回信、待办和备注、放下的事、点子、习惯、周信、季信）
+// 重置示例账号：按「今天」的日期重新铺一套演示数据（信、回信、待办和备注、放下的事、点子、习惯、长期记忆、周信、季信）
 // 只动这个账号的数据，账号和密码不变。演示前跑一次，「昨晚的你来信了」就会在任何设备上重新出现。
 //
 // 用法：
@@ -72,7 +72,7 @@ const SPAN = 45;
 const out = [];
 const who = `-- 示例账号：${username}（北京时间 ${TODAY} 生成）`;
 out.push(who);
-for (const t of ['letters', 'todos', 'ideas', 'habits', 'habit_logs', 'digests', 'feedback']) out.push(`DELETE FROM ${t} WHERE user_id = ${U};`);
+for (const t of ['letters', 'todos', 'ideas', 'habits', 'habit_logs', 'digests', 'feedback', 'memories']) out.push(`DELETE FROM ${t} WHERE user_id = ${U};`);
 
 // 待办和点子：挂在对应那封信的回信「附件」里
 const todos = [], ideas = [];
@@ -129,6 +129,27 @@ for (const i of ideas) {
   out.push(`INSERT INTO ideas (id, user_id, text, status, source_date, created, updated_at) SELECT ${q(i.id)}, id, ${q(i.text)}, ${q(i.status || 'open')}, ${q(day(-i.src))}, ${q(day(-i.src))}, ${q(now)} FROM users WHERE username = ${q(username)};`);
 }
 
+// 长期记忆：与上面的信件内容相互印证，覆盖认识自己页面的主要分类。
+// 每次重置都重建，来源日期随演示日期滚动；内容均为虚构示例，不代表真实用户。
+const memories = [
+  ['value', '你很看重做事的自主性，也在意把时间花在真正重要的事情上。', [-1, -5, -18], 0.91],
+  ['goal', '你想把读书会从线下活动逐步发展成一个稳定的内容项目。', [-9, -31], 0.88],
+  ['preference', '比起长时间开会，你更喜欢短而明确、有结论的沟通方式。', [-1, -5, -16], 0.93],
+  ['preference', '清晨阅读通常能让你进入比较专注的状态。', [-31, -34], 0.86],
+  ['relationship', '小林是你重要的共创伙伴，你们正在尝试一起做读书会播客。', [-9, -14, -31], 0.9],
+  ['relationship', '你希望更主动地联系老朋友，而不是只在想起时才联系。', [-14, -20], 0.82],
+  ['work', '你近期持续在思考如何减少低效会议，并尝试推动周会改成短站会。', [-1, -5, -16], 0.94],
+  ['pattern', '当工作压力变大时，跑步或出门走一走常常能帮助你恢复状态。', [-3, -14, -24], 0.89],
+  ['pattern', '你有时会先把责任揽到自己身上，之后才意识到需要重新分配精力。', [-1, -5], 0.81],
+  ['goal', '你想保持稳定的阅读和运动节奏，但也在练习不给自己安排过多目标。', [-14, -24, -31], 0.84],
+  ['other', '你喜欢把模糊的想法先写下来，再通过小步骤验证，而不是一开始就做很大的计划。', [-1, -9, -18], 0.83],
+];
+for (const [category, content, offsets, confidence] of memories) {
+  const id = uid('m');
+  const evidence = offsets.map(n => day(n));
+  out.push(`INSERT INTO memories (id, user_id, category, content, evidence_dates, confidence, status, created_at, updated_at) SELECT ${q(id)}, id, ${q(category)}, ${q(content)}, ${q(JSON.stringify(evidence))}, ${confidence}, 'active', ${q(now)}, ${q(now)} FROM users WHERE username = ${q(username)};`);
+}
+
 // 习惯：早睡 / 跑步 / 读书，最近 40 天打卡有疏有密；昨天三个都打了
 const habits = [['早睡', 3], ['跑步', 2], ['读书', 4]];
 habits.forEach(([hname, every], k) => {
@@ -173,4 +194,4 @@ digest('quarter', qk, {
 // DEMO_OUT=文件路径 时直接写文件（PowerShell 重定向会加 BOM，wrangler 读不了）
 if (process.env.DEMO_OUT) (await import('node:fs')).writeFileSync(process.env.DEMO_OUT, out.join('\n') + '\n');
 else process.stdout.write(out.join('\n') + '\n');
-console.error(`已生成：${username} · ${written} 封信 · ${todos.length} 件待办 · ${ideas.length} 个点子 · 2 封周信 · 1 封季信（今天按北京时间是 ${TODAY}）`);
+console.error(`已生成：${username} · ${written} 封信 · ${todos.length} 件待办 · ${ideas.length} 个点子 · ${memories.length} 条长期记忆 · 2 封周信 · 1 封季信（今天按北京时间是 ${TODAY}）`);
