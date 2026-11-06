@@ -154,7 +154,7 @@ function extractJSON(txt) {
 
 const REPLY_SYSTEM = `你是「回信」：一个人每晚给自己写一封信，你替未来的他回一封信，同时把信里以后回看时需要的东西整理出来。
 只输出 JSON，严格照这个结构：
-{"summary":"…","energy":3,"mood":"平静","highlight":"晚上",
+{"summary":"…","observation":"…或空字符串","mode":"倾听|分析|行动|回望","energy":3,"mood":"平静","highlight":"晚上",
  "lenses":{"health":"…","energy":"…","career":"…","relation":"…"},
  "tasks":[{"text":"…","dueDays":3}],"ideas":[{"text":"…"}]}
 
@@ -177,7 +177,7 @@ const REPLY_SYSTEM = `你是「回信」：一个人每晚给自己写一封信�
    已经出现在【还没完成的待办】里的，不要重复给。dueDays 是 1-14 的整数：有时间线索按线索换算，没有就小事 1-2、正常 3、大工程 7。
 7. ideas：信里冒出来的点子、灵感、选题、"也许可以…"的想法 —— 还没决定要不要做的。不是待办，也不是感想。每条一句话说清楚是什么点子。已经在【点子库】里的不要重复给。没有就给 []。
 8. 【他最近给待办写的备注】是他自己对某件事的补充、进展或放下的原因：只有和今天的信有关时才在回信里自然地提一句，用他的原话；无关就不提。标着"放下了"的事不要再放进 tasks。
-9. 只输出 JSON，不要任何解释。`;
+9. observation：只有当本封信与提供的长期记忆/历史有明确联系时，写一句「我注意到」；必须说明是观察而非定论，不能仅凭单封信推断稳定人格。没有可靠依据就给空字符串。\n10. mode：根据用户当前需要选择「倾听」「分析」「行动」「回望」之一；默认优先回应情绪，不要强行建议。\n11. 伙伴人格：温暖但不肉麻，诚实不盲目附和，有观点但不替用户决定；不假装有真实情感或意识。\n12. 只输出 JSON，不要任何解释。`;
 
 export async function writeReply(env, ctx) {
   const lines = [];
@@ -188,7 +188,8 @@ export async function writeReply(env, ctx) {
   lines.push(`【还没完成的待办】\n${ctx.openTodos.length ? ctx.openTodos.map(t => '- ' + t).join('\n') : '（无）'}`);
   lines.push(`【点子库】\n${ctx.ideas.length ? ctx.ideas.map(t => '- ' + t).join('\n') : '（无）'}`);
   if (ctx.notes && ctx.notes.length) lines.push(`【他最近给待办写的备注（他自己的话）】\n${ctx.notes.map(t => '- ' + t).join('\n')}`);
-  if (ctx.memories && ctx.memories.length) lines.push(`【长期记忆（仅作理解背景；与本封信冲突时以本封信为准，不要生搬硬套）】\n${ctx.memories.map(x => '- ' + x.category + '：' + x.content).join('\n')}`);\n  if (ctx.yesterday) lines.push(`【前一天的回信摘要，只用来理解对比，不要把昨天的事写成今天】\n${ctx.yesterday}`);
+  if (ctx.memories && ctx.memories.length) lines.push(`【长期记忆（仅作理解背景；与本封信冲突时以本封信为准，不要生搬硬套）】\n${ctx.memories.map(x => '- ' + x.category + '：' + x.content + (x.evidence_dates?.length ? '（来源：' + x.evidence_dates.join('、') + '）' : '')).join('\n')}`);
+  if (ctx.yesterday) lines.push(`【前一天的回信摘要，只用来理解对比，不要把昨天的事写成今天】\n${ctx.yesterday}`);
 
   if (env.MOCK_AI) return mockReply(ctx);
   const j = await callJSON(env, [
@@ -200,6 +201,8 @@ export async function writeReply(env, ctx) {
   const L = j.lenses || {};
   return {
     summary: clampStr(j.summary, 1200),
+    observation: clampStr(j.observation, 260),
+    mode: ['倾听','分析','行动','回望'].includes(j.mode) ? j.mode : '倾听',
     energy: Math.min(5, Math.max(1, Math.round(Number(j.energy) || 3))),
     mood: MOODS.includes(j.mood) ? j.mood : '平静',
     highlight: ['早上', '上午', '中午', '下午', '晚上'].includes(j.highlight) ? j.highlight : '',
