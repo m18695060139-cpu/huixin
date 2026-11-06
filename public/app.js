@@ -367,7 +367,7 @@
     </main>`;
   }
 
-  // ───────────── 时光  // ───────────── 时光 ─────────────
+  // ───────────── 时光 ─────────────
   function viewArchive() {
     const letters = Object.values(S.letters).filter(x => x.text && x.text.trim());
     const digests = S.digests || [];
@@ -387,7 +387,7 @@
     </main>`;
   }
 
-  // ───────────── 今天  // ───────────── 今天 ─────────────
+  // ───────────── 今天 ─────────────
   function viewToday() {
     const t = today();
     const h = new Date().getHours();
@@ -823,7 +823,7 @@
     </main>`;
   }
 
-  function energySeries  function energySeries(t, n) {
+  function energySeries(t, n) {
     const pts = [];
     for (let i = n; i >= 1; i--) {
       const d = addDays(t, -i);
@@ -944,7 +944,7 @@
     return html;
   }
 
-  function digestList  function digestList(kind, t) {
+  function digestList(kind, t) {
     const list = S.digests.filter(d => d.kind === kind);
     const kindN = { week: '周信', quarter: '季信', year: '年信' }[kind];
     const when = { week: '每周一早上 7 点', quarter: '每季度第一天早上 7 点', year: '每年元旦早上 7 点' }[kind];
