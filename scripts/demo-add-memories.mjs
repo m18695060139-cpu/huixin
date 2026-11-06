@@ -37,5 +37,6 @@ FROM users
 WHERE username = ${q(username)}
 AND NOT EXISTS (SELECT 1 FROM memories WHERE user_id = users.id AND content = ${q(content)} AND status = 'active');`);
 }
-process.stdout.write(out.join('\n') + '\n');
+if (process.env.DEMO_OUT) (await import('node:fs')).writeFileSync(process.env.DEMO_OUT, out.join('\n') + '\n');
+else process.stdout.write(out.join('\n') + '\n');
 console.error(`已准备 ${memories.length} 条示例长期记忆（北京时间 ${today}）；执行 SQL 后不会删除现有演示数据。`);
