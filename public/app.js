@@ -804,7 +804,7 @@
       const has = !!(l.reply && !sealed);
       const line = has ? String(l.reply.summary || l.text || '一次交流') : String(l.text || '一次交流');
       const status = sealed ? '回信明早送达' : has ? '有伙伴的回应' : '你留下的记录';
-      return `<button class="mail-history-row" data-act="letter" data-v="${l.date}">
+      return `<button class="mail-history-row" data-act="${has ? 'open-reply' : 'letter'}" data-v="${l.date}">
         <span class="mail-history-date"><b>${Number(l.date.slice(8))}</b><small>${Number(l.date.slice(5,7))}月</small></span>
         <span class="mail-history-copy"><strong>${esc(line.slice(0,76))}${line.length>76?'…':''}</strong><small>${cn(l.date)} · ${status}</small></span>
         <span class="mail-history-arrow">${ICON.chev}</span>
@@ -971,7 +971,7 @@
         const label = rangeLabel(d);
         const title = d.title && !d.imported ? d.title : '这一周的回顾';
         return `<button class="week-history-row" data-act="digest" data-v="week|${d.key}">
-          <span class="week-history-date"><b>${esc(String(d.key).slice(-2))}</b><small>WEEK</small></span>
+          <span class="week-history-date"><b>${Number(String(d.key).slice(8,10))}</b><small>${Number(String(d.key).slice(5,7))}月</small></span>
           <span class="week-history-copy"><strong>${esc(title)}</strong><small>${label}${st.letters != null ? ' · ' + st.letters + ' 封信' : ''}</small></span>
           ${ICON.chev}
         </button>`;
