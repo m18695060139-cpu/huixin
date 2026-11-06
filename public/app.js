@@ -785,8 +785,10 @@
     let list = V.mb === 'unread' ? unread : V.mb === 'mine' ? letters : V.mb === 'replies' ? letters.filter(l => l.reply) : letters;
     const rows = list.map(l => {
       const sealed = isSealed(l.date);
-      const summary = sealed ? '回信封存中 · 明早 6:00 送到' : String((l.reply && l.reply.summary) || l.text || '').split('\\n').map(x => x.trim()).find(Boolean) || '打开这次交流';
-      const status = sealed ? '回信明早送达' : l.reply ? (isOpened(l.date) ? '已读回信' : '有一封新回信') : '等待伙伴回信';
+      const mineText = String(l.text || '').split('\\n').map(x => x.trim()).find(Boolean) || '你写下的一封信';
+      const replyText = String((l.reply && l.reply.summary) || '').split('\\n').map(x => x.trim()).find(Boolean) || '伙伴已经给你回信';
+      const summary = sealed ? '回信封存中 · 明早 6:00 送到' : V.mb === 'mine' ? mineText : V.mb === 'replies' ? replyText : (l.reply ? replyText : mineText);
+      const status = sealed ? '回信明早送达' : V.mb === 'mine' ? '你写给伙伴' : l.reply ? (isOpened(l.date) ? '已读回信' : '有一封新回信') : '等待伙伴回信';
       return `<button class="row day archive-row" data-act="letter" data-v="${l.date}">
         <span class="dt"><b>${Number(l.date.slice(8))}</b><span>周${wd(l.date)}</span></span>
         <span class="row-main"><span class="one-line">${esc(summary)}</span><span class="sub">${cn(l.date)} · No.${letterNo(l.date)} · ${status}</span></span>${ICON.chev}</button>`;
