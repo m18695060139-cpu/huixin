@@ -737,7 +737,8 @@
     const sealedOnce = when && when < cutoff(l.date) && deliverMode() === 'morning';
     const whenTxt = r.imported ? '从 Life OS 搬过来的旧信'
       : sealedOnce ? `${cn(addDays(l.date, 1))} 6:00 送到` : when ? `${cn(localDate(when))} ${hm(when)} 收到` : '';
-    if (r.observation) h += `<div class="gh"><h2>我注意到</h2><span>一条可被你纠正的观察</span></div><div class="card pad" style="line-height:1.7">${esc(r.observation)}<div class="sub" style="margin-top:10px">回应方式：${esc(r.mode || '倾听')} · 这只是基于现有信件的观察，不是对你的定论。</div></div>`;
+    const extra = [];
+    if (r.observation) extra.push(`<div class="detail-note"><b>我注意到</b><p>${esc(r.observation)}</p><small>回应方式：${esc(r.mode || '倾听')} · 这是基于现有信件的观察，不是定论。</small></div>`);
     h += `<article class="card reply-letter">${paras || '<p class="muted">（这封回信没有正文）</p>'}
       <div class="reply-sign"><b>Re: 回信</b><span>${esc(whenTxt)}${r.engine ? ' · ' + esc(r.engine) : ''}</span></div></article>`;
 
@@ -753,23 +754,23 @@
       }).join('') + ids.map((x, i) => `<div class="row"><span class="ic idea">${ICON.bulb}</span>
           <span class="row-main"><span>${esc(x.text)}</span><span class="sub">点子</span></span>
           <span class="pill green pop" style="animation-delay:${0.6 + (tds.length + i) * 0.2}s">已收进点子库</span></div>`).join('');
-      h += `<div class="gh"><h2>附件</h2><span>从你的信里整理出来的</span></div><div class="card">${rows}</div>`;
+      extra.push(`<div class="detail-extra-block"><b>从信里整理出来</b><div class="card">${rows}</div></div>`);
     }
     if (r.energy) {
-      h += `<div class="card stats mt">
+      extra.push(`<div class="detail-extra-block"><b>当天状态</b><div class="card stats compact-stats">
         <div class="stat"><span>精力</span><b>${r.energy}<small> / 5</small></b></div>
         <div class="stat"><span>情绪</span><b>${esc(r.mood || '—')}</b></div>
-        <div class="stat"><span>高光</span><b>${esc(r.highlight || '—')}</b></div></div>`;
+        <div class="stat"><span>高光</span><b>${esc(r.highlight || '—')}</b></div></div></div>`);
     }
     const L = r.lenses || {};
     if (L.health || L.energy || L.career || L.relation) {
       const v = S.feedback[l.date + '|lenses'] || 0;
       const ln = LENSES.map(([k, n, c]) => `<div class="row lens"><span class="ic" style="background:${c}" aria-hidden="true">${n[0]}</span>
         <span class="row-main"><span>${n}</span><span>${L[k] ? esc(L[k]) : '<span class="muted">信里没提到</span>'}</span></span></div>`).join('');
-      h += `<div class="gh"><h2>四个角度</h2><span style="color:var(--ink);font-weight:600">实验</span></div>
-        <div class="card">${ln}<div class="row foot"><span class="small muted">这部分对你有用吗？</span>
-          <div class="seg2"><button class="${v > 0 ? 'on' : ''}" data-act="fb" data-v="lenses" data-d="${l.date}" data-x="1">有用</button><button class="${v < 0 ? 'on' : ''}" data-act="fb" data-v="lenses" data-d="${l.date}" data-x="-1">没用</button></div></div></div>`;
+      extra.push(`<div class="detail-extra-block"><b>四个角度</b><div class="card">${ln}<div class="row foot"><span class="small muted">这部分对你有用吗？</span>
+          <div class="seg2"><button class="${v > 0 ? 'on' : ''}" data-act="fb" data-v="lenses" data-d="${l.date}" data-x="1">有用</button><button class="${v < 0 ? 'on' : ''}" data-act="fb" data-v="lenses" data-d="${l.date}" data-x="-1">没用</button></div></div></div></div>`);
     }
+    if (extra.length) h += `<details class="detail-fold"><summary><span>更多记录</span><small>${extra.length} 项 · 状态、观察与整理</small><span class="detail-fold-arrow">${ICON.chev}</span></summary><div class="detail-fold-body">${extra.join('')}</div></details>`;
     if (r.ownError) h += `<p class="note">你自己的 AI 这次没接通（${esc(r.ownError)}），这封先用免费模型写的。可以去「设置 → AI 回信」检查一下。</p>`;
     if (opts.go) h += `<button class="btn full" style="margin-top:20px" data-act="go-today">去看今天要做的</button>`;
     return h;
@@ -991,7 +992,7 @@
   function openSheet(s) { s.fresh = true; V.sheets.push(s); render(); }
   function closeSheet() { V.sheets.pop(); V.droppedIdeas = undefined; if (!V.sheets.length) { V.openGroups = null; V.olderTodos = undefined; } render(); }
   function viewSheet(s) {
-    const titles = { reply: '', letter: '', digest: '', lists: '待办与点子', settings: '设置', todo: s.id ? '编辑待办' : '加一件事', drop: '放下这件事', idea: s.id ? '编辑点子' : '记一个点子' };
+    const titles = { reply: '知知的回信', letter: '我的信', digest: '时光回顾', lists: '待办与点子', settings: '设置', todo: s.id ? '编辑待办' : '加一件事', drop: '放下这件事', idea: s.id ? '编辑点子' : '记一个点子' };
     const anim = s.fresh ? ' enter' : '';
     s.fresh = false;   // 只在刚打开时升起，之后刷新内容不再重播动画
     return `<div class="sheet-dim" data-act="close" aria-hidden="true"></div><div class="sheet${anim}" role="dialog" aria-modal="true">
@@ -1020,21 +1021,20 @@
       if (!d) return '<div class="card empty">找不到这封信。</div>';
       const kindN = { week: '周信', quarter: '季信', year: '年信' }[d.kind];
       const range = d.range ? `${cn(d.range[0])} – ${cn(d.range[1])}` : (d.kind === 'week' ? `${cn(d.key)} – ${cn(addDays(d.key, 6))}` : d.key);
-      let h = `<div class="head"><div class="head-l"><span class="eyebrow">${kindN} · ${range}</span><h1 style="font-size:26px">${esc(d.title || kindN)}</h1></div></div>`;
-      if (d.stats) h += `<div class="card stats mt">
-        <div class="stat"><span>写了</span><b>${d.stats.letters}<small> 封</small></b></div>
-        <div class="stat"><span>平均精力</span><b>${d.stats.energyAvg ?? '—'}</b></div>
-        <div class="stat"><span>完成待办</span><b>${d.stats.todosDone}</b></div></div>`;
-      h += `<article class="card reply-letter"><p>${esc(d.letter || '')}</p></article>`;
-      const sec = (lab, body) => `<div class="gh"><h2>${lab}</h2></div><div class="card pad" style="font-size:15px;line-height:1.6">${body}</div>`;
-      if (d.energy_note) h += sec('精力的规律', esc(d.energy_note));
-      if (d.forgotten && d.forgotten.length) h += sec('可能漏掉的', d.forgotten.map(x => `<div>· ${esc(x)}</div>`).join(''));
-      if (d.next) h += sec(d.kind === 'week' ? '下周最值得做的一件事' : '接下来', esc(d.next));
+      let h = `<div class="detail-heading"><span class="eyebrow">${kindN} · ${range}</span><h1>${esc(d.title || kindN)}</h1></div>`;
+      if (d.stats) h += `<div class="detail-statline"><span>${d.stats.letters ?? 0} 封信</span><i></i><span>平均精力 ${d.stats.energyAvg ?? '—'}</span><i></i><span>完成 ${d.stats.todosDone ?? 0} 件</span></div>`;
+      h += `<article class="card reply-letter digest-letter"><p>${esc(d.letter || '')}</p></article>`;
+      const extras = [];
+      const sec = (lab, body) => `<div class="detail-extra-block"><b>${lab}</b><div class="card pad detail-copy">${body}</div></div>`;
+      if (d.energy_note) extras.push(sec('精力的规律', esc(d.energy_note)));
+      if (d.forgotten && d.forgotten.length) extras.push(sec('可能漏掉的', d.forgotten.map(x => `<div>· ${esc(x)}</div>`).join('')));
+      if (d.next) extras.push(sec(d.kind === 'week' ? '下周最值得做的一件事' : '接下来', esc(d.next)));
       const four = (o) => `<div class="card">${LENSES.map(([k, n, c]) => `<div class="row lens"><span class="ic" style="background:${c}" aria-hidden="true">${n[0]}</span><span class="row-main"><span>${n}</span><span>${esc(o[k] || '—')}</span></span></div>`).join('')}</div>`;
-      if (d.lenses && Object.values(d.lenses).some(Boolean)) h += `<div class="gh"><h2>四个角度</h2></div>` + four(d.lenses);
-      if (d.plans && Object.values(d.plans).some(Boolean)) h += `<div class="gh"><h2>下个季度的四条小规划</h2></div>` + four(d.plans);
-      if (d.themes && d.themes.length) h += sec('这一年反复出现的主题', d.themes.map(esc).join(' · '));
-      if (!d.imported) h += `<div style="margin-top:26px"><button class="btn ghost sm" data-act="gen" data-v="${d.kind}|${d.key}">让回信重写这封${kindN}</button></div>`;
+      if (d.lenses && Object.values(d.lenses).some(Boolean)) extras.push(`<div class="detail-extra-block"><b>四个角度</b>${four(d.lenses)}</div>`);
+      if (d.plans && Object.values(d.plans).some(Boolean)) extras.push(`<div class="detail-extra-block"><b>下个季度的四条小规划</b>${four(d.plans)}</div>`);
+      if (d.themes && d.themes.length) extras.push(sec('这一年反复出现的主题', d.themes.map(esc).join(' · ')));
+      if (extras.length) h += `<details class="detail-fold"><summary><span>展开更多回顾</span><small>${extras.length} 项补充内容</small><span class="detail-fold-arrow">${ICON.chev}</span></summary><div class="detail-fold-body">${extras.join('')}</div></details>`;
+      if (!d.imported) h += `<div class="detail-footer"><button class="btn ghost sm" data-act="gen" data-v="${d.kind}|${d.key}">重新整理这封${kindN}</button></div>`;
       return h;
     }
     if (s.type === 'lists') {
