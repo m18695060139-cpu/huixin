@@ -347,32 +347,47 @@
     const groups = Object.keys(names).map(k => {
       const list = items.filter(x => x.category === k);
       if (!list.length) return '';
-      return '<section class="self-group"><div class="gh"><h2>' + names[k] + '</h2><span>' + list.length + ' 条</span></div><div class="card">' + list.map(x => '<div class="row memory-row"><span class="row-main"><span>' + esc(x.content) + '</span><span class="sub">来源：' + ((x.evidence_dates || []).map(esc).join('、') || '尚无日期') + ' · 可信度 ' + Math.round((Number(x.confidence)||0)*100) + '%</span></span><span class="memory-actions"><button class="lk" data-act="memory-edit" data-v="' + esc(x.id) + '">修改</button><button class="lk danger-link" data-act="memory-del" data-v="' + esc(x.id) + '">删除</button></span></div>').join('') + '</div></section>';
+      return `<details class="self-collection"><summary><span class="self-collection-name">${names[k]}</span><span class="self-collection-count">${list.length} 条线索</span></summary><div class="self-collection-body">${list.map(x => `<article class="self-memory"><p>${esc(x.content)}</p><div class="self-memory-meta"><span>${(x.evidence_dates || []).map(esc).join('、') || '手动补充'}</span><span>可信度 ${Math.round((Number(x.confidence)||0)*100)}%</span></div><div class="memory-actions"><button class="lk" data-act="memory-edit" data-v="${esc(x.id)}">修改</button><button class="lk danger-link" data-act="memory-del" data-v="${esc(x.id)}">删除</button></div></article>`).join('')}</div></details>`;
     }).join('');
     const enabled = S.settings.memory_enabled !== false;
-    return '<main class="page"><div class="head"><div class="head-l"><span class="eyebrow">从近期状态，到长期线索</span><h1>认识自己</h1><p class="note">不是给你贴标签，而是把你亲自写下的经历和反复出现的线索放在一起看。</p></div></div>' +
-      '<section class="self-state">' + stateCard(today()) + '</section>' +
-      '<div class="card pad self-intro"><div class="self-memory-head"><b>长期理解</b><span>' + items.length + ' 条记忆</span></div><p class="note">这些内容来自你的信件和主动补充。它们可能会变化，你可以随时修改、删除或暂停使用。</p><span class="self-memory-status">' + (enabled ? '长期记忆已开启' : '长期记忆已暂停') + '</span></div>' +
-      (groups || '<div class="card empty">还没有形成长期记忆。继续写信，回信会逐步整理值得长期保留的内容。</div>') +
-      '<div class="self-footer"><button class="lk" data-act="memory-add">＋ 手动添加记忆</button><button class="lk muted" data-act="settings">记忆设置 ›</button></div></main>';
+    const categories = Object.keys(names).filter(k => items.some(x => x.category === k)).length;
+    return `<main class="page self-page">
+      <div class="head"><div class="head-l"><span class="eyebrow">了解自己，是一件持续发生的事</span><h1>认识自己</h1><p class="note">不急着定义你。先从真实的日常里，看见那些慢慢浮现的线索。</p></div></div>
+      <section class="self-opening">
+        <div class="self-opening-top"><span>PERSONAL NOTES</span><span class="self-status">${enabled ? '长期记忆开启' : '长期记忆已暂停'}</span></div>
+        <div class="self-opening-title">你正在成为<br><em>更了解自己的人。</em></div>
+        <div class="self-opening-bottom"><div><b>${items.length}</b><span>条长期线索</span></div><i></i><div><b>${categories}</b><span>个观察维度</span></div></div>
+      </section>
+      <section class="self-recent"><div class="section-intro"><div><span class="eyebrow">RECENTLY</span><h2>最近的你</h2></div><span>从近况开始</span></div>${stateCard(today())}</section>
+      <section class="self-long"><div class="section-intro"><div><span class="eyebrow">OVER TIME</span><h2>慢慢形成的理解</h2></div><span>${items.length} 条</span></div>
+        <p class="self-long-note">这些不是给你贴上的标签，而是从信件中整理出的阶段性理解。你可以随时展开、修改或删除。</p>
+        ${groups || '<div class="card empty">还没有形成长期线索。继续写信，回信会逐步整理值得保留的内容。</div>'}
+        <div class="self-footer"><button class="lk" data-act="memory-add">＋ 添加一条自己的线索</button><button class="lk muted" data-act="settings">记忆设置 ›</button></div>
+      </section>
+    </main>`;
   }
 
-
-  // ───────────── 时光 ─────────────
+  // ───────────── 时光  // ───────────── 时光 ─────────────
   function viewArchive() {
     const letters = Object.values(S.letters).filter(x => x.text && x.text.trim());
     const digests = S.digests || [];
     const spanDays = S.stats.first ? diffDays(today(), S.stats.first) + 1 : 0;
     const tabs = [['timeline','时间线'],['week','周信'],['quarter','季信'],['year','年信']];
-    const seg = `<div class="seg" role="tablist" aria-label="时光分类">${tabs.map(([k,n]) => `<button role="tab" aria-selected="${V.archiveTab === k}" data-act="archive-tab" data-v="${k}">${n}</button>`).join('')}</div>`;
-    const overview = `<div class="card pad archive-overview"><div class="archive-overview-title"><b>你的时间轨迹</b><span>每一封信，都是当时的你留下的坐标</span></div><div class="stats">
-      <div class="stat"><span>写下的信</span><b>${S.stats.letters || letters.length}</b></div><div class="stat"><span>回顾记录</span><b>${digests.length}</b></div><div class="stat"><span>记录天数</span><b>${spanDays}</b></div></div></div>`;
+    const seg = `<div class="seg archive-seg" role="tablist" aria-label="时光分类">${tabs.map(([k,n]) => `<button role="tab" aria-selected="${V.archiveTab === k}" data-act="archive-tab" data-v="${k}">${n}</button>`).join('')}</div>`;
     const content = V.archiveTab === 'timeline' ? timeline(today()) : digestList(V.archiveTab, today());
-    return `<main class="page"><div class="head"><div class="head-l"><span class="eyebrow">把经历留在时间里</span><h1>时光</h1><p class="note">不只是保存信件，也是在回看每一段真实走过的日子。</p></div></div>${overview}${seg}${content}</main>`;
+    return `<main class="page archive-page">
+      <div class="head"><div class="head-l"><span class="eyebrow">每一段经历，都有它的位置</span><h1>时光</h1><p class="note">把走过的日子留在这里。多年以后，再回来看看当时的自己。</p></div></div>
+      <section class="archive-cover">
+        <div class="archive-cover-label">YOUR LIFE, IN MOMENTS</div>
+        <div class="archive-cover-quote">时间没有替你<br>留下些什么，<br><em>是你自己留下了。</em></div>
+        <div class="archive-cover-stats"><div><b>${S.stats.letters || letters.length}</b><span>封信</span></div><div><b>${digests.length}</b><span>篇回顾</span></div><div><b>${spanDays}</b><span>记录天数</span></div></div>
+      </section>
+      ${seg}
+      <div class="archive-content">${content}</div>
+    </main>`;
   }
 
-
-  // ───────────── 今天 ─────────────
+  // ───────────── 今天  // ───────────── 今天 ─────────────
   function viewToday() {
     const t = today();
     const h = new Date().getHours();
@@ -763,53 +778,52 @@
 
   // ───────────── 信箱 ─────────────
   function viewMailbox() {
-    const t = today(), firstDate = S.stats.first;
+    const t = today();
+    const firstDate = S.stats.first;
     const days = firstDate ? diffDays(t, firstDate) + 1 : 0;
     const letters = Object.values(S.letters).filter(l => l.text && l.text.trim()).sort((a,b) => a.date < b.date ? 1 : -1);
     const unread = letters.filter(l => l.reply && !isSealed(l.date) && !isOpened(l.date));
     const filters = [['all','全部'],['unread','未读回信'],['mine','我写的'],['replies','AI 回信']];
-    const seg = `<div class="seg" role="tablist" aria-label="交流分类">${filters.map(([k,n]) => `<button role="tab" aria-selected="${V.mb === k}" data-act="mb" data-v="${k}">${n}</button>`).join('')}</div>`;
+    const seg = `<div class="seg mailbox-seg" role="tablist" aria-label="交流分类">${filters.map(([k,n]) => `<button role="tab" aria-selected="${V.mb === k}" data-act="mb" data-v="${k}">${n}</button>`).join('')}</div>`;
     const featured = unread[0] || letters[0] || null;
-    const sealed = featured ? isSealed(featured.date) : false;
-    const hasReply = !!(featured && featured.reply && !sealed);
-    const excerpt = featured ? String(hasReply ? (featured.reply.summary || '回信已经整理好，等你有空时再读。') : (featured.text || '那天的你留下了一封信。')).trim() : '';
-    const action = hasReply ? 'open-reply' : 'letter';
-    const spotlight = featured ? `<button class="mail-latest card pad" data-act="${action}" data-v="${featured.date}">
-      <span class="mail-latest-head"><span class="mail-kicker">${unread.includes(featured) ? '有一封新回信' : '最近一次交流'}</span><span class="mail-date">${cn(featured.date)} · No.${letterNo(featured.date)}</span></span>
-      <strong>${hasReply ? '伙伴给你的回信' : sealed ? '回信正在整理中' : '你写下的那封信'}</strong>
-      <span class="mail-excerpt">${esc(excerpt.slice(0,116))}${excerpt.length>116?'…':''}</span>
-      <span class="mail-open">${hasReply ? (unread.includes(featured) ? '拆开这封新回信' : '继续读这次交流') : sealed ? '明早 6:00 送达' : '打开这封信'} ${ICON.chev}</span>
-    </button>` : `<div class="mail-latest card pad"><span class="mail-kicker">从一封信开始</span><strong>你的 AI 伙伴在这里</strong><span class="mail-excerpt">写下最近的心情、困惑或一个小念头，回信会认真读完，再慢慢回应你。</span><button class="btn sm" data-act="tab" data-v="write">写第一封信</button></div>`;
+    const spotlight = featured ? (() => {
+      const sealed = isSealed(featured.date);
+      const reply = featured.reply && !sealed ? String(featured.reply.summary || '伙伴已经给你回信。') : '';
+      const own = String(featured.text || '').trim();
+      return `<section class="conversation-feature">
+        <div class="conversation-feature-head"><span>最近一次交流</span><span>${cn(featured.date)} · No.${letterNo(featured.date)}</span></div>
+        <div class="conversation-bubble mine"><small>你</small><p>${esc(own.slice(0,105))}${own.length>105?'…':''}</p></div>
+        ${reply ? `<div class="conversation-bubble partner"><small>回信</small><p>${esc(reply.slice(0,125))}${reply.length>125?'…':''}</p></div>` : `<div class="conversation-wait">${sealed ? '这封回信会在明早 6:00 送达' : '伙伴正在等你继续分享下一件事'}</div>`}
+        <button class="conversation-open" data-act="${reply ? 'open-reply' : 'letter'}" data-v="${featured.date}">${reply ? (unread.includes(featured) ? '阅读新回信' : '继续这次交流') : '查看这次交流'} ${ICON.chev}</button>
+      </section>`;
+    })() : `<section class="conversation-feature conversation-empty"><span class="eyebrow">A PLACE TO TALK</span><h2>这里一直有个位置，<br>留给你慢慢说。</h2><p>写下最近的心情、困惑或一个小念头。你的伙伴会认真读完，再给你回应。</p><button class="btn sm" data-act="tab" data-v="write">写第一封信</button></section>`;
     let list = V.mb === 'unread' ? unread : V.mb === 'mine' ? letters : V.mb === 'replies' ? letters.filter(l => l.reply) : letters;
-    if (featured && (V.mb === 'all' || V.mb === 'unread')) list = list.filter(l => l.date !== featured.date);
+    if (featured && V.mb === 'all') list = list.filter(l => l.date !== featured.date);
     const rows = list.map(l => {
       const waiting = l.reply && !isSealed(l.date) && !isOpened(l.date);
       const line = l.reply && !isSealed(l.date) ? String(l.reply.summary || '伙伴已经给你回信') : String(l.text || '你写下的一封信');
-      const status = isSealed(l.date) ? '回信明早送达' : waiting ? '有一封新回信' : l.reply ? '已经读过' : '等待回信';
-      return `<button class="row day archive-row" data-act="letter" data-v="${l.date}">
-        <span class="dt"><b>${Number(l.date.slice(8))}</b><span>周${wd(l.date)}</span></span>
-        <span class="row-main"><span class="one-line">${esc(line.slice(0,78))}${line.length>78?'…':''}</span><span class="sub">${cn(l.date)} · No.${letterNo(l.date)} · ${status}</span></span>${ICON.chev}</button>`;
+      const status = isSealed(l.date) ? '回信明早送达' : waiting ? '有新回信' : l.reply ? '已读' : '等待回信';
+      return `<button class="conversation-row" data-act="letter" data-v="${l.date}">
+        <span class="conversation-day"><b>${Number(l.date.slice(8))}</b><small>${Number(l.date.slice(5,7))}月</small></span>
+        <span class="conversation-row-copy"><strong>${esc(line.slice(0,72))}${line.length>72?'…':''}</strong><small>${cn(l.date)} · ${status}</small></span>${ICON.chev}
+      </button>`;
     }).join('');
-    const empty = V.mb === 'unread' ? '暂时没有未读回信，等下一次交流吧。' : V.mb === 'replies' ? '还没有收到 AI 回信。' : V.mb === 'mine' ? '你写下的信会留在这里。' : '还没有其他交流记录。';
+    const empty = V.mb === 'unread' ? '暂时没有未读回信。' : V.mb === 'replies' ? '还没有收到 AI 回信。' : V.mb === 'mine' ? '你写下的信会留在这里。' : '更多交流会按时间留在这里。';
     const monthN = letters.filter(l => l.date.slice(0,7) === t.slice(0,7)).length;
-    const tiles = `<div class="tiles mail-tools">
-      <button class="tile" data-act="lists" data-v="todos"><span>待办清单</span><b>${openTodos(t).length}</b></button>
-      <button class="tile" data-act="lists" data-v="ideas"><span>收集的点子</span><b>${openIdeas().length}</b></button>
-      <div class="tile"><span>本月交流</span><b>${monthN}</b></div></div>`;
-    return `<main class="page">
-      <div class="head"><div class="head-l"><span class="eyebrow">与你一起走过 ${days || 0} 天</span><h1>信箱</h1><p class="note">这里是你和 AI 伙伴持续交流的地方。</p></div><button class="round-btn" data-act="settings" aria-label="设置">${ICON.gear}</button></div>
+    const tools = `<div class="mailbox-quick"><button data-act="lists" data-v="todos"><span>待办清单</span><b>${openTodos(t).length}</b></button><button data-act="lists" data-v="ideas"><span>灵感收藏</span><b>${openIdeas().length}</b></button><span>本月 ${monthN} 次交流</span></div>`;
+    return `<main class="page mailbox-page">
+      <div class="head"><div class="head-l"><span class="eyebrow">${days ? '已经一起走过 ' + days + ' 天' : '从一次交流开始'}</span><h1>信箱</h1><p class="note">不只是收信，也是你和 AI 伙伴持续对话的地方。</p></div><button class="round-btn" data-act="settings" aria-label="设置">${ICON.gear}</button></div>
       ${offlineLine()}
-      <section class="mail-partner card pad"><span class="mail-avatar">${ICON.self}</span><span class="mail-partner-copy"><b>你的 AI 伙伴</b><span>${days ? '从第一封信开始，已经往来 ' + days + ' 天' : '从今天开始，慢慢建立属于你们的交流'}</span></span><span class="mail-unread">${unread.length ? unread.length + ' 封未读' : '持续陪伴'}</span></section>
+      <section class="mailbox-presence"><span class="presence-orbit"><i></i></span><div><b>AI 伙伴</b><small>${unread.length ? unread.length + ' 封回信等你阅读' : '在这里，继续上一次没说完的话'}</small></div><span class="presence-dot"></span></section>
       ${spotlight}
       ${seg}
-      <div class="gh"><h2>${V.mb === 'unread' ? '等待你拆开的回信' : V.mb === 'mine' ? '你写给伙伴的信' : V.mb === 'replies' ? '伙伴给你的回信' : '之前的交流'}</h2><span>${list.length} 封</span></div>
-      <div class="card">${rows || `<div class="empty">${empty}</div>`}</div>
-      ${tiles}
+      <div class="gh"><h2>${V.mb === 'unread' ? '未读回信' : V.mb === 'mine' ? '我写下的' : V.mb === 'replies' ? '伙伴的回信' : '更早的交流'}</h2><span>${list.length} 次</span></div>
+      <div class="conversation-list">${rows || `<div class="card empty">${empty}</div>`}</div>
+      ${tools}
     </main>`;
   }
 
-
-  function energySeries(t, n) {
+  function energySeries  function energySeries(t, n) {
     const pts = [];
     for (let i = n; i >= 1; i--) {
       const d = addDays(t, -i);
@@ -905,19 +919,24 @@
   }
   function timeline(t) {
     const letters = Object.values(S.letters).filter(l => l.text && l.text.trim()).sort((a,b) => a.date < b.date ? 1 : -1);
-    if (!letters.length) return `<div class="card empty mt">这里还没有留下记录。今晚写下第一封信吧。<br><button class="lk" data-act="write-day" data-v="${letterDay()}">去写信 ›</button></div>`;
+    if (!letters.length) return `<div class="archive-empty"><p>这里还没有留下记录。</p><span>今晚写下第一封信，让时间线从今天开始。</span><button class="lk" data-act="write-day" data-v="${letterDay()}">去写信 ›</button></div>`;
     const months = new Map();
     letters.forEach(l => { const key=l.date.slice(0,7); if(!months.has(key)) months.set(key,[]); months.get(key).push(l); });
-    let html='';
+    let html = '';
     for (const [key,entries] of months) {
-      const [year,month]=key.split('-').map(Number);
-      const title=year===Number(t.slice(0,4)) ? `${month} 月` : `${year} 年 ${month} 月`;
-      html += `<section class="archive-month"><div class="archive-month-head"><h2>${title}</h2><span>${entries.length} 封记录</span></div><div class="card archive-events">`;
+      const [year,month] = key.split('-').map(Number);
+      const title = year === Number(t.slice(0,4)) ? `${month} 月` : `${year} 年 ${month} 月`;
+      html += `<section class="life-month"><div class="life-month-heading"><h2>${title}</h2><span>${entries.length} 个片段</span></div><div class="life-track">`;
       html += entries.map(l => {
-        const sealed=isSealed(l.date), body=String(l.text||'').replace(/\\s+/g,' ').trim(), own=body.slice(0,88);
-        const reply=l.reply&&!sealed ? String(l.reply.summary||'').replace(/\\s+/g,' ').trim() : '';
-        const meta=sealed?'回信封存中':l.reply?'有 AI 回信':'写下了这一天';
-        return `<button class="archive-event" data-act="letter" data-v="${l.date}"><span class="archive-date"><b>${Number(l.date.slice(8))}</b><small>周${wd(l.date)}</small></span><span class="archive-event-copy"><strong>${esc(own)}${body.length>88?'…':''}</strong><small>${reply?esc(reply.slice(0,72))+(reply.length>72?'…':''):meta}</small><em>${cn(l.date)} · No.${letterNo(l.date)}</em></span>${ICON.chev}</button>`;
+        const sealed = isSealed(l.date);
+        const body = String(l.text || '').replace(/\\s+/g,' ').trim();
+        const reply = l.reply && !sealed ? String(l.reply.summary || '').replace(/\\s+/g,' ').trim() : '';
+        const headline = body.slice(0,92);
+        const note = reply || (sealed ? '回信将在明早送达' : l.reply ? '那一天，伙伴也留下了回应' : '那一天，你为自己留下一段记录');
+        return `<button class="life-moment" data-act="letter" data-v="${l.date}">
+          <span class="life-marker"></span><span class="life-date"><b>${Number(l.date.slice(8))}</b><small>周${wd(l.date)}</small></span>
+          <span class="life-moment-body"><strong>${esc(headline)}${body.length>92?'…':''}</strong><span>${esc(note.slice(0,76))}${note.length>76?'…':''}</span><em>${cn(l.date)} · No.${letterNo(l.date)}</em></span>
+        </button>`;
       }).join('');
       html += `</div></section>`;
     }
@@ -925,8 +944,7 @@
     return html;
   }
 
-
-  function digestList(kind, t) {
+  function digestList  function digestList(kind, t) {
     const list = S.digests.filter(d => d.kind === kind);
     const kindN = { week: '周信', quarter: '季信', year: '年信' }[kind];
     const when = { week: '每周一早上 7 点', quarter: '每季度第一天早上 7 点', year: '每年元旦早上 7 点' }[kind];
