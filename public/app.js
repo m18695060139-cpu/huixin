@@ -83,7 +83,7 @@
       letters: Object.fromEntries((b.letters || []).map(l => [l.date, l])),
       todos: b.todos || [], ideas: b.ideas || [], habits: b.habits || [],
       logs: new Set((b.habitLogs || []).map(([h, d]) => h + '|' + d)),
-      digests: b.digests || [],
+      digests: b.digests || [], memories: b.memories || [],
       feedback: Object.fromEntries((b.feedback || []).map(f => [f.date + '|' + f.block, f.value])),
     };
   }
@@ -92,7 +92,7 @@
     store.set('hx_cache', {
       user: S.user, settings: S.settings, stats: S.stats,
       letters: Object.values(S.letters), todos: S.todos, ideas: S.ideas, habits: S.habits,
-      habitLogs: [...S.logs].map(k => k.split('|')), digests: S.digests,
+      habitLogs: [...S.logs].map(k => k.split('|')), digests: S.digests, memories: S.memories || [],
       feedback: Object.entries(S.feedback).map(([k, v]) => ({ date: k.split('|')[0], block: k.split('|')[1], value: v })),
     });
   }
@@ -1005,6 +1005,13 @@
           ${opt('morning', '明早 6:00 拆信', '今晚寄出的信，回信封存到第二天早上；补写的信马上送到')}
           ${opt('now', '寄出后马上', '写完就能看到回信')}</div></div>
         ${aiSettings()}
+        <div class="field"><span class="lab">回信的长期记忆</span>
+          <div class="note" style="margin:0">回信会从你多天的来信中整理长期目标、偏好和反复出现的主题。每条记忆都保留来源日期；你可以修改或删除。记忆只用于辅助理解，不会覆盖你今天写下的内容。</div>
+          <div class="group" style="padding:4px 14px">
+            ${(S.memories || []).length ? S.memories.map(x => `<div class="row" style="align-items:flex-start;padding:12px 0"><span class="row-main"><span>${esc(x.content)}</span><span class="sub">${esc(x.category)} · 来源 ${(x.evidence_dates || []).map(esc).join('、') || '待补充'}</span></span><button class="lk" data-act="memory-edit" data-v="${x.id}">修改</button><button class="lk" style="color:var(--danger)" data-act="memory-del" data-v="${x.id}">删除</button></div>`).join('') : '<div class="empty" style="padding:14px">还没有长期记忆。随着你持续写信，回信会逐步整理。</div>'}
+          </div>
+          <button class="btn sm ghost" style="align-self:flex-start" data-act="memory-add">手动添加一条记忆</button>
+        </div>
         <div class="field"><span class="lab">外观</span><div class="themes">${themes}</div></div>
         <div class="field"><span class="lab">写信时顺手打卡的习惯</span><div class="group">${habits || '<div class="empty" style="padding:14px">还没有习惯</div>'}</div>
           <form id="habit-form" style="display:flex;gap:8px"><input class="input" id="habit-new" placeholder="新习惯，比如：运动 30 分钟" aria-label="新习惯"><button class="btn sm" style="height:48px" type="submit">添加</button></form></div>
@@ -1396,6 +1403,23 @@
         break;
       }
       case 'settings': V.ai = { loading: true }; openSheet({ type: 'settings' }); loadAI(); break;
+      case 'memory-add': {
+        const content = prompt('想让回信长期记住什么？');
+        if (!content || !content.trim()) break;
+        try { await api('POST','/memories',{content:content.trim(),category:'other',confidence:1}); const d=await api('GET','/memories'); S.memories=d.memories; toCache(); render(); toast('已加入长期记忆'); }
+        catch(e){ toast(e.message); } break;
+      }
+      case 'memory-edit': {
+        const item=(S.memories||[]).find(x=>x.id===v); if(!item) break;
+        const content=prompt('修改这条长期记忆',item.content); if(content===null) break;
+        try { await api('PUT','/memories/'+v,{content}); const d=await api('GET','/memories'); S.memories=d.memories; toCache(); render(); toast('已更新'); }
+        catch(e){ toast(e.message); } break;
+      }
+      case 'memory-del': {
+        if(!confirm('删除这条长期记忆？删除后，之后的回信不会再使用它。')) break;
+        try { await api('DELETE','/memories/'+v); S.memories=(S.memories||[]).filter(x=>x.id!==v); toCache(); render(); toast('已删除'); }
+        catch(e){ toast(e.message); } break;
+      }
       case 'deliver':
         S.settings.deliver = v; queue('PUT', '/settings', { deliver: v }); toCache(); render();
         toast(v === 'now' ? '之后寄出的信，马上就能看到回信' : '之后今晚寄出的信，回信明早 6:00 送到'); break;
