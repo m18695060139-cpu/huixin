@@ -722,7 +722,7 @@
       : sealedOnce ? `${cn(addDays(l.date, 1))} 6:00 送到` : when ? `${cn(localDate(when))} ${hm(when)} 收到` : '';
     if (r.observation) h += `<div class="gh"><h2>我注意到</h2><span>一条可被你纠正的观察</span></div><div class="card pad" style="line-height:1.7">${esc(r.observation)}<div class="sub" style="margin-top:10px">回应方式：${esc(r.mode || '倾听')} · 这只是基于现有信件的观察，不是对你的定论。</div></div>`;
     h += `<article class="card reply-letter">${paras || '<p class="muted">（这封回信没有正文）</p>'}
-      <div class="reply-sign"><b>Re: 回信</b><span>${esc(whenTxt)}${r.engine ? ' · ' + esc(r.engine) : ''}</span></div></article>`;
+      <div class="reply-sign"><b>知知的回信</b><span>${esc(whenTxt)}${r.engine ? ' · ' + esc(r.engine) : ''}</span></div></article>`;
 
     const tds = r.todos || [], ids = r.ideas || [];
     if (tds.length || ids.length) {
