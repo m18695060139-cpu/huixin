@@ -359,12 +359,13 @@
   function viewArchive() {
     const letters = Object.values(S.letters).filter(x => x.text && x.text.trim());
     const digests = S.digests || [];
+    const spanDays = S.stats.first ? diffDays(today(), S.stats.first) + 1 : 0;
     const tabs = [['timeline','时间线'],['week','周信'],['quarter','季信'],['year','年信']];
     const seg = `<div class="seg" role="tablist" aria-label="时光分类">${tabs.map(([k,n]) => `<button role="tab" aria-selected="${V.archiveTab === k}" data-act="archive-tab" data-v="${k}">${n}</button>`).join('')}</div>`;
     const overview = `<div class="card pad"><div class="stats">
       <div class="stat"><span>写过的信</span><b>${S.stats.letters || letters.length}</b></div>
       <div class="stat"><span>阶段回顾</span><b>${digests.length}</b></div>
-      <div class="stat"><span>记录天数</span><b>${S.stats.streak || letters.length}</b></div>
+      <div class="stat"><span>记录跨度</span><b>${spanDays}</b></div>
     </div></div>`;
     let content = '';
     if (V.archiveTab === 'timeline') content = stateCard(today()) + timeline(today());
@@ -898,7 +899,7 @@
   }
   function timeline(t) {
     const letters = Object.values(S.letters).filter(l => l.text && l.text.trim()).sort((a, b) => (a.date < b.date ? 1 : -1));
-    if (!letters.length) return `<div class="card empty mt">信箱还是空的。今晚写第一封信吧。<br><button class="lk" data-act="write-day" data-v="${letterDay()}">去写信 ›</button></div>`;
+    if (!letters.length) return `<div class="card empty mt">这里还没有留下记录。今晚写下第一封信吧。<br><button class="lk" data-act="write-day" data-v="${letterDay()}">去写信 ›</button></div>`;
     // 一天一行：写了的是信，没写的留一个空位，可以点进去补写
     const oldest = letters[letters.length - 1].date;
     const start = hasText(letterDay()) ? letterDay() : addDays(letterDay(), -1);
