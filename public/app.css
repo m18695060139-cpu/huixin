@@ -828,3 +828,48 @@ html, body { min-height: 100%; }
   .mail-recent { padding-left: 12px; padding-right: 12px; }
   .mail-history-date { width: 32px; }
 }
+
+
+/* ── 原生阅读层级：详情先看信，补充信息按需展开 ── */
+.detail-heading { padding: 2px 4px 8px; }
+.detail-heading .eyebrow { display:block; margin-bottom:5px; }
+.detail-heading h1 { font-size:25px; line-height:1.28; }
+.detail-statline { display:flex; align-items:center; gap:9px; padding:7px 4px 2px; color:var(--sub); font-size:11px; }
+.detail-statline i { width:3px; height:3px; border-radius:50%; background:var(--ring); }
+.detail-fold { margin:16px 0 4px; border-top:1px solid var(--sep); border-bottom:1px solid var(--sep); }
+.detail-fold summary { min-height:48px; display:flex; align-items:center; gap:8px; list-style:none; cursor:pointer; color:var(--text); }
+.detail-fold summary::-webkit-details-marker { display:none; }
+.detail-fold summary > span:first-child { font-size:13px; font-weight:650; }
+.detail-fold summary small { margin-left:auto; color:var(--sub); font-size:10px; }
+.detail-fold-arrow { display:flex; color:var(--sub); transition:transform .2s ease; }
+.detail-fold[open] .detail-fold-arrow { transform:rotate(90deg); }
+.detail-fold-body { padding:0 0 14px; }
+.detail-extra-block { margin-top:12px; }
+.detail-extra-block > b,.detail-note > b { display:block; margin:0 2px 8px; font-size:12px; color:var(--sub); }
+.detail-extra-block .card { margin-top:0; }
+.detail-note { padding:12px 14px; border-radius:13px; background:var(--tile); }
+.detail-note p { margin:0; font-size:13px; line-height:1.65; }
+.detail-note small { display:block; margin-top:7px; color:var(--sub); font-size:10px; line-height:1.5; }
+.compact-stats { padding:8px; gap:6px; }
+.compact-stats .stat { padding:9px; }
+.compact-stats .stat b { font-size:17px; }
+.digest-letter { margin-top:10px; padding:18px 17px; }
+.digest-letter p { font-size:15px; line-height:1.8; }
+.detail-copy { font-size:14px; line-height:1.65; }
+.detail-footer { margin-top:16px; padding-bottom:8px; }
+@media (max-width:767px) {
+  .sheet-bar > div { height:46px; padding-left:18px; padding-right:18px; }
+  .sheet .page { padding-top:4px; padding-bottom:calc(var(--safe-bottom) + 18px); }
+  .sheet .head { padding-top:2px; }
+  .sheet .head h1 { font-size:25px !important; }
+  .reply-letter { margin-top:8px; padding:18px 16px; gap:10px; }
+  .reply-letter p { font-size:15px; line-height:1.82; }
+  .reply-sign { padding-top:6px; }
+  details.mine { margin-top:8px; }
+  details.mine summary { min-height:48px; }
+  details.mine .letter-text { padding:0 13px 13px; font-size:14px; line-height:1.75; }
+  .detail-fold { margin-top:12px; }
+  .detail-extra-block { margin-top:9px; }
+  .detail-heading h1 { font-size:24px; }
+  .digest-letter { padding:16px 15px; }
+}
