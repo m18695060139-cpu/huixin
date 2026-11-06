@@ -794,8 +794,8 @@
     const spotlight = featured ? `<section class="mail-recent">
       <div class="mail-recent-top"><span><i></i>${V.mb === 'unread' ? '等你读的新回信' : '最近一次交流'}</span><small>${cn(featured.date)}</small></div>
       <div class="mail-exchange">
-        <div class="mail-exchange-line"><span class="mail-speaker">你</span><p>${esc(ownText.slice(0,100))}${ownText.length>100?'…':''}</p></div>
-        ${hasReply ? `<div class="mail-exchange-line reply"><span class="mail-speaker">知知</span><p>${esc(replyText.slice(0,125))}${replyText.length>125?'…':''}</p></div>` : `<div class="mail-reply-pending">${isSealed(featured.date) ? '回信已经写好，明早 6:00 送达' : featured.reply ? '回信已收到' : '这封信还没有收到回信'}</div>`}
+        <div class="mail-exchange-line"><span class="mail-speaker">你</span><p class="mail-exchange-preview">${esc(ownText.slice(0,100))}${ownText.length>100?'…':''}</p></div>
+        ${hasReply ? `<div class="mail-exchange-line reply"><span class="mail-speaker">知知</span><p class="mail-exchange-preview">${esc(replyText.slice(0,125))}${replyText.length>125?'…':''}</p></div>` : `<div class="mail-reply-pending">${isSealed(featured.date) ? '回信已经写好，明早 6:00 送达' : featured.reply ? '回信已收到' : '这封信还没有收到回信'}</div>`}
       </div>
       <button class="mail-recent-action" data-act="${hasReply ? 'open-reply' : 'letter'}" data-v="${featured.date}">${hasReply ? '打开知知的回信' : '打开这次交流'} ${ICON.chev}</button>
     </section>` : `<section class="mail-welcome"><span class="mail-welcome-kicker">A SPACE FOR TWO</span><h2>${V.mb === 'unread' ? '今天没有未读回信。' : '有些话，可以慢慢说。'}</h2><p>${V.mb === 'unread' ? '新的回应到来时，会安静地留在这里。' : '把日常、困惑或突然冒出的念头写下来。知知会认真读，也会记得那些值得留下的事。'}</p>${V.mb === 'all' ? '<button class="btn sm" data-act="tab" data-v="write">写一封信</button>' : ''}</section>`;
