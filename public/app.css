@@ -491,3 +491,111 @@ textarea.input { line-height: 1.6; resize: vertical; }
 .self-memory-head b { font-size:17px; }
 .self-memory-head span,.self-memory-status { color:var(--sub); font-size:12px; }
 .self-memory-status { display:inline-block; margin:10px 4px 0; padding:4px 8px; border-radius:8px; background:var(--tile); }
+
+
+/* ── 个人页：编辑式个人档案，而非数据列表 ── */
+.self-page .head { margin-bottom: 20px; }
+.self-opening { margin: 8px 0 28px; padding: 22px; border-radius: 24px; color: var(--text); background: var(--card); position: relative; overflow: hidden; }
+.self-opening:after { content:""; position:absolute; width:190px; height:190px; right:-76px; top:-86px; border:1px solid var(--sep); border-radius:50%; box-shadow:0 0 0 22px var(--bg),0 0 0 23px var(--sep),0 0 0 48px var(--card),0 0 0 49px var(--sep); opacity:.7; }
+.self-opening-top,.self-opening-bottom { display:flex; justify-content:space-between; align-items:center; position:relative; z-index:1; }
+.self-opening-top { color:var(--sub); font-size:10px; letter-spacing:1.5px; font-weight:700; }
+.self-status { font-size:11px; letter-spacing:0; padding:5px 9px; border-radius:12px; background:var(--tile); }
+.self-opening-title { position:relative; z-index:1; margin:30px 0 28px; font-family:var(--serif); font-size:30px; font-weight:600; line-height:1.42; letter-spacing:-.4px; }
+.self-opening-title em { color:var(--ink); font-style:normal; }
+.self-opening-bottom { justify-content:flex-start; gap:14px; }
+.self-opening-bottom div { display:flex; align-items:baseline; gap:6px; }
+.self-opening-bottom b { font-size:23px; font-variant-numeric:tabular-nums; }
+.self-opening-bottom span { color:var(--sub); font-size:12px; }
+.self-opening-bottom i { height:22px; width:1px; background:var(--sep); }
+.section-intro { display:flex; justify-content:space-between; align-items:flex-end; margin:0 4px 10px; }
+.section-intro .eyebrow { font-size:10px; letter-spacing:1.4px; }
+.section-intro h2 { margin-top:2px; font-size:21px; }
+.section-intro > span { color:var(--sub); font-size:12px; }
+.self-recent { margin-bottom:28px; }
+.self-recent .gh { padding-top:4px; }
+.self-long-note { margin:0 4px 14px; color:var(--sub); font-size:13px; line-height:1.65; }
+.self-collection { margin-top:10px; border-radius:16px; background:var(--card); overflow:hidden; }
+.self-collection summary { list-style:none; display:flex; align-items:center; justify-content:space-between; min-height:58px; padding:0 16px; cursor:pointer; }
+.self-collection summary::-webkit-details-marker { display:none; }
+.self-collection summary:after { content:"＋"; color:var(--sub); font-size:18px; }
+.self-collection[open] summary:after { content:"－"; }
+.self-collection-name { font-weight:650; }
+.self-collection-count { margin-left:auto; margin-right:12px; color:var(--sub); font-size:12px; }
+.self-collection-body { padding:0 16px 12px; }
+.self-memory { padding:12px 0; border-top:.5px solid var(--sep); }
+.self-memory p { margin:0; font-size:14px; line-height:1.65; }
+.self-memory-meta { display:flex; gap:12px; margin-top:8px; color:var(--sub); font-size:11px; }
+.self-memory .memory-actions { justify-content:flex-end; }
+
+/* ── 时光页：杂志式时间封面 + 纵向人生轨迹 ── */
+.archive-cover { margin:18px 0 20px; padding:22px; border-radius:24px; background:var(--ink); color:var(--on-ink); overflow:hidden; position:relative; }
+.archive-cover:after { content:""; position:absolute; width:230px; height:230px; right:-98px; top:-104px; border:1px solid currentColor; border-radius:50%; opacity:.22; box-shadow:0 0 0 24px transparent,0 0 0 25px currentColor,0 0 0 52px transparent,0 0 0 53px currentColor; }
+.archive-cover-label { font-size:10px; letter-spacing:1.7px; opacity:.72; font-weight:700; }
+.archive-cover-quote { margin:24px 0 30px; font-family:var(--serif); font-size:27px; line-height:1.42; font-weight:600; position:relative; z-index:1; }
+.archive-cover-quote em { font-style:normal; opacity:.78; }
+.archive-cover-stats { display:flex; gap:28px; position:relative; z-index:1; }
+.archive-cover-stats div { display:flex; align-items:baseline; gap:5px; }
+.archive-cover-stats b { font-size:22px; font-variant-numeric:tabular-nums; }
+.archive-cover-stats span { font-size:11px; opacity:.75; }
+.archive-seg { margin:0 0 8px; }
+.archive-content { padding-bottom:8px; }
+.life-month { margin-top:22px; }
+.life-month-heading { display:flex; justify-content:space-between; align-items:baseline; padding:0 4px 10px; }
+.life-month-heading h2 { font-size:21px; }
+.life-month-heading span { color:var(--sub); font-size:12px; }
+.life-track { position:relative; padding:2px 0 2px 14px; }
+.life-track:before { content:""; position:absolute; left:6px; top:15px; bottom:17px; width:1px; background:var(--sep); }
+.life-moment { display:flex; align-items:flex-start; gap:12px; width:100%; position:relative; border:0; background:none; color:var(--text); text-align:left; padding:12px 0 16px; }
+.life-marker { position:absolute; left:-12px; top:22px; width:9px; height:9px; border-radius:50%; background:var(--ink); border:2px solid var(--bg); box-shadow:0 0 0 1px var(--ink); }
+.life-date { width:42px; flex:none; display:flex; flex-direction:column; align-items:center; padding-top:1px; }
+.life-date b { font-size:23px; font-weight:650; line-height:1.1; font-variant-numeric:tabular-nums; }
+.life-date small { color:var(--sub); font-size:10px; margin-top:3px; }
+.life-moment-body { flex:1; min-width:0; display:flex; flex-direction:column; gap:5px; padding:0 12px 14px 0; border-bottom:.5px solid var(--sep); }
+.life-moment-body strong { font-size:14px; line-height:1.55; font-weight:650; }
+.life-moment-body span { color:var(--sub); font-size:12px; line-height:1.5; }
+.life-moment-body em { color:var(--sub); font-size:10px; font-style:normal; }
+
+/* ── 信箱：交流气泡，不再把每条记录画成信封 ── */
+.mailbox-presence { display:flex; align-items:center; gap:11px; margin:18px 4px 14px; }
+.presence-orbit { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; background:var(--tint); position:relative; }
+.presence-orbit:before,.presence-orbit:after { content:""; position:absolute; inset:5px; border:1px solid var(--ink); border-radius:50%; opacity:.45; }
+.presence-orbit:after { inset:10px; opacity:.7; }
+.presence-orbit i { width:5px; height:5px; border-radius:50%; background:var(--ink); }
+.mailbox-presence div { display:flex; flex-direction:column; gap:1px; flex:1; }
+.mailbox-presence b { font-size:14px; }
+.mailbox-presence small { color:var(--sub); font-size:11px; }
+.presence-dot { width:7px; height:7px; border-radius:50%; background:var(--green); }
+.conversation-feature { padding:17px; border-radius:22px; background:var(--card); margin-bottom:18px; }
+.conversation-feature-head { display:flex; justify-content:space-between; gap:8px; margin-bottom:15px; color:var(--sub); font-size:11px; }
+.conversation-bubble { max-width:92%; padding:11px 13px; border-radius:16px; margin-top:9px; }
+.conversation-bubble small { display:block; margin-bottom:4px; font-size:10px; color:var(--sub); }
+.conversation-bubble p { margin:0; font-size:13px; line-height:1.6; }
+.conversation-bubble.mine { margin-left:auto; background:var(--tile); border-bottom-right-radius:5px; }
+.conversation-bubble.partner { margin-right:auto; background:var(--tint); border-bottom-left-radius:5px; }
+.conversation-bubble.partner small { color:var(--ink-text); }
+.conversation-wait { margin:12px 2px 2px; color:var(--sub); font-size:12px; }
+.conversation-open { display:flex; align-items:center; gap:5px; margin:13px 0 0 auto; border:0; background:none; color:var(--ink); font-size:13px; font-weight:650; padding:4px 0; }
+.conversation-empty { padding:25px 21px; }
+.conversation-empty h2 { margin:14px 0 9px; font-family:var(--serif); font-size:23px; line-height:1.5; }
+.conversation-empty p { margin:0 0 17px; color:var(--sub); font-size:13px; line-height:1.7; }
+.mailbox-seg { margin:0 0 4px; }
+.conversation-list { background:var(--card); border-radius:18px; overflow:hidden; }
+.conversation-row { display:flex; align-items:center; gap:12px; width:100%; padding:12px 15px; border:0; background:none; color:var(--text); text-align:left; }
+.conversation-row + .conversation-row { border-top:.5px solid var(--sep); }
+.conversation-day { width:42px; flex:none; display:flex; flex-direction:column; align-items:center; }
+.conversation-day b { font-size:19px; line-height:1.1; }
+.conversation-day small { color:var(--sub); font-size:10px; }
+.conversation-row-copy { min-width:0; flex:1; display:flex; flex-direction:column; gap:4px; }
+.conversation-row-copy strong { font-size:13px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.conversation-row-copy small { color:var(--sub); font-size:11px; }
+.mailbox-quick { display:flex; align-items:center; gap:9px; margin-top:18px; }
+.mailbox-quick button { display:flex; flex-direction:column; align-items:flex-start; gap:5px; flex:1; min-width:0; padding:12px 14px; border:0; border-radius:15px; background:var(--card); color:var(--text); text-align:left; }
+.mailbox-quick button span { font-size:12px; color:var(--sub); }
+.mailbox-quick button b { font-size:19px; }
+.mailbox-quick > span { font-size:10px; color:var(--sub); white-space:nowrap; }
+@media (max-width:380px) {
+  .archive-cover-stats { gap:18px; }
+  .archive-cover-quote { font-size:24px; }
+  .mailbox-quick { gap:6px; }
+  .mailbox-quick > span { font-size:9px; }
+}
