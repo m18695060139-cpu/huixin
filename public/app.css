@@ -425,27 +425,3 @@ textarea.input { line-height: 1.6; resize: vertical; }
   .sheet, .bob, .reply-letter, .pop, .fresh, .sent .env-wrap, .sent .pm, .spin, .mic.on { animation: none; }
   button:active:not(:disabled), .tap:active { transform: none; }
 }
-
-
-/* ── 新增页面：沿用回信原有的卡片、间距与主题变量 ── */
-.tabbar nav button.write { order: 0; }
-.self-intro { margin-top: 18px; }
-.self-intro .note { margin: 8px 0 0; }
-.self-group { margin-top: 22px; }
-.self-group .gh { margin-bottom: 10px; }
-.memory-row { align-items: flex-start; padding: 14px 16px; gap: 10px; }
-.memory-row + .memory-row { border-top: .5px solid var(--sep); }
-.memory-row .row-main { min-width: 0; gap: 5px; }
-.memory-row .row-main > span:first-child { line-height: 1.55; white-space: normal; }
-.memory-actions { display: flex; align-items: center; gap: 12px; flex: none; padding-top: 1px; }
-.memory-actions .lk { font-size: 13px; }
-.danger-link { color: var(--danger); }
-.self-footer { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin-top: 18px; padding: 0 4px; }
-.archive-digest { width: 100%; text-align: left; margin-bottom: 10px; padding: 14px 16px; }
-.archive-row { width: 100%; text-align: left; }
-.archive-row .row-main { min-width: 0; }
-.archive-row .row-main > span:first-child { font-weight: 600; }
-.archive-row .sub.one-line { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (min-width: 960px) {
-  .tabbar nav button.write { order: 0; }
-}

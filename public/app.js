@@ -37,7 +37,6 @@
     boxSm: svg(18, '<rect x="3" y="5.5" width="18" height="13" rx="2.5"/><path d="m3.8 7 8.2 6 8.2-6"/>'),
     send: svg(20, '<path d="M21 3L10 14M21 3l-7 18-4-7-7-4z"/>'),
     bulb: svg(14, '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/>', 2.4),
-    self: svg(24, '<circle cx="12" cy="8" r="3.5"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/>', 1.8),
     mic: svg(22, '<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>'),
     clock: svg(16, '<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/>', 2.2),
     x: svg(15, '<path d="M6 6l12 12M18 6L6 18"/>', 2.6),
@@ -84,7 +83,7 @@
       letters: Object.fromEntries((b.letters || []).map(l => [l.date, l])),
       todos: b.todos || [], ideas: b.ideas || [], habits: b.habits || [],
       logs: new Set((b.habitLogs || []).map(([h, d]) => h + '|' + d)),
-      digests: b.digests || [], memories: b.memories || [],
+      digests: b.digests || [],
       feedback: Object.fromEntries((b.feedback || []).map(f => [f.date + '|' + f.block, f.value])),
     };
   }
@@ -93,7 +92,7 @@
     store.set('hx_cache', {
       user: S.user, settings: S.settings, stats: S.stats,
       letters: Object.values(S.letters), todos: S.todos, ideas: S.ideas, habits: S.habits,
-      habitLogs: [...S.logs].map(k => k.split('|')), digests: S.digests, memories: S.memories || [],
+      habitLogs: [...S.logs].map(k => k.split('|')), digests: S.digests,
       feedback: Object.entries(S.feedback).map(([k, v]) => ({ date: k.split('|')[0], block: k.split('|')[1], value: v })),
     });
   }
@@ -319,7 +318,7 @@
     V._composing = false;
     const u = unopenedLetter(today());
     V._env = u ? u.date : null;
-    const html = V.tab === 'today' ? viewToday() : V.tab === 'write' ? viewWrite() : V.tab === 'self' ? viewSelf() : V.tab === 'archive' ? viewArchive() : viewMailbox();
+    const html = V.tab === 'today' ? viewToday() : V.tab === 'write' ? viewWrite() : viewMailbox();
     const sent = V.sent && V.tab === 'write' ? viewSent() : '';
     $('#app').innerHTML = html + tabbar() + sent + V.sheets.map(viewSheet).join('');
     if (V._lastTab !== V.tab) window.scrollTo(0, 0); else window.scrollTo(0, keepScroll);
@@ -332,43 +331,12 @@
     const b = (id, label, icon, cls = '', extra = '') =>
       `<button class="${cls}" data-act="tab" data-v="${id}" ${V.tab === id ? 'aria-current="page"' : ''} aria-label="${label}">${icon}<span>${label}</span>${extra}</button>`;
     return `<div class="tabbar${V._composing ? ' hide-m' : ''}"><div class="brand" aria-hidden="true"><b>Re:</b><span>回信</span></div>
-      <nav aria-label="主导航">${b('today', '今天', ICON.today, '', dot)}${b('self', '认识自己', ICON.self)}${b('write', '写信', ICON.pen, 'write')}${b('archive', '时光', ICON.clock)}${b('mailbox', '信箱', ICON.box)}</nav>
+      <nav aria-label="主导航">${b('today', '今天', ICON.today, '', dot)}${b('write', '写信', ICON.pen, 'write')}${b('mailbox', '信箱', ICON.box)}</nav>
       <button class="side-set" data-act="settings">${ICON.gear}<span>设置</span></button></div>`;
   }
 
   const offlineLine = () => `<div class="offline" data-offline ${V.online ? 'hidden' : ''}>离线中 · 改动会在联网后自动同步</div>`;
   const countBadge = () => { const n = totalLetters(); return n ? `<div class="count" aria-label="已经写了 ${n} 封信">${n}</div>` : ''; };
-
-  // ───────────── 认识自己 ─────────────
-  function viewSelf() {
-    const items = (S.memories || []).slice().sort((a,b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')));
-    const names = { value:'价值观', goal:'长期目标', preference:'偏好', relationship:'重要关系', work:'工作与项目', pattern:'反复出现的模式', health:'健康相关', other:'其他' };
-    const groups = Object.keys(names).map(k => {
-      const list = items.filter(x => x.category === k);
-      if (!list.length) return '';
-      return '<section class="self-group"><div class="gh"><h2>' + names[k] + '</h2><span>' + list.length + ' 条</span></div><div class="card">' + list.map(x => '<div class="row memory-row"><span class="row-main"><span>' + esc(x.content) + '</span><span class="sub">来源：' + ((x.evidence_dates || []).map(esc).join('、') || '尚无日期') + ' · 可信度 ' + Math.round((Number(x.confidence)||0)*100) + '%</span></span><span class="memory-actions"><button class="lk" data-act="memory-edit" data-v="' + esc(x.id) + '">修改</button><button class="lk danger-link" data-act="memory-del" data-v="' + esc(x.id) + '">删除</button></span></div>').join('') + '</div></section>';
-    }).join('');
-    return '<main class="page"><div class="head"><div class="head-l"><span class="eyebrow">长期理解 · 由你的信件慢慢形成</span><h1>认识自己</h1></div></div>' +
-      '<div class="card pad self-intro"><b>不是给你贴标签，而是帮你看见反复出现的线索。</b><p class="note">每条记忆都应有来源。它可能会过时，也可以随时修改或删除。</p></div>' +
-      '<div class="gh"><h2>回信记住的你</h2><span>' + items.length + ' 条有效记忆</span></div>' +
-      (groups || '<div class="card empty">还没有形成长期记忆。继续写信，回信会逐步整理值得长期保留的内容。</div>') +
-      '<div class="self-footer"><button class="lk" data-act="memory-add">＋ 手动添加记忆</button><button class="lk muted" data-act="settings">记忆设置 ›</button></div></main>';
-  }
-
-  // ───────────── 时光 ─────────────
-  function viewArchive() {
-    const letters = Object.values(S.letters).filter(x => x.text && x.text.trim()).sort((a,b) => a.date < b.date ? 1 : -1);
-    const months = [];
-    letters.forEach(l => { const k = l.date.slice(0,7); let g = months.find(x => x.key === k); if (!g) months.push(g = {key:k,items:[]}); g.items.push(l); });
-    const rows = months.map(g => '<div class="gh"><h2>' + g.key.replace('-', ' 年 ') + ' 月</h2><span>' + g.items.length + ' 封信</span></div><div class="card">' + g.items.map(l => '<button class="row archive-row" data-act="letter" data-v="' + l.date + '"><span class="ic gray">' + ICON.boxSm + '</span><span class="row-main"><span>' + Number(l.date.slice(5,7)) + '月' + Number(l.date.slice(8,10)) + '日 · 星期' + wd(l.date) + '</span><span class="sub one-line">' + esc((l.text || '').split('\n').find(Boolean) || '一封信') + '</span></span><span class="sub">' + (l.reply ? '已回信' : '待回信') + '</span>' + ICON.chev + '</button>').join('') + '</div>').join('');
-    const digests = (S.digests || []).slice().sort((a,b) => a.key < b.key ? 1 : -1);
-    return '<main class="page"><div class="head"><div class="head-l"><span class="eyebrow">过去的你，仍然在这里</span><h1>时光</h1></div></div>' +
-      '<div class="card pad"><div class="stats"><div class="stat"><span>写过的信</span><b>' + (S.stats.letters || letters.length) + '</b></div><div class="stat"><span>阶段回顾</span><b>' + digests.length + '</b></div></div></div>' +
-      '<div class="gh"><h2>周信 · 季信 · 年信</h2></div>' +
-      (digests.length ? digests.map(d => '<button class="card row archive-digest" data-act="digest" data-v="' + d.kind + '|' + d.key + '"><span class="row-main"><span>' + esc(d.title || ({week:'周信',quarter:'季信',year:'年信'}[d.kind])) + '</span><span class="sub">' + esc(d.key) + '</span></span>' + ICON.chev + '</button>').join('') : '<div class="card empty">还没有阶段回顾。你可以在信箱生成周信、季信和年信。</div>') +
-      '<div class="gh"><h2>原始信件</h2><span>最近加载的记录</span></div>' +
-      (rows || '<div class="card empty">还没有信件。</div>') + '<div class="row foot"><button class="lk" data-act="older">加载更早的信件</button></div></main>';
-  }
 
   // ───────────── 今天 ─────────────
   function viewToday() {
@@ -720,9 +688,8 @@
     const sealedOnce = when && when < cutoff(l.date) && deliverMode() === 'morning';
     const whenTxt = r.imported ? '从 Life OS 搬过来的旧信'
       : sealedOnce ? `${cn(addDays(l.date, 1))} 6:00 送到` : when ? `${cn(localDate(when))} ${hm(when)} 收到` : '';
-    if (r.observation) h += `<div class="gh"><h2>我注意到</h2><span>一条可被你纠正的观察</span></div><div class="card pad" style="line-height:1.7">${esc(r.observation)}<div class="sub" style="margin-top:10px">回应方式：${esc(r.mode || '倾听')} · 这只是基于现有信件的观察，不是对你的定论。</div></div>`;
     h += `<article class="card reply-letter">${paras || '<p class="muted">（这封回信没有正文）</p>'}
-      <div class="reply-sign"><b>知知的回信</b><span>${esc(whenTxt)}${r.engine ? ' · ' + esc(r.engine) : ''}</span></div></article>`;
+      <div class="reply-sign"><b>Re: 回信</b><span>${esc(whenTxt)}${r.engine ? ' · ' + esc(r.engine) : ''}</span></div></article>`;
 
     const tds = r.todos || [], ids = r.ideas || [];
     if (tds.length || ids.length) {
@@ -1038,13 +1005,6 @@
           ${opt('morning', '明早 6:00 拆信', '今晚寄出的信，回信封存到第二天早上；补写的信马上送到')}
           ${opt('now', '寄出后马上', '写完就能看到回信')}</div></div>
         ${aiSettings()}
-        <div class="field"><span class="lab">回信的长期记忆</span><div class="group opts"><button class="opt" data-act="memory-toggle" data-v="${S.settings.memory_enabled === false ? 'off' : 'on'}"><span>${S.settings.memory_enabled === false ? '已暂停记忆' : '记忆功能已开启'}<small>关闭后，回信不再检索或提炼长期记忆；已有记忆仍保留，可重新开启。</small></span><span class="tick">${ICON.tick}</span></button></div>
-          <div class="note" style="margin:0">回信会从你多天的来信中整理长期目标、偏好和反复出现的主题。每条记忆都保留来源日期；你可以修改或删除。记忆只用于辅助理解，不会覆盖你今天写下的内容。</div>
-          <div class="group" style="padding:4px 14px">
-            ${(S.memories || []).length ? S.memories.map(x => `<div class="row" style="align-items:flex-start;padding:12px 0"><span class="row-main"><span>${esc(x.content)}</span><span class="sub">${esc(x.category)} · 来源 ${(x.evidence_dates || []).map(esc).join('、') || '待补充'}</span></span><button class="lk" data-act="memory-edit" data-v="${x.id}">修改</button><button class="lk" style="color:var(--danger)" data-act="memory-del" data-v="${x.id}">删除</button></div>`).join('') : '<div class="empty" style="padding:14px">还没有长期记忆。随着你持续写信，回信会逐步整理。</div>'}
-          </div>
-          <button class="btn sm ghost" style="align-self:flex-start" data-act="memory-add">手动添加一条记忆</button>
-        </div>
         <div class="field"><span class="lab">外观</span><div class="themes">${themes}</div></div>
         <div class="field"><span class="lab">写信时顺手打卡的习惯</span><div class="group">${habits || '<div class="empty" style="padding:14px">还没有习惯</div>'}</div>
           <form id="habit-form" style="display:flex;gap:8px"><input class="input" id="habit-new" placeholder="新习惯，比如：运动 30 分钟" aria-label="新习惯"><button class="btn sm" style="height:48px" type="submit">添加</button></form></div>
@@ -1436,30 +1396,6 @@
         break;
       }
       case 'settings': V.ai = { loading: true }; openSheet({ type: 'settings' }); loadAI(); break;
-      case 'memory-toggle': {
-        const enabled = S.settings.memory_enabled === false;
-        S.settings.memory_enabled = enabled;
-        try { await api('PUT','/settings',{memory_enabled:enabled}); toCache(); render(); toast(enabled ? '长期记忆已开启' : '长期记忆已暂停'); }
-        catch(e){ S.settings.memory_enabled = !enabled; render(); toast(e.message); }
-        break;
-      }
-      case 'memory-add': {
-        const content = prompt('想让回信长期记住什么？');
-        if (!content || !content.trim()) break;
-        try { await api('POST','/memories',{content:content.trim(),category:'other',confidence:1}); const d=await api('GET','/memories'); S.memories=d.memories; toCache(); render(); toast('已加入长期记忆'); }
-        catch(e){ toast(e.message); } break;
-      }
-      case 'memory-edit': {
-        const item=(S.memories||[]).find(x=>x.id===v); if(!item) break;
-        const content=prompt('修改这条长期记忆',item.content); if(content===null) break;
-        try { await api('PUT','/memories/'+v,{content}); const d=await api('GET','/memories'); S.memories=d.memories; toCache(); render(); toast('已更新'); }
-        catch(e){ toast(e.message); } break;
-      }
-      case 'memory-del': {
-        if(!confirm('删除这条长期记忆？删除后，之后的回信不会再使用它。')) break;
-        try { await api('DELETE','/memories/'+v); S.memories=(S.memories||[]).filter(x=>x.id!==v); toCache(); render(); toast('已删除'); }
-        catch(e){ toast(e.message); } break;
-      }
       case 'deliver':
         S.settings.deliver = v; queue('PUT', '/settings', { deliver: v }); toCache(); render();
         toast(v === 'now' ? '之后寄出的信，马上就能看到回信' : '之后今晚寄出的信，回信明早 6:00 送到'); break;

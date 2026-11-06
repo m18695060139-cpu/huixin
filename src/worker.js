@@ -1,7 +1,7 @@
 // 回信 · Cloudflare Worker
 // 静态页面由 Workers Assets 直接提供；/api/* 走这里
 import { login, logout, register, currentUser } from './auth.js';
-import { writeReply, writeDigest, updateLongTermMemories, DEFAULT_QUESTIONS, PROVIDERS, testAI } from './ai.js';
+import { writeReply, writeDigest, DEFAULT_QUESTIONS, PROVIDERS, testAI } from './ai.js';
 import { encryptKey, decryptKey } from './secret.js';
 import { importBackup } from './importer.js';
 import {
@@ -49,46 +49,13 @@ async function api(req, env, ctx, url) {
   // ── 设置 ──
   if (p === '/settings' && m === 'PUT') {
     const cur = await getSettings(env, U);
-    const next = { ...cur, ...pick(body, ['theme', 'questions', 'deliver', 'memory_enabled']) };
-    if (next.deliver !== 'now') next.deliver = 'morning';
-    if (typeof next.memory_enabled !== 'boolean') next.memory_enabled = true;   // 回信什么时候送到：明早 6 点，或寄出后马上
+    const next = { ...cur, ...pick(body, ['theme', 'questions', 'deliver']) };
+    if (next.deliver !== 'now') next.deliver = 'morning';   // 回信什么时候送到：明早 6 点，或寄出后马上
     if (Array.isArray(next.questions)) next.questions = next.questions.map(s => String(s).slice(0, 120)).filter(Boolean).slice(0, 10);
     await env.DB.prepare('INSERT INTO settings (user_id, json) VALUES (?, ?) ON CONFLICT(user_id) DO UPDATE SET json = excluded.json')
       .bind(U, JSON.stringify(next)).run();
     if (typeof body.name === 'string') await env.DB.prepare('UPDATE users SET name = ? WHERE id = ?').bind(body.name.slice(0, 20), U).run();
     return json({ ok: true, settings: next });
-  }
-
-  // ── 长期记忆：每条记录都严格按当前用户隔离 ──
-  if (p === '/memories' && m === 'GET') {
-    const rows = await env.DB.prepare("SELECT id, category, content, evidence_dates, confidence, created_at, updated_at FROM memories WHERE user_id = ? AND status = 'active' ORDER BY updated_at DESC LIMIT 200").bind(U).all();
-    return json({ memories: rows.results.map(x => ({ ...x, evidence_dates: parseJSON(x.evidence_dates, []) })) });
-  }
-  if (p === '/memories' && m === 'POST') {
-    const content = String(body.content || '').trim().slice(0, 500);
-    if (!content) return err('记忆内容不能为空');
-    const id = uid('m'), now = nowIso();
-    const category = ['value','goal','preference','relationship','work','health','pattern','other'].includes(body.category) ? body.category : 'other';
-    const evidence = Array.isArray(body.evidence_dates) ? body.evidence_dates.filter(isDate).slice(0, 30) : [];
-    await env.DB.prepare("INSERT INTO memories (id,user_id,category,content,evidence_dates,confidence,status,created_at,updated_at) VALUES (?,?,?,?,?,?, 'active',?,?)")
-      .bind(id,U,category,content,JSON.stringify(evidence),Math.max(0,Math.min(1,Number(body.confidence)||1)),now,now).run();
-    return json({ ok:true, id });
-  }
-  if (seg[0] === 'memories' && seg[1]) {
-    const id = seg[1];
-    const existing = await env.DB.prepare("SELECT * FROM memories WHERE id = ? AND user_id = ? AND status = 'active'").bind(id,U).first();
-    if (!existing) return err('找不到这条记忆',404);
-    if (m === 'PUT') {
-      const content = String(body.content ?? existing.content).trim().slice(0,500);
-      const category = ['value','goal','preference','relationship','work','health','pattern','other'].includes(body.category) ? body.category : existing.category;
-      if (!content) return err('记忆内容不能为空');
-      await env.DB.prepare('UPDATE memories SET content=?, category=?, updated_at=? WHERE id=? AND user_id=?').bind(content,category,nowIso(),id,U).run();
-      return json({ok:true});
-    }
-    if (m === 'DELETE') {
-      await env.DB.prepare("UPDATE memories SET status='deleted', updated_at=? WHERE id=? AND user_id=?").bind(nowIso(),id,U).run();
-      return json({ok:true});
-    }
   }
 
   // ── 信 ──
@@ -271,7 +238,7 @@ async function bootstrap(env, user) {
   const U = user.id;
   const today = cstDate();
   const since = addDays(today, -120);
-  const [settings, letters, todos, ideas, habits, logs, digests, fb, count, memories] = await Promise.all([
+  const [settings, letters, todos, ideas, habits, logs, digests, fb, count] = await Promise.all([
     getSettings(env, U),
     env.DB.prepare('SELECT * FROM letters WHERE user_id = ? AND date >= ? ORDER BY date DESC').bind(U, since).all(),
     env.DB.prepare(`SELECT * FROM todos WHERE user_id = ? AND archived = 0
@@ -282,7 +249,6 @@ async function bootstrap(env, user) {
     env.DB.prepare('SELECT * FROM digests WHERE user_id = ? ORDER BY key DESC').bind(U).all(),
     env.DB.prepare('SELECT date, block, value FROM feedback WHERE user_id = ? AND date >= ?').bind(U, since).all(),
     env.DB.prepare("SELECT COUNT(*) AS n, MIN(date) AS first FROM letters WHERE user_id = ? AND text != ''").bind(U).first(),
-    env.DB.prepare("SELECT id, category, content, evidence_dates, confidence, created_at, updated_at FROM memories WHERE user_id = ? AND status = 'active' ORDER BY updated_at DESC LIMIT 100").bind(U).all(),
   ]);
   return {
     user, today, settings,
@@ -293,7 +259,6 @@ async function bootstrap(env, user) {
     habitLogs: logs.results.map(l => [l.habit_id, l.date]),
     digests: digests.results.map(d => ({ kind: d.kind, key: d.key, created_at: d.created_at, ...parseJSON(d.content, {}) })),
     feedback: fb.results,
-    memories: memories.results.map(x => ({ ...x, evidence_dates: parseJSON(x.evidence_dates, []) })),
     stats: { letters: count ? count.n : 0, first: count ? count.first : null },
   };
 }
@@ -370,7 +335,7 @@ async function replyTo(env, user, date, clientToday) {
   const letter = await env.DB.prepare('SELECT * FROM letters WHERE user_id = ? AND date = ?').bind(U, date).first();
   if (!letter || !letter.text.trim()) throw new Error('信还是空的');
   const today = isDate(clientToday) ? clientToday : cstDate();
-  const [settings, openTodos, ideas, yday, noted, memories, history] = await Promise.all([
+  const [settings, openTodos, ideas, yday, noted] = await Promise.all([
     getSettings(env, U),
     env.DB.prepare('SELECT id, text, due, source_date, created FROM todos WHERE user_id = ? AND done = 0 AND archived = 0 AND dropped_at IS NULL').bind(U).all(),
     env.DB.prepare("SELECT id, text, source_date, created FROM ideas WHERE user_id = ? AND status = 'open' ORDER BY created DESC LIMIT 40").bind(U).all(),
@@ -379,8 +344,6 @@ async function replyTo(env, user, date, clientToday) {
     env.DB.prepare(`SELECT text, done, dropped_at, note FROM todos WHERE user_id = ? AND archived = 0
       AND (dropped_at >= ? OR (note != '' AND updated_at >= ?)) ORDER BY updated_at DESC LIMIT 15`)
       .bind(U, addDays(date, -7), addDays(date, -7)).all(),
-    env.DB.prepare("SELECT id, category, content FROM memories WHERE user_id = ? AND status = 'active' ORDER BY updated_at DESC LIMIT 30").bind(U).all(),
-    env.DB.prepare("SELECT date, text, reply FROM letters WHERE user_id = ? AND date <= ? AND text != '' ORDER BY date DESC LIMIT 20").bind(U,date).all(),
   ]);
 
   const aiEnv = await withUserAI(env, U);
@@ -391,27 +354,7 @@ async function replyTo(env, user, date, clientToday) {
     notes: noted.results.map(todoNoteLine),
     ideas: ideas.results.map(t => t.text),
     yesterday: yday && parseJSON(yday.reply, {}) ? (parseJSON(yday.reply, {}).summary || '') : '',
-    memories: settings.memory_enabled === false ? [] : memories.results,
   });
-
-  // 用跨日素材更新长期记忆。失败不影响当封回信。
-  if (settings.memory_enabled !== false) try {
-    const material = history.results.reverse().map(x => {
-      const rp = parseJSON(x.reply, {}) || {};
-      return x.date + '\n' + String(x.text || '').slice(0, 900) + '\n' + String(rp.summary || '').slice(0, 500);
-    }).join('\n\n');
-    const extracted = await updateLongTermMemories(aiEnv, '【近期来信】\n' + material + '\n\n【已有记忆】\n' + memories.results.map(x => x.category + '：' + x.content).join('\n'));
-    for (const item of (Array.isArray(extracted.memories) ? extracted.memories : []).slice(0,12)) {
-      const content = String(item.content || '').trim().slice(0,500);
-      const category = ['value','goal','preference','relationship','work','health','pattern','other'].includes(item.category) ? item.category : 'other';
-      const evidence = Array.isArray(item.evidence_dates) ? item.evidence_dates.filter(isDate).slice(0,30) : [];
-      if (!content || !evidence.length || Number(item.confidence) < 0.72) continue;
-      const old = await env.DB.prepare("SELECT id, evidence_dates FROM memories WHERE user_id=? AND category=? AND content=? AND status='active'").bind(U,category,content).first();
-      const merged = [...new Set([...(old ? parseJSON(old.evidence_dates,[]) : []),...evidence])].slice(-30);
-      if (old) await env.DB.prepare("UPDATE memories SET evidence_dates=?, confidence=?, updated_at=? WHERE id=? AND user_id=?").bind(JSON.stringify(merged),Math.min(1,Math.max(0,Number(item.confidence)||0.72)),nowIso(),old.id,U).run();
-      else await env.DB.prepare("INSERT INTO memories (id,user_id,category,content,evidence_dates,confidence,status,created_at,updated_at) VALUES (?,?,?,?,?,?, 'active',?,?)").bind(uid('m'),U,category,content,JSON.stringify(merged),Math.min(1,Math.max(0,Number(item.confidence)||0.72)),nowIso(),nowIso()).run();
-    }
-  } catch (e) { console.error('长期记忆更新失败', e.message); }
 
   // 拆出来的待办 / 点子入库（按文字去重）
   const now = nowIso();
@@ -445,7 +388,7 @@ async function replyTo(env, user, date, clientToday) {
   }
 
   const reply = {
-    summary: r.summary, observation: r.observation || '', mode: r.mode || '倾听', energy: r.energy, mood: r.mood, highlight: r.highlight,
+    summary: r.summary, energy: r.energy, mood: r.mood, highlight: r.highlight,
     questions: settings.questions, lenses: r.lenses,
     todos: madeTodos.map(t => ({ id: t.id, text: t.text })),
     ideas: madeIdeas.map(t => ({ id: t.id, text: t.text })),
