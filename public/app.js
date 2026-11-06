@@ -781,45 +781,45 @@
     const t = today();
     const firstDate = S.stats.first;
     const days = firstDate ? diffDays(t, firstDate) + 1 : 0;
-    const letters = Object.values(S.letters).filter(l => l.text && l.text.trim()).sort((a,b) => a.date < b.date ? 1 : -1);
-    const unread = letters.filter(l => l.reply && !isSealed(l.date) && !isOpened(l.date));
-    const filters = [['all','全部'],['unread','未读回信'],['mine','我写的'],['replies','AI 回信']];
+    const all = Object.values(S.letters).filter(l => l.text && l.text.trim()).sort((a,b) => a.date < b.date ? 1 : -1);
+    const unread = all.filter(l => l.reply && !isSealed(l.date) && !isOpened(l.date));
+    const filters = [['all','全部'],['unread','未读'],['mine','我写的'],['replies','AI 回信']];
     const seg = `<div class="seg mailbox-seg" role="tablist" aria-label="交流分类">${filters.map(([k,n]) => `<button role="tab" aria-selected="${V.mb === k}" data-act="mb" data-v="${k}">${n}</button>`).join('')}</div>`;
-    const featured = unread[0] || letters[0] || null;
-    const spotlight = featured ? (() => {
-      const sealed = isSealed(featured.date);
-      const reply = featured.reply && !sealed ? String(featured.reply.summary || '伙伴已经给你回信。') : '';
-      const own = String(featured.text || '').trim();
-      return `<section class="conversation-feature">
-        <div class="conversation-feature-head"><span>最近一次交流</span><span>${cn(featured.date)} · No.${letterNo(featured.date)}</span></div>
-        <div class="conversation-bubble mine"><small>你</small><p>${esc(own.slice(0,105))}${own.length>105?'…':''}</p></div>
-        ${reply ? `<div class="conversation-bubble partner"><small>回信</small><p>${esc(reply.slice(0,125))}${reply.length>125?'…':''}</p></div>` : `<div class="conversation-wait">${sealed ? '这封回信会在明早 6:00 送达' : '伙伴正在等你继续分享下一件事'}</div>`}
-        <button class="conversation-open" data-act="${reply ? 'open-reply' : 'letter'}" data-v="${featured.date}">${reply ? (unread.includes(featured) ? '阅读新回信' : '继续这次交流') : '查看这次交流'} ${ICON.chev}</button>
-      </section>`;
-    })() : `<section class="conversation-feature conversation-empty"><span class="eyebrow">A PLACE TO TALK</span><h2>这里一直有个位置，<br>留给你慢慢说。</h2><p>写下最近的心情、困惑或一个小念头。你的伙伴会认真读完，再给你回应。</p><button class="btn sm" data-act="tab" data-v="write">写第一封信</button></section>`;
-    let list = V.mb === 'unread' ? unread : V.mb === 'mine' ? letters : V.mb === 'replies' ? letters.filter(l => l.reply) : letters;
-    if (featured && V.mb === 'all') list = list.filter(l => l.date !== featured.date);
-    const rows = list.map(l => {
-      const waiting = l.reply && !isSealed(l.date) && !isOpened(l.date);
-      const line = l.reply && !isSealed(l.date) ? String(l.reply.summary || '伙伴已经给你回信') : String(l.text || '你写下的一封信');
-      const status = isSealed(l.date) ? '回信明早送达' : waiting ? '有新回信' : l.reply ? '已读' : '等待回信';
-      return `<button class="conversation-row" data-act="letter" data-v="${l.date}">
-        <span class="conversation-day"><b>${Number(l.date.slice(8))}</b><small>${Number(l.date.slice(5,7))}月</small></span>
-        <span class="conversation-row-copy"><strong>${esc(line.slice(0,72))}${line.length>72?'…':''}</strong><small>${cn(l.date)} · ${status}</small></span>${ICON.chev}
+    const filtered = V.mb === 'unread' ? unread : V.mb === 'mine' ? all : V.mb === 'replies' ? all.filter(l => l.reply) : all;
+    const featured = filtered[0] || null;
+    const history = filtered.slice(1);
+    const hasReply = !!(featured && featured.reply && !isSealed(featured.date));
+    const ownText = featured ? String(featured.text || '').trim() : '';
+    const replyText = hasReply ? String(featured.reply.summary || '伙伴已经认真读完了你的信。').trim() : '';
+    const spotlight = featured ? `<section class="mail-recent">
+      <div class="mail-recent-top"><span><i></i>${V.mb === 'unread' ? '等你读的新回信' : '最近一次交流'}</span><small>${cn(featured.date)}</small></div>
+      <div class="mail-exchange">
+        <div class="mail-exchange-line"><span class="mail-speaker">你</span><p>${esc(ownText.slice(0,100))}${ownText.length>100?'…':''}</p></div>
+        ${hasReply ? `<div class="mail-exchange-line reply"><span class="mail-speaker">伙伴</span><p>${esc(replyText.slice(0,125))}${replyText.length>125?'…':''}</p></div>` : `<div class="mail-reply-pending">${isSealed(featured.date) ? '回信已经写好，明早 6:00 送达' : featured.reply ? '回信已收到' : '这封信还没有收到回信'}</div>`}
+      </div>
+      <button class="mail-recent-action" data-act="${hasReply ? 'open-reply' : 'letter'}" data-v="${featured.date}">${hasReply ? '打开伙伴的回信' : '打开这次交流'} ${ICON.chev}</button>
+    </section>` : `<section class="mail-welcome"><span class="mail-welcome-kicker">A SPACE FOR TWO</span><h2>${V.mb === 'unread' ? '今天没有未读回信。' : '有些话，可以慢慢说。'}</h2><p>${V.mb === 'unread' ? '新的回应到来时，会安静地留在这里。' : '把日常、困惑或突然冒出的念头写下来。你的 AI 伙伴会认真读，也会记得那些值得留下的事。'}</p>${V.mb === 'all' ? '<button class="btn sm" data-act="tab" data-v="write">写一封信</button>' : ''}</section>`;
+    const rows = history.map(l => {
+      const sealed = isSealed(l.date);
+      const has = !!(l.reply && !sealed);
+      const line = has ? String(l.reply.summary || l.text || '一次交流') : String(l.text || '一次交流');
+      const status = sealed ? '回信明早送达' : has ? '有伙伴的回应' : '你留下的记录';
+      return `<button class="mail-history-row" data-act="letter" data-v="${l.date}">
+        <span class="mail-history-date"><b>${Number(l.date.slice(8))}</b><small>${Number(l.date.slice(5,7))}月</small></span>
+        <span class="mail-history-copy"><strong>${esc(line.slice(0,76))}${line.length>76?'…':''}</strong><small>${cn(l.date)} · ${status}</small></span>
+        <span class="mail-history-arrow">${ICON.chev}</span>
       </button>`;
     }).join('');
-    const empty = V.mb === 'unread' ? '暂时没有未读回信。' : V.mb === 'replies' ? '还没有收到 AI 回信。' : V.mb === 'mine' ? '你写下的信会留在这里。' : '更多交流会按时间留在这里。';
-    const monthN = letters.filter(l => l.date.slice(0,7) === t.slice(0,7)).length;
-    const tools = `<div class="mailbox-quick"><button data-act="lists" data-v="todos"><span>待办清单</span><b>${openTodos(t).length}</b></button><button data-act="lists" data-v="ideas"><span>灵感收藏</span><b>${openIdeas().length}</b></button><span>本月 ${monthN} 次交流</span></div>`;
+    const monthN = all.filter(l => l.date.slice(0,7) === t.slice(0,7)).length;
+    const historyTitle = V.mb === 'unread' ? '其他未读回信' : V.mb === 'mine' ? '更早写下的信' : V.mb === 'replies' ? '之前收到的回信' : '之前的交流';
     return `<main class="page mailbox-page">
-      <div class="head"><div class="head-l"><span class="eyebrow">${days ? '已经一起走过 ' + days + ' 天' : '从一次交流开始'}</span><h1>信箱</h1><p class="note">不只是收信，也是你和 AI 伙伴持续对话的地方。</p></div><button class="round-btn" data-act="settings" aria-label="设置">${ICON.gear}</button></div>
+      <div class="head"><div class="head-l"><span class="eyebrow">${days ? '已经一起走过 ' + days + ' 天' : '从一次交流开始'}</span><h1>信箱</h1><p class="note">重要的话，有来有往，都留在这里。</p></div><button class="round-btn" data-act="settings" aria-label="设置">${ICON.gear}</button></div>
       ${offlineLine()}
-      <section class="mailbox-presence"><span class="presence-orbit"><i></i></span><div><b>AI 伙伴</b><small>${unread.length ? unread.length + ' 封回信等你阅读' : '在这里，继续上一次没说完的话'}</small></div><span class="presence-dot"></span></section>
-      ${spotlight}
+      <div class="mail-partner-strip"><span class="mail-partner-avatar">${ICON.self}</span><span class="mail-partner-info"><b>你的 AI 伙伴</b><small>${unread.length ? unread.length + ' 封回信等你读' : '继续上一次没说完的话'}</small></span><span class="mail-month-count"><b>${monthN}</b><small>本月交流</small></span></div>
       ${seg}
-      <div class="gh"><h2>${V.mb === 'unread' ? '未读回信' : V.mb === 'mine' ? '我写下的' : V.mb === 'replies' ? '伙伴的回信' : '更早的交流'}</h2><span>${list.length} 次</span></div>
-      <div class="conversation-list">${rows || `<div class="card empty">${empty}</div>`}</div>
-      ${tools}
+      ${spotlight}
+      ${history.length ? `<div class="mail-history-heading"><h2>${historyTitle}</h2><span>${history.length} 条</span></div><div class="mail-history">${rows}</div>` : featured ? '<div class="mail-history-end">这就是目前全部的交流记录。</div>' : ''}
+      <div class="mail-shortcuts"><button data-act="lists" data-v="todos"><span>待办清单</span><b>${openTodos(t).length}</b><small>把接下来要做的事整理好</small></button><button data-act="lists" data-v="ideas"><span>灵感收藏</span><b>${openIdeas().length}</b><small>留住还没实现的念头</small></button></div>
     </main>`;
   }
 
@@ -945,15 +945,46 @@
   }
 
   function digestList(kind, t) {
-    const list = S.digests.filter(d => d.kind === kind);
+    const list = S.digests.filter(d => d.kind === kind).slice().sort((a,b) => String(b.key).localeCompare(String(a.key)));
     const kindN = { week: '周信', quarter: '季信', year: '年信' }[kind];
     const when = { week: '每周一早上 7 点', quarter: '每季度第一天早上 7 点', year: '每年元旦早上 7 点' }[kind];
     const curKey = kind === 'week' ? weekKey(t) : kind === 'quarter' ? quarterKey(t) : t.slice(0, 4);
     const curName = { week: '本周', quarter: '这一季', year: '今年' }[kind];
-    let html = `<p class="note" style="margin-top:18px">${kindN}会在${when}自动送达。也可以现在就让回信先写一封${curName}到目前为止的。</p>
-      <div style="padding:0 4px"><button class="lk" data-act="gen" data-v="${kind}|${curKey}">现在写${curName}的${kindN} ›</button></div>`;
-    html += list.length ? list.map(d => `<div style="margin-top:12px">${digestCard(d)}</div>`).join('') : `<div class="card empty mt">还没有${kindN}。</div>`;
-    return html;
+    const create = `<button class="digest-create" data-act="gen" data-v="${kind}|${curKey}"><span class="digest-create-mark">＋</span><span><b>写一封${curName}${kindN}</b><small>现在生成，不必等自动送达</small></span>${ICON.chev}</button>`;
+    if (kind === 'week') {
+      const featured = list[0];
+      const rangeLabel = d => d.range && d.range.length === 2 ? `${cn(d.range[0])} — ${cn(d.range[1])}` : `${cn(d.key)} 那一周`;
+      const weeklyCard = d => {
+        const st = d.stats || {};
+        const title = d.title && !d.imported ? d.title : '这一周，发生了什么';
+        const excerpt = String(d.letter || '').trim();
+        return `<button class="week-feature" data-act="digest" data-v="week|${d.key}">
+          <span class="week-feature-top"><span>WEEKLY LETTER</span><span>${rangeLabel(d)}</span></span>
+          <strong>${esc(title)}</strong>
+          ${excerpt ? `<span class="week-feature-excerpt">${esc(excerpt.slice(0,150))}${excerpt.length>150?'…':''}</span>` : '<span class="week-feature-excerpt">打开这封周信，回看这一周的心情、精力和重要进展。</span>'}
+          ${d.stats ? `<span class="week-stats"><span><b>${st.letters ?? 0}</b><small>写下的信</small></span><i></i><span><b>${st.energyAvg ?? '—'}</b><small>平均精力</small></span><i></i><span><b>${st.todosDone ?? 0}</b><small>完成的事</small></span></span>` : ''}
+          <span class="week-read">读完整周信 ${ICON.chev}</span>
+        </button>`;
+      };
+      const older = list.slice(1).map(d => {
+        const st = d.stats || {};
+        const label = rangeLabel(d);
+        const title = d.title && !d.imported ? d.title : '这一周的回顾';
+        return `<button class="week-history-row" data-act="digest" data-v="week|${d.key}">
+          <span class="week-history-date"><b>${esc(String(d.key).slice(-2))}</b><small>WEEK</small></span>
+          <span class="week-history-copy"><strong>${esc(title)}</strong><small>${label}${st.letters != null ? ' · ' + st.letters + ' 封信' : ''}</small></span>
+          ${ICON.chev}
+        </button>`;
+      }).join('');
+      return `<section class="week-intro"><span class="week-eyebrow">A LITTLE LOOK BACK</span><h2>把这一周，<br><em>好好收起来。</em></h2><p>不是总结成绩，而是留意这一周的你，经历了什么、在意什么，又向前走了哪一步。</p></section>
+        ${create}
+        ${featured ? `<div class="week-section-label"><b>最近的一封</b><span>${list.length} 封周信</span></div>${weeklyCard(featured)}` : `<div class="week-empty"><span>还没有周信</span><p>每周一早上 7 点，回信会为你整理上一周。你也可以现在就生成一封。</p></div>`}
+        ${older ? `<div class="week-section-label week-older-label"><b>以前的每一周</b><span>慢慢回看</span></div><div class="week-history">${older}</div>` : ''}`;
+    }
+    const lab = kind === 'quarter' ? '每个季度，看看自己走到了哪里' : '把这一年，留成一封信';
+    const desc = `${kindN}会在${when}自动送达。也可以现在就让回信先写一封${curName}到目前为止的。`;
+    return `<section class="digest-period-intro"><h2>${lab}</h2><p>${desc}</p>${create}</section>
+      <div class="digest-period-list">${list.length ? list.map(d => digestCard(d)).join('') : `<div class="card empty">还没有${kindN}。</div>`}</div>`;
   }
 
   // ───────────── 二级页面 ─────────────
