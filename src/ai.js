@@ -188,7 +188,7 @@ export async function writeReply(env, ctx) {
   lines.push(`【还没完成的待办】\n${ctx.openTodos.length ? ctx.openTodos.map(t => '- ' + t).join('\n') : '（无）'}`);
   lines.push(`【点子库】\n${ctx.ideas.length ? ctx.ideas.map(t => '- ' + t).join('\n') : '（无）'}`);
   if (ctx.notes && ctx.notes.length) lines.push(`【他最近给待办写的备注（他自己的话）】\n${ctx.notes.map(t => '- ' + t).join('\n')}`);
-  if (ctx.yesterday) lines.push(`【前一天的回信摘要，只用来理解对比，不要把昨天的事写成今天】\n${ctx.yesterday}`);
+  if (ctx.memories && ctx.memories.length) lines.push(`【长期记忆（仅作理解背景；与本封信冲突时以本封信为准，不要生搬硬套）】\n${ctx.memories.map(x => '- ' + x.category + '：' + x.content).join('\n')}`);\n  if (ctx.yesterday) lines.push(`【前一天的回信摘要，只用来理解对比，不要把昨天的事写成今天】\n${ctx.yesterday}`);
 
   if (env.MOCK_AI) return mockReply(ctx);
   const j = await callJSON(env, [
@@ -208,6 +208,24 @@ export async function writeReply(env, ctx) {
       .map(t => ({ text: clampStr(t.text, 60), dueDays: Math.min(14, Math.max(1, Math.round(Number(t.dueDays) || 3))) })),
     ideas: (Array.isArray(j.ideas) ? j.ideas : []).filter(t => t && t.text).slice(0, 5).map(t => ({ text: clampStr(t.text, 80) })),
   };
+}
+
+// ───────────── 长期记忆 ─────────────
+const MEMORY_SYSTEM = `你是「回信」的长期记忆整理员。阅读用户多天的来信与已有记忆，只提炼值得跨周、跨月保留的信息。
+只输出 JSON：{"memories":[{"category":"value|goal|preference|relationship|work|health|pattern|other","content":"简洁、可被用户理解的一句话","evidence_dates":["YYYY-MM-DD"],"confidence":0.0}]}
+规则：
+- 只记录多次出现或明确表达为长期稳定的信息：长期目标、重要价值观、持续偏好、重要关系、长期项目、反复出现的行为/情绪模式。
+- 不把单日心情、偶发事件、未经证实的推测、敏感隐私或医疗诊断写成记忆。
+- 每条必须给出真实来源日期；confidence 0-1。证据不足不输出。
+- 不要把模型猜测写成事实；使用「你似乎…」「你多次提到…」等审慎表达。
+- 最多返回 12 条；与已有记忆重复时合并，保留旧证据并补充新日期。
+`;
+export async function updateLongTermMemories(env, material) {
+  if (env.MOCK_AI) return { memories: [] };
+  return callJSON(env, [
+    { role: 'system', content: MEMORY_SYSTEM },
+    { role: 'user', content: material },
+  ], { maxTokens: 2200, temperature: 0.2 });
 }
 
 // ───────────── 周信 / 季信 / 年信 ─────────────
