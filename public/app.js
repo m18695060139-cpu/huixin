@@ -790,20 +790,20 @@
     const history = filtered.slice(1);
     const hasReply = !!(featured && featured.reply && !isSealed(featured.date));
     const ownText = featured ? String(featured.text || '').trim() : '';
-    const replyText = hasReply ? String(featured.reply.summary || '伙伴已经认真读完了你的信。').trim() : '';
+    const replyText = hasReply ? String(featured.reply.summary || '知知已经认真读完了你的信。').trim() : '';
     const spotlight = featured ? `<section class="mail-recent">
       <div class="mail-recent-top"><span><i></i>${V.mb === 'unread' ? '等你读的新回信' : '最近一次交流'}</span><small>${cn(featured.date)}</small></div>
       <div class="mail-exchange">
         <div class="mail-exchange-line"><span class="mail-speaker">你</span><p>${esc(ownText.slice(0,100))}${ownText.length>100?'…':''}</p></div>
-        ${hasReply ? `<div class="mail-exchange-line reply"><span class="mail-speaker">伙伴</span><p>${esc(replyText.slice(0,125))}${replyText.length>125?'…':''}</p></div>` : `<div class="mail-reply-pending">${isSealed(featured.date) ? '回信已经写好，明早 6:00 送达' : featured.reply ? '回信已收到' : '这封信还没有收到回信'}</div>`}
+        ${hasReply ? `<div class="mail-exchange-line reply"><span class="mail-speaker">知知</span><p>${esc(replyText.slice(0,125))}${replyText.length>125?'…':''}</p></div>` : `<div class="mail-reply-pending">${isSealed(featured.date) ? '回信已经写好，明早 6:00 送达' : featured.reply ? '回信已收到' : '这封信还没有收到回信'}</div>`}
       </div>
-      <button class="mail-recent-action" data-act="${hasReply ? 'open-reply' : 'letter'}" data-v="${featured.date}">${hasReply ? '打开伙伴的回信' : '打开这次交流'} ${ICON.chev}</button>
-    </section>` : `<section class="mail-welcome"><span class="mail-welcome-kicker">A SPACE FOR TWO</span><h2>${V.mb === 'unread' ? '今天没有未读回信。' : '有些话，可以慢慢说。'}</h2><p>${V.mb === 'unread' ? '新的回应到来时，会安静地留在这里。' : '把日常、困惑或突然冒出的念头写下来。你的 AI 伙伴会认真读，也会记得那些值得留下的事。'}</p>${V.mb === 'all' ? '<button class="btn sm" data-act="tab" data-v="write">写一封信</button>' : ''}</section>`;
+      <button class="mail-recent-action" data-act="${hasReply ? 'open-reply' : 'letter'}" data-v="${featured.date}">${hasReply ? '打开知知的回信' : '打开这次交流'} ${ICON.chev}</button>
+    </section>` : `<section class="mail-welcome"><span class="mail-welcome-kicker">A SPACE FOR TWO</span><h2>${V.mb === 'unread' ? '今天没有未读回信。' : '有些话，可以慢慢说。'}</h2><p>${V.mb === 'unread' ? '新的回应到来时，会安静地留在这里。' : '把日常、困惑或突然冒出的念头写下来。知知会认真读，也会记得那些值得留下的事。'}</p>${V.mb === 'all' ? '<button class="btn sm" data-act="tab" data-v="write">写一封信</button>' : ''}</section>`;
     const rows = history.map(l => {
       const sealed = isSealed(l.date);
       const has = !!(l.reply && !sealed);
       const line = has ? String(l.reply.summary || l.text || '一次交流') : String(l.text || '一次交流');
-      const status = sealed ? '回信明早送达' : has ? '有伙伴的回应' : '你留下的记录';
+      const status = sealed ? '回信明早送达' : has ? '有知知的回应' : '你留下的记录';
       return `<button class="mail-history-row" data-act="${has ? 'open-reply' : 'letter'}" data-v="${l.date}">
         <span class="mail-history-date"><b>${Number(l.date.slice(8))}</b><small>${Number(l.date.slice(5,7))}月</small></span>
         <span class="mail-history-copy"><strong>${esc(line.slice(0,76))}${line.length>76?'…':''}</strong><small>${cn(l.date)} · ${status}</small></span>
@@ -815,7 +815,7 @@
     return `<main class="page mailbox-page">
       <div class="head"><div class="head-l"><span class="eyebrow">${days ? '已经一起走过 ' + days + ' 天' : '从一次交流开始'}</span><h1>信箱</h1><p class="note">重要的话，有来有往，都留在这里。</p></div><button class="round-btn" data-act="settings" aria-label="设置">${ICON.gear}</button></div>
       ${offlineLine()}
-      <div class="mail-partner-strip"><span class="mail-partner-avatar">${ICON.self}</span><span class="mail-partner-info"><b>你的 AI 伙伴</b><small>${unread.length ? unread.length + ' 封回信等你读' : '继续上一次没说完的话'}</small></span><span class="mail-month-count"><b>${monthN}</b><small>本月交流</small></span></div>
+      <div class="mail-partner-strip"><span class="mail-partner-avatar">${ICON.self}</span><span class="mail-partner-info"><b>知知</b><small>${unread.length ? unread.length + ' 封回信等你读' : '继续上一次没说完的话'}</small></span><span class="mail-month-count"><b>${monthN}</b><small>本月交流</small></span></div>
       ${seg}
       ${spotlight}
       ${history.length ? `<div class="mail-history-heading"><h2>${historyTitle}</h2><span>${history.length} 条</span></div><div class="mail-history">${rows}</div>` : featured ? '<div class="mail-history-end">这就是目前全部的交流记录。</div>' : ''}
@@ -932,7 +932,7 @@
         const body = String(l.text || '').replace(/\\s+/g,' ').trim();
         const reply = l.reply && !sealed ? String(l.reply.summary || '').replace(/\\s+/g,' ').trim() : '';
         const headline = body.slice(0,92);
-        const note = reply || (sealed ? '回信将在明早送达' : l.reply ? '那一天，伙伴也留下了回应' : '那一天，你为自己留下一段记录');
+        const note = reply || (sealed ? '回信将在明早送达' : l.reply ? '那一天，知知也留下了回应' : '那一天，你为自己留下一段记录');
         return `<button class="life-moment" data-act="letter" data-v="${l.date}">
           <span class="life-marker"></span><span class="life-date"><b>${Number(l.date.slice(8))}</b><small>周${wd(l.date)}</small></span>
           <span class="life-moment-body"><strong>${esc(headline)}${body.length>92?'…':''}</strong><span>${esc(note.slice(0,76))}${note.length>76?'…':''}</span><em>${cn(l.date)} · No.${letterNo(l.date)}</em></span>
@@ -1575,6 +1575,41 @@
         store.del('hx_outbox'); store.del('hx_opened2'); outbox = []; opened = new Set();
         showLogin(); break;
     }
+  });
+
+
+  // iPhone / Safari：跟随可视视口变化，避免键盘遮住写信操作
+  function syncMobileViewport() {
+    const vv = window.visualViewport;
+    const height = vv ? vv.height : window.innerHeight;
+    const offset = vv ? vv.offsetTop : 0;
+    const keyboard = Math.max(0, window.innerHeight - height - offset);
+    document.documentElement.style.setProperty('--app-height', Math.round(height) + 'px');
+    document.documentElement.style.setProperty('--keyboard-height', Math.round(keyboard) + 'px');
+  }
+  syncMobileViewport();
+  window.addEventListener('resize', syncMobileViewport, { passive: true });
+  window.addEventListener('orientationchange', () => setTimeout(syncMobileViewport, 180), { passive: true });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', syncMobileViewport, { passive: true });
+    window.visualViewport.addEventListener('scroll', syncMobileViewport, { passive: true });
+  }
+  document.addEventListener('focusin', e => {
+    if (!e.target.matches('input, textarea, select, [contenteditable="true"]')) return;
+    document.body.classList.add('keyboard-open');
+    setTimeout(() => {
+      syncMobileViewport();
+      if (e.target.isConnected) e.target.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 180);
+  });
+  document.addEventListener('focusout', () => {
+    setTimeout(() => {
+      const a = document.activeElement;
+      if (!a || !a.matches('input, textarea, select, [contenteditable="true"]')) {
+        document.body.classList.remove('keyboard-open');
+        syncMobileViewport();
+      }
+    }, 120);
   });
 
   boot();
