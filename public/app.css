@@ -599,3 +599,98 @@ textarea.input { line-height: 1.6; resize: vertical; }
   .mailbox-quick { gap:6px; }
   .mailbox-quick > span { font-size:9px; }
 }
+
+
+/* 周信：编辑式周记，而不是一叠同款黑卡 */
+.week-intro { padding:8px 4px 18px; }
+.week-eyebrow { color:var(--sub); font-size:10px; letter-spacing:1.6px; font-weight:700; }
+.week-intro h2 { margin:12px 0 8px; font-size:26px; line-height:1.35; letter-spacing:-.5px; }
+.week-intro h2 em { color:var(--ink); font-style:normal; }
+.week-intro p { max-width:340px; margin:0; color:var(--sub); font-size:13px; line-height:1.7; }
+.digest-create { display:flex; align-items:center; gap:12px; width:100%; margin:0 0 24px; padding:13px 14px; border:1px solid var(--sep); border-radius:15px; background:var(--card); color:var(--text); text-align:left; }
+.digest-create-mark { width:34px; height:34px; flex:none; display:grid; place-items:center; border-radius:50%; background:var(--tint); color:var(--ink); font-size:20px; }
+.digest-create > span:nth-child(2) { flex:1; display:flex; flex-direction:column; gap:3px; }
+.digest-create b { font-size:13px; font-weight:650; }
+.digest-create small { color:var(--sub); font-size:11px; }
+.digest-create > svg { color:var(--sub); }
+.week-section-label { display:flex; justify-content:space-between; align-items:baseline; margin:0 3px 10px; }
+.week-section-label b { font-size:15px; }
+.week-section-label span { color:var(--sub); font-size:11px; }
+.week-feature { display:flex; flex-direction:column; align-items:stretch; gap:12px; width:100%; padding:19px; border:0; border-radius:20px; background:var(--ink); color:var(--on-ink); text-align:left; }
+.week-feature-top { display:flex; justify-content:space-between; align-items:center; gap:8px; color:rgba(255,255,255,.72); font-size:10px; }
+.week-feature-top span:first-child { letter-spacing:1.4px; font-weight:700; }
+.week-feature strong { font-size:21px; line-height:1.4; }
+.week-feature-excerpt { color:rgba(255,255,255,.85); font-size:13px; line-height:1.7; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+.week-stats { display:flex; align-items:center; gap:14px; padding:12px 0 2px; border-top:1px solid rgba(255,255,255,.2); }
+.week-stats > span { display:flex; flex-direction:column; gap:3px; }
+.week-stats b { font-size:19px; font-weight:650; }
+.week-stats small { color:rgba(255,255,255,.68); font-size:10px; }
+.week-stats i { width:1px; height:25px; background:rgba(255,255,255,.24); }
+.week-read { display:flex; align-items:center; justify-content:flex-end; gap:5px; margin-top:2px; font-size:12px; font-weight:650; }
+.week-empty { padding:23px 18px; border-radius:18px; background:var(--card); }
+.week-empty span { font-size:15px; font-weight:650; }
+.week-empty p { margin:7px 0 0; color:var(--sub); font-size:12px; line-height:1.6; }
+.week-older-label { margin-top:26px; }
+.week-history { border-top:1px solid var(--sep); }
+.week-history-row { display:flex; align-items:center; gap:12px; width:100%; padding:13px 4px; border:0; border-bottom:1px solid var(--sep); background:none; color:var(--text); text-align:left; }
+.week-history-date { width:42px; height:42px; flex:none; display:flex; flex-direction:column; align-items:center; justify-content:center; border-radius:12px; background:var(--tile); }
+.week-history-date b { font-size:18px; line-height:1; }
+.week-history-date small { color:var(--sub); font-size:9px; letter-spacing:1px; margin-top:4px; }
+.week-history-copy { display:flex; flex:1; min-width:0; flex-direction:column; gap:4px; }
+.week-history-copy strong { font-size:13px; font-weight:600; overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+.week-history-copy small { color:var(--sub); font-size:11px; }
+.digest-period-intro { padding:8px 4px 18px; }
+.digest-period-intro h2 { font-size:22px; margin:0 0 7px; }
+.digest-period-intro p { margin:0 0 16px; color:var(--sub); font-size:13px; line-height:1.65; }
+.digest-period-list { display:flex; flex-direction:column; gap:12px; }
+.digest-period-list .digest { margin:0; }
+
+/* 信箱：一段真实交流 + 克制的历史列表 */
+.mail-partner-strip { display:flex; align-items:center; gap:11px; padding:3px 2px 15px; border-bottom:1px solid var(--sep); }
+.mail-partner-avatar { width:38px; height:38px; display:grid; place-items:center; flex:none; border-radius:50%; background:var(--tint); color:var(--ink); }
+.mail-partner-info { display:flex; flex-direction:column; gap:3px; flex:1; min-width:0; }
+.mail-partner-info b { font-size:14px; }
+.mail-partner-info small { color:var(--sub); font-size:11px; }
+.mail-month-count { display:flex; align-items:baseline; gap:5px; }
+.mail-month-count b { font-size:20px; font-weight:650; }
+.mail-month-count small { color:var(--sub); font-size:10px; }
+.mailbox-seg { margin:15px 0 16px; }
+.mail-recent { padding:16px 17px 14px; margin-bottom:20px; border-radius:18px; background:var(--card); }
+.mail-recent-top { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:15px; }
+.mail-recent-top > span { display:flex; align-items:center; gap:7px; color:var(--ink); font-size:11px; font-weight:650; }
+.mail-recent-top i { width:6px; height:6px; border-radius:50%; background:var(--ink); }
+.mail-recent-top small { color:var(--sub); font-size:10px; }
+.mail-exchange { display:flex; flex-direction:column; gap:10px; }
+.mail-exchange-line { display:flex; align-items:flex-start; gap:9px; }
+.mail-speaker { width:38px; flex:none; padding-top:2px; color:var(--sub); font-size:11px; }
+.mail-exchange-line p { margin:0; color:var(--text); font-size:13px; line-height:1.65; }
+.mail-exchange-line.reply p { color:var(--ink-text); }
+.mail-reply-pending { margin-left:47px; padding:10px 12px; border-radius:12px; background:var(--tile); color:var(--sub); font-size:11px; }
+.mail-recent-action { display:flex; align-items:center; gap:5px; margin:14px 0 0 auto; padding:5px 0; border:0; background:none; color:var(--ink); font-size:12px; font-weight:650; }
+.mail-welcome { margin:4px 0 20px; padding:21px; border-radius:18px; background:var(--tile); }
+.mail-welcome-kicker { color:var(--sub); font-size:10px; letter-spacing:1.4px; font-weight:700; }
+.mail-welcome h2 { margin:12px 0 8px; font-size:22px; line-height:1.4; }
+.mail-welcome p { margin:0 0 15px; color:var(--sub); font-size:13px; line-height:1.7; }
+.mail-history-heading { display:flex; align-items:baseline; justify-content:space-between; gap:10px; margin:0 3px 8px; }
+.mail-history-heading h2 { font-size:15px; }
+.mail-history-heading span { color:var(--sub); font-size:11px; }
+.mail-history { border-top:1px solid var(--sep); }
+.mail-history-row { display:flex; align-items:center; gap:12px; width:100%; padding:13px 3px; border:0; border-bottom:1px solid var(--sep); background:none; color:var(--text); text-align:left; }
+.mail-history-date { width:40px; flex:none; display:flex; flex-direction:column; align-items:center; }
+.mail-history-date b { font-size:21px; line-height:1.1; font-weight:600; }
+.mail-history-date small { color:var(--sub); font-size:10px; margin-top:3px; }
+.mail-history-copy { display:flex; flex-direction:column; gap:4px; min-width:0; flex:1; }
+.mail-history-copy strong { font-size:13px; line-height:1.5; font-weight:600; display:-webkit-box; -webkit-line-clamp:1; -webkit-box-orient:vertical; overflow:hidden; }
+.mail-history-copy small { color:var(--sub); font-size:10px; }
+.mail-history-arrow { color:var(--sub); }
+.mail-history-end { margin:0 4px 10px; color:var(--sub); font-size:11px; text-align:center; }
+.mail-shortcuts { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:24px; }
+.mail-shortcuts button { display:flex; flex-direction:column; align-items:flex-start; gap:5px; min-width:0; padding:14px; border:1px solid var(--sep); border-radius:15px; background:var(--card); color:var(--text); text-align:left; }
+.mail-shortcuts button span { color:var(--sub); font-size:12px; }
+.mail-shortcuts button b { font-size:22px; font-weight:600; }
+.mail-shortcuts button small { color:var(--sub); font-size:10px; }
+@media (max-width:380px) {
+  .week-stats { gap:9px; }
+  .week-stats b { font-size:17px; }
+  .mail-month-count { gap:3px; }
+}
