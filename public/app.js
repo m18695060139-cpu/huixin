@@ -74,7 +74,7 @@
   let S = null;                 // 当前用户的所有数据
   const V = {                   // 界面状态
     tab: 'today', writeDate: null, editing: false, replying: false, replyErr: '',
-    mb: 'all', sheets: [], quoteOffset: 0, olderLoaded: false, online: navigator.onLine,
+    mb: 'all', archiveTab: 'timeline', sheets: [], quoteOffset: 0, olderLoaded: false, online: navigator.onLine,
     sent: null,                 // 刚寄出、正在看「已寄出」那一屏的信：{ date, at }
   };
 
@@ -357,17 +357,24 @@
 
   // ───────────── 时光 ─────────────
   function viewArchive() {
-    const letters = Object.values(S.letters).filter(x => x.text && x.text.trim()).sort((a,b) => a.date < b.date ? 1 : -1);
-    const months = [];
-    letters.forEach(l => { const k = l.date.slice(0,7); let g = months.find(x => x.key === k); if (!g) months.push(g = {key:k,items:[]}); g.items.push(l); });
-    const rows = months.map(g => '<div class="gh"><h2>' + g.key.replace('-', ' 年 ') + ' 月</h2><span>' + g.items.length + ' 封信</span></div><div class="card">' + g.items.map(l => '<button class="row archive-row" data-act="letter" data-v="' + l.date + '"><span class="ic gray">' + ICON.boxSm + '</span><span class="row-main"><span>' + Number(l.date.slice(5,7)) + '月' + Number(l.date.slice(8,10)) + '日 · 星期' + wd(l.date) + '</span><span class="sub one-line">' + esc((l.text || '').split('\n').find(Boolean) || '一封信') + '</span></span><span class="sub">' + (l.reply ? '已回信' : '待回信') + '</span>' + ICON.chev + '</button>').join('') + '</div>').join('');
-    const digests = (S.digests || []).slice().sort((a,b) => a.key < b.key ? 1 : -1);
-    return '<main class="page"><div class="head"><div class="head-l"><span class="eyebrow">过去的你，仍然在这里</span><h1>时光</h1></div></div>' +
-      '<div class="card pad"><div class="stats"><div class="stat"><span>写过的信</span><b>' + (S.stats.letters || letters.length) + '</b></div><div class="stat"><span>阶段回顾</span><b>' + digests.length + '</b></div></div></div>' +
-      '<div class="gh"><h2>周信 · 季信 · 年信</h2></div>' +
-      (digests.length ? digests.map(d => '<button class="card row archive-digest" data-act="digest" data-v="' + d.kind + '|' + d.key + '"><span class="row-main"><span>' + esc(d.title || ({week:'周信',quarter:'季信',year:'年信'}[d.kind])) + '</span><span class="sub">' + esc(d.key) + '</span></span>' + ICON.chev + '</button>').join('') : '<div class="card empty">还没有阶段回顾。你可以在信箱生成周信、季信和年信。</div>') +
-      '<div class="gh"><h2>原始信件</h2><span>最近加载的记录</span></div>' +
-      (rows || '<div class="card empty">还没有信件。</div>') + '<div class="row foot"><button class="lk" data-act="older">加载更早的信件</button></div></main>';
+    const letters = Object.values(S.letters).filter(x => x.text && x.text.trim());
+    const digests = S.digests || [];
+    const tabs = [['timeline','时间线'],['week','周信'],['quarter','季信'],['year','年信']];
+    const seg = `<div class="seg" role="tablist" aria-label="时光分类">${tabs.map(([k,n]) => `<button role="tab" aria-selected="${V.archiveTab === k}" data-act="archive-tab" data-v="${k}">${n}</button>`).join('')}</div>`;
+    const overview = `<div class="card pad"><div class="stats">
+      <div class="stat"><span>写过的信</span><b>${S.stats.letters || letters.length}</b></div>
+      <div class="stat"><span>阶段回顾</span><b>${digests.length}</b></div>
+      <div class="stat"><span>记录天数</span><b>${S.stats.streak || letters.length}</b></div>
+    </div></div>`;
+    let content = '';
+    if (V.archiveTab === 'timeline') content = stateCard(today()) + timeline(today());
+    else content = digestList(V.archiveTab, today());
+    return `<main class="page">
+      <div class="head"><div class="head-l"><span class="eyebrow">把经历留在时间里</span><h1>时光</h1><p class="note">信件、重要时刻和阶段回顾，慢慢组成你自己的时间线。</p></div></div>
+      ${overview}
+      ${seg}
+      ${content}
+    </main>`;
   }
 
   // ───────────── 今天 ─────────────
@@ -762,24 +769,36 @@
   // ───────────── 信箱 ─────────────
   function viewMailbox() {
     const t = today();
-    const filters = [['all', '全部'], ['week', '周信'], ['quarter', '季信'], ['year', '年信']];
-    const seg = `<div class="seg" role="tablist" aria-label="信的类型">${filters.map(([k, n]) => `<button role="tab" aria-selected="${V.mb === k}" data-act="mb" data-v="${k}">${n}</button>`).join('')}</div>`;
     const first = S.stats.first;
     const days = first ? diffDays(t, first) + 1 : 0;
+    const letters = Object.values(S.letters).filter(l => l.text && l.text.trim()).sort((a,b) => a.date < b.date ? 1 : -1);
+    const unread = letters.filter(l => l.reply && !isSealed(l.date) && !isOpened(l.date));
+    const filters = [['all', '全部'], ['unread', '待读'], ['mine', '我写的'], ['replies', 'AI 回信']];
+    const seg = `<div class="seg" role="tablist" aria-label="信件分类">${filters.map(([k,n]) => `<button role="tab" aria-selected="${V.mb === k}" data-act="mb" data-v="${k}">${n}</button>`).join('')}</div>`;
     const month = Number(t.slice(5, 7));
-    const monthN = Object.values(S.letters).filter(l => l.text && l.date.slice(0, 7) === t.slice(0, 7)).length;
+    const monthN = letters.filter(l => l.date.slice(0, 7) === t.slice(0, 7)).length;
     const tiles = `<div class="tiles">
-        <button class="tile" data-act="lists" data-v="todos"><span>待办</span><b>${openTodos(t).length}</b></button>
-        <button class="tile" data-act="lists" data-v="ideas"><span>点子</span><b>${openIdeas().length}</b></button>
-        <div class="tile"><span>${month}月的信</span><b>${monthN}</b></div></div>`;
-    const main = V.mb === 'all' ? stateCard(t) + timeline(t) : digestList(V.mb, t);
+      <button class="tile" data-act="lists" data-v="todos"><span>待办</span><b>${openTodos(t).length}</b></button>
+      <button class="tile" data-act="lists" data-v="ideas"><span>点子</span><b>${openIdeas().length}</b></button>
+      <div class="tile"><span>${month}月的信</span><b>${monthN}</b></div></div>`;
+    let list = V.mb === 'unread' ? unread : V.mb === 'mine' ? letters : V.mb === 'replies' ? letters.filter(l => l.reply) : letters;
+    const rows = list.map(l => {
+      const sealed = isSealed(l.date);
+      const summary = sealed ? '回信封存中 · 明早 6:00 送到' : String((l.reply && l.reply.summary) || l.text || '').split('\\n').map(x => x.trim()).find(Boolean) || '打开这次交流';
+      const status = sealed ? '回信明早送达' : l.reply ? (isOpened(l.date) ? '已读回信' : '有一封新回信') : '等待伙伴回信';
+      return `<button class="row day archive-row" data-act="letter" data-v="${l.date}">
+        <span class="dt"><b>${Number(l.date.slice(8))}</b><span>周${wd(l.date)}</span></span>
+        <span class="row-main"><span class="one-line">${esc(summary)}</span><span class="sub">${cn(l.date)} · No.${letterNo(l.date)} · ${status}</span></span>${ICON.chev}</button>`;
+    }).join('');
+    const empty = V.mb === 'unread' ? '暂时没有待读回信。' : V.mb === 'replies' ? '还没有收到 AI 回信。' : '还没有信件。今晚写下第一封信吧。';
     return `<main class="page">
-      <div class="head">
-        <div class="head-l"><span class="eyebrow">${days ? `已经往来 ${days} 天 · ${totalLetters()} 封信` : '还没有信'}</span><h1>信箱</h1></div>
-        <button class="round-btn" data-act="settings" aria-label="设置">${ICON.gear}</button>
-      </div>
+      <div class="head"><div class="head-l"><span class="eyebrow">${days ? `已经往来 ${days} 天 · ${totalLetters()} 封信` : '从第一封信开始'}</span><h1>信箱</h1><p class="note">这里收藏着你和 AI 伙伴的每一次交流。</p></div>
+        <button class="round-btn" data-act="settings" aria-label="设置">${ICON.gear}</button></div>
       ${offlineLine()}
-      ${seg}${tiles}${main}
+      ${seg}
+      <div class="gh"><h2>${V.mb === 'unread' ? '等待你拆开的回信' : V.mb === 'mine' ? '你写给伙伴的信' : V.mb === 'replies' ? '伙伴给你的回信' : '最近的交流'}</h2><span>${list.length} 封</span></div>
+      <div class="card">${rows || `<div class="empty">${empty}</div>`}</div>
+      ${tiles}
     </main>`;
   }
 
@@ -1421,6 +1440,7 @@
         toCache(); render(); break;
       }
       case 'mb': V.mb = v; render(); break;
+      case 'archive-tab': V.archiveTab = v; render(); break;
       case 'letter': if (!isSealed(v)) markOpened(v); openSheet({ type: 'letter', date: v }); break;
       case 'open-in-write': V.sheets = []; V.tab = 'write'; V.writeDate = v; V.editing = false; V.sent = null; render(); break;
       case 'digest': { const [kind, key] = v.split('|'); openSheet({ type: 'digest', kind, key }); break; }
