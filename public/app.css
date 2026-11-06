@@ -773,3 +773,58 @@ html, body { min-height: 100%; }
 @media (prefers-reduced-motion: reduce) {
   .sheet.enter { animation: none; }
 }
+
+
+/* ── 小屏信息层级：减少首屏纵向占用，保留原有封面与留白气质 ── */
+@media (max-width: 767px) {
+  .self-page .head .note, .archive-page .head .note {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    overflow: hidden; line-height: 1.5; margin-top: 5px;
+  }
+  .self-opening { margin: 6px 0 20px; padding: 18px; border-radius: 21px; }
+  .self-opening-title { margin: 20px 0; font-size: 26px; line-height: 1.36; }
+  .self-recent { margin-top: 0; }
+  .self-long { margin-top: 20px; }
+  .self-long-note { margin-top: 6px; line-height: 1.55; }
+  .self-collection summary { min-height: 50px; }
+  .self-memory { padding-top: 12px; padding-bottom: 12px; }
+  .archive-cover { margin: 14px 0 16px; padding: 18px; border-radius: 21px; }
+  .archive-cover-quote { margin: 17px 0 20px; font-size: 24px; line-height: 1.36; }
+  .archive-cover-stats { gap: 18px; }
+  .archive-cover-stats b { font-size: 20px; }
+  .life-month { margin-top: 18px; }
+  .life-moment { gap: 9px; padding: 9px 0 12px; }
+  .life-date { width: 36px; }
+  .life-date b { font-size: 21px; }
+  .life-moment-body { gap: 3px; padding-right: 4px; }
+  .life-moment-body strong {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    overflow: hidden; line-height: 1.45;
+  }
+  .life-moment-body span {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 1; overflow: hidden;
+  }
+  .mail-recent { padding: 13px 14px 12px; margin-bottom: 16px; }
+  .mail-recent-top { margin-bottom: 11px; }
+  .mail-exchange { gap: 7px; }
+  .mail-exchange-line { gap: 7px; }
+  .mail-speaker { width: 34px; }
+  .mail-exchange-line p.mail-exchange-preview {
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    overflow: hidden; line-height: 1.5;
+  }
+  .mail-recent-action { margin-top: 9px; }
+  .mail-history-row { padding: 10px 2px; gap: 9px; }
+  .mail-history-date { width: 36px; }
+  .mail-history-copy { gap: 2px; }
+  .mail-history-copy strong { -webkit-line-clamp: 2; line-height: 1.4; }
+  .mail-shortcuts { margin-top: 18px; gap: 8px; }
+  .mail-shortcuts button { padding: 12px; }
+}
+@media (max-width: 380px) {
+  .self-opening-title { font-size: 24px; }
+  .archive-cover-quote { font-size: 22px; }
+  .archive-cover-stats { gap: 13px; }
+  .mail-recent { padding-left: 12px; padding-right: 12px; }
+  .mail-history-date { width: 32px; }
+}
