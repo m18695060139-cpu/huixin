@@ -92,16 +92,16 @@ function openIdeas(S) {
   return (S.ideas || []).filter(i => i.status === 'open' && !sourceHidden(S, i));
 }
 
-function srcLine(x, t) {
+function srcLine(S, x, t) {
   if (!x.source_date) return { text: '自己加的', cls: '' };
   if (x.source_date === date.addDays(t, -1)) return { text: '昨晚的信 · No.' + letterNo(S, x.source_date), cls: 'hot' };
   if (x.source_date === t) return { text: '今天的信', cls: 'hot' };
   return { text: date.cn(x.source_date) + '的信', cls: '' };
 }
 
-function todoView(x, t) {
+function todoView(S, x, t) {
   const d = dueInfo(x, t);
-  const s = srcLine(x, t);
+  const s = srcLine(S, x, t);
   let pill = '';
   let pillCls = '';
   if (x.dropped_at) {
@@ -243,9 +243,9 @@ function todayModel(S, now, opts) {
   const h = now.getHours();
   const just = opts.justDone || {};
   const todos = openTodos(S, t);
-  const showT = todos.slice(0, 4).map(x => todoView(x, t));
+  const showT = todos.slice(0, 4).map(x => todoView(S, x, t));
   const recentDone = (S.todos || []).filter(x => x.done && x.done_at === t && !x.dropped_at && !x.archived);
-  const justList = recentDone.filter(x => just[x.id]).map(x => todoView(x, t));
+  const justList = recentDone.filter(x => just[x.id]).map(x => todoView(S, x, t));
   const ideas = openIdeas(S);
   let ideaBlock = null;
   if (ideas.length) {
@@ -663,8 +663,8 @@ function groupOf(d, t) {
   return ['m' + d.slice(0, 7), y + Number(d.slice(5, 7)) + '月'];
 }
 
-function historyRow(x, d, gk) {
-  const view = todoView(x, d);
+function historyRow(S, x, d, gk) {
+  const view = todoView(S, x, d);
   view.showDate = ['today', 'yday'].indexOf(gk) < 0;
   view.dateLabel = Number(d.slice(5, 7)) + '/' + Number(d.slice(8, 10));
   return view;
@@ -707,7 +707,7 @@ function doneHistory(S, t, mode, openGroups) {
         open: open,
         count: g.items.length,
         verb: mode === 'done' ? '完成' : '放下',
-        rows: open ? g.items.map(it => historyRow(it.x, it.d, g.key)) : [],
+        rows: open ? g.items.map(it => historyRow(S, it.x, it.d, g.key)) : [],
       };
     }),
   };
@@ -723,7 +723,7 @@ function listsModel(S, now, ui) {
     .slice().sort((a, b) => String(a.dropped_at || a.updated_at || '') < String(b.dropped_at || b.updated_at || '') ? 1 : -1);
   return {
     tab: tab,
-    todos: openTodos(S, t).map(x => todoView(x, t)),
+    todos: openTodos(S, t).map(x => todoView(S, x, t)),
     ideas: ideas.map(i => ideaView(i, t)),
     showDropped: !!ui.showDropped,
     dropped: dropped.map(i => ideaView(i, t)),

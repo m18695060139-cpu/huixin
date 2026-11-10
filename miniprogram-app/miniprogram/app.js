@@ -36,8 +36,7 @@ App({
       const box = chrome.measure();
       this.globalData.statusBar = box.statusBar;
       this.globalData.safeBottom = box.safeBottom;
-      const sys = wx.getSystemInfoSync();
-      this.globalData.systemDark = sys.theme === 'dark';
+      this.globalData.systemDark = chrome.appTheme() === 'dark';
     } catch (e) { /* 用默认安全区 */ }
   },
   resolvedTheme() {

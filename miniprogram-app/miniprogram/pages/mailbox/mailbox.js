@@ -2,6 +2,7 @@ const behavior = require('../../behaviors/page');
 const state = require('../../utils/state');
 const actions = require('../../utils/actions');
 const model = require('../../utils/model');
+const chrome = require('../../utils/chrome');
 
 Page({
   behaviors: [behavior],
@@ -94,7 +95,7 @@ Page({
       if (!info || !info.node || !chart || !chart.pts) return;
       const canvas = info.node;
       const ctx = canvas.getContext('2d');
-      const dpr = (wx.getSystemInfoSync && wx.getSystemInfoSync().pixelRatio) || 2;
+      const dpr = (chrome.windowInfo().pixelRatio) || 2;
       const w = info.width || 300;
       const h = info.height || 88;
       canvas.width = w * dpr;
