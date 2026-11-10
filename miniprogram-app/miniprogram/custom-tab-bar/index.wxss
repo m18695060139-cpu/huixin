@@ -5,9 +5,12 @@
   bottom: 0;
   z-index: 1000;
   padding: 19.231rpx 30.769rpx calc(env(safe-area-inset-bottom) + 26.923rpx);
-  background: var(--bg, #F2F2F7);
+  background: transparent;
+  pointer-events: none;
   box-sizing: border-box;
 }
+.tab-slot .tabbar { pointer-events: auto; }
+.tab-slot .i { width: 46.154rpx; height: 46.154rpx; }
 .tab-slot.hide-m { display: none; }
 .tab-slot .tabbar {
   position: relative;

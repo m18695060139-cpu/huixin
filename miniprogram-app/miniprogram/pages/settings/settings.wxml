@@ -3,7 +3,7 @@
     <view>
       <view class="sp"></view>
       <text class="t">设置</text>
-      <button class="x" hover-class="none" bindtap="back" aria-label="关闭">×</button>
+      <button class="x" hover-class="none" bindtap="back" aria-label="关闭"><view class="i i-x"></view></button>
     </view>
   </view>
   <view class="page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
@@ -20,14 +20,14 @@
             <text>明早 6:00 拆信</text>
             <text class="opt-sub">今晚寄出的信，回信封存到第二天早上；补写的信马上送到</text>
           </view>
-          <text class="tick-mark" wx:if="{{deliver !== 'now'}}">✓</text>
+          <view class="i i-check tick-mark" wx:if="{{deliver !== 'now'}}"></view>
         </view>
         <view class="opt" data-v="now" bindtap="onDeliver">
           <view class="opt-main">
             <text>寄出后马上</text>
             <text class="opt-sub">写完就能看到回信</text>
           </view>
-          <text class="tick-mark" wx:if="{{deliver === 'now'}}">✓</text>
+          <view class="i i-check tick-mark" wx:if="{{deliver === 'now'}}"></view>
         </view>
       </view>
     </view>

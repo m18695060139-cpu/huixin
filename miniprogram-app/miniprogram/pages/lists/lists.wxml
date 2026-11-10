@@ -3,7 +3,7 @@
     <view>
       <view class="sp"></view>
       <text class="t">待办与点子</text>
-      <button class="x" hover-class="none" bindtap="back" aria-label="关闭">×</button>
+      <button class="x" hover-class="none" bindtap="back" aria-label="关闭"><view class="i i-x"></view></button>
     </view>
   </view>
   <view class="page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
@@ -29,7 +29,7 @@
 
     <block wx:if="{{tab === 'ideas'}}">
       <view class="card mt">
-        <view wx:if="{{!ideas.length}}" class="empty">点子库是空的。想到什么，记在这里。</view>
+        <view wx:if="{{!ideas.length}}" class="empty">点子库是空的。写信时冒出的想法，回信会收到这里。</view>
         <view class="row" wx:for="{{ideas}}" wx:key="id">
           <view class="ic sm idea"><view class="i i-bulb" style="width:26.923rpx;height:26.923rpx;"></view></view>
           <button class="row-main" hover-class="none" data-id="{{item.id}}" bindtap="editIdea">

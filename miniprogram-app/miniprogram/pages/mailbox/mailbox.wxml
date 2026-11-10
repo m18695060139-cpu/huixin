@@ -36,7 +36,8 @@
           <view class="digest" data-kind="{{item.kind}}" data-key="{{item.key}}" bindtap="openDigest">
             <view class="digest-h"><text class="badge">{{item.badge}}</text><text>{{item.lab}}</text></view>
             <text class="digest-t" wx:if="{{item.title}}">{{item.title}}</text>
-            <view class="digest-stats">
+            <text class="digest-b" wx:if="{{!item.hasStats}}">{{item.excerpt}}</text>
+            <view class="digest-stats" wx:if="{{item.hasStats}}">
               <view><text>平均精力</text><text class="b">{{item.energy}}</text></view>
               <view><text>完成待办</text><text class="b">{{item.todos}}</text></view>
               <view><text>可能漏掉</text><text class="b">{{item.forgotten}}</text></view>
@@ -75,7 +76,8 @@
         <view wx:if="{{item.digest}}" class="digest" style="margin-bottom:23.077rpx;" data-kind="{{item.digest.kind}}" data-key="{{item.digest.key}}" bindtap="openDigest">
           <view class="digest-h"><text class="badge">{{item.digest.badge}}</text><text>{{item.digest.lab}}</text></view>
           <text class="digest-t" wx:if="{{item.digest.title}}">{{item.digest.title}}</text>
-          <view class="digest-stats">
+          <text class="digest-b" wx:if="{{!item.digest.hasStats}}">{{item.digest.excerpt}}</text>
+          <view class="digest-stats" wx:if="{{item.digest.hasStats}}">
             <view><text>平均精力</text><text class="b">{{item.digest.energy}}</text></view>
             <view><text>完成待办</text><text class="b">{{item.digest.todos}}</text></view>
             <view><text>可能漏掉</text><text class="b">{{item.digest.forgotten}}</text></view>
@@ -92,7 +94,7 @@
               <text class="row-t one-line">{{row.kind === 'gap' ? '这天没有写信' : row.line}}</text>
               <text class="sub">{{row.kind === 'gap' ? '点一下补写' : row.meta}}</text>
             </view>
-            <text class="chev">›</text>
+            <view class="i i-chev"></view>
           </view>
           <view class="row foot" wx:if="{{item.canGen}}">
             <button class="lk" hover-class="none" data-kind="week" data-key="{{item.wk}}" bindtap="genDigest">让回信写这一周的周信 ›</button>

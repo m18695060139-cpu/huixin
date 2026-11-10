@@ -2,17 +2,7 @@
   <view class="tabbar">
     <view class="nav">
       <view class="tab {{selected === 0 ? 'on' : ''}}" data-i="0" bindtap="go">
-        <view class="sun" aria-hidden="true">
-          <view class="sun-core"></view>
-          <view class="sun-ray"></view>
-          <view class="sun-ray d45"></view>
-          <view class="sun-ray d90"></view>
-          <view class="sun-ray d135"></view>
-          <view class="sun-ray d180"></view>
-          <view class="sun-ray d225"></view>
-          <view class="sun-ray d270"></view>
-          <view class="sun-ray d315"></view>
-        </view>
+        <view class="i i-today"></view>
         <text>今天</text>
         <view class="badge-dot" wx:if="{{badge && selected !== 0}}"></view>
       </view>

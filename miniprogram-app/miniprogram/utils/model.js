@@ -94,7 +94,7 @@ function openIdeas(S) {
 
 function srcLine(x, t) {
   if (!x.source_date) return { text: '自己加的', cls: '' };
-  if (x.source_date === date.addDays(t, -1)) return { text: '昨晚的信', cls: 'hot' };
+  if (x.source_date === date.addDays(t, -1)) return { text: '昨晚的信 · No.' + letterNo(S, x.source_date), cls: 'hot' };
   if (x.source_date === t) return { text: '今天的信', cls: 'hot' };
   return { text: date.cn(x.source_date) + '的信', cls: '' };
 }
@@ -186,6 +186,7 @@ function heroBlock(S, now) {
       type: 'backfill',
       date: yday,
       title: '昨晚没有写信',
+      dateLabel: date.cn(yday),
       sub: '现在补上也来得及。补写的信寄出后，回信马上送到，拆出来的事直接放进今天。',
     };
   }
@@ -215,7 +216,7 @@ function writeHero(S, d, label) {
     date: d,
     label: label,
     title: label + '的信还没写',
-    sub: (habits.length ? '写信时顺手打卡 · ' : '') + (deliverNow(S) ? '寄出后马上可以回看' : '回信明早 6:00 送到'),
+    sub: (habits.length ? '写信时顺手打卡 · ' : '') + (deliverNow(S) ? '寄出后马上回信' : '回信明早 6:00 送到'),
   };
 }
 
@@ -300,21 +301,22 @@ function writeMeta(S, day, now) {
   const h = now.getHours();
   const isToday = day === ld;
   const label = isToday ? ((h >= 17 || h < 4) ? '今晚' : '今天') : (day === date.addDays(ld, -1) ? '补写昨天' : '补写');
-  const name = (S.settings && S.settings.name || '').trim();
   const l = letterOf(S, day) || {};
   const tonight = !deliverNow(S) && date.sendsTonight(day, now);
   return {
     date: day,
     label: label,
     sub: date.cn(day) + ' 星期' + date.wd(day),
-    to: isToday ? ('致 明早的' + (name || '我')) : ('补写 · ' + date.cn(day)),
+    to: isToday ? '致 明早的我' : ('补写 · ' + date.cn(day)),
     no: letterNo(S, day),
     canNext: day < ld,
     sent: !!l.sent_at,
     sealed: isSealed(S, day, now),
+    sealedTitle: day === ld ? '今晚的信已寄出' : (date.cn(day) + '的信已寄出'),
+    hasReply: !!(l.reply && l.reply.summary),
     opened: !!l.opened,
     sendLabel: l.sent_at ? '重新寄出' : '寄出',
-    note: tonight ? '回信明早 6:00 送到 · 送到前都可以拿回来改' : '寄出后马上可以回看',
+    note: tonight ? '回信明早 6:00 送到 · 送到前都可以拿回来改' : '寄出后马上回信',
     tonight: tonight,
     habits: habitItems(S, day),
     showHabits: activeHabits(S).length > 0 && day >= date.addDays(t, -6),
@@ -330,7 +332,7 @@ function writeMeta(S, day, now) {
 
 function energySeries(S, t, now, n) {
   const pts = [];
-  for (let i = n - 1; i >= 0; i--) {
+  for (let i = n; i >= 0; i--) {
     const d = date.addDays(t, -i);
     const l = letterOf(S, d);
     const visible = !!(l && l.sent_at && !isSealed(S, d, now));
@@ -349,7 +351,7 @@ function stateCard(S, t, now, theme) {
   const pts = energySeries(S, t, now, n);
   const vals = pts.filter(p => p.ok);
   if (vals.length < 3) {
-    return { ready: false, empty: '自己标过几天精力和心情之后，这里会出现曲线。' };
+    return { ready: false, empty: '写几天信之后，回信会给每天的精力打分，这里会出现你的精力曲线。' };
   }
   const avg = vals.reduce((s, p) => s + p.v, 0) / vals.length;
   const recent = pts.slice(-7).filter(p => p.ok);
@@ -469,6 +471,8 @@ function digestCard(d) {
     badge: kindN + (st.letters ? (' · ' + st.letters + ' 封信') : ''),
     read: '读完整的' + kindN + ' ›',
     lab: lab,
+    hasStats: !!c.stats,
+    excerpt: c.letter || '',
     energy: st.energyAvg != null ? st.energyAvg : '—',
     todos: st.todosDone || 0,
     forgotten: (c.forgotten || []).length,
@@ -587,6 +591,7 @@ function letterModel(S, day, now) {
     chars: String(l.text || '').trim().length,
     sentences: hideBody || reply ? [] : sentencesOf(l.text || ''),
     hasReply: !!reply,
+    showGo: !!(reply && day >= yday),
     canAsk: !!(l.sent_at && !hideBody && !sealed && !reply),
     reply: reply,
   };
@@ -619,9 +624,15 @@ function replyBlock(S, l, t) {
   });
   const ideas = (r.ideas || []).map(x => ({ id: x.id, text: x.text }));
   let when = '';
-  if (l.replied_at) {
+  if (r.imported) when = '从 Life OS 搬过来的旧信';
+  else if (l.replied_at) {
     const at = new Date(l.replied_at);
-    if (!isNaN(at.getTime())) when = date.cn(date.localDate(at)) + ' ' + date.hm(at) + ' 收到';
+    if (!isNaN(at.getTime())) {
+      const sealedOnce = at < date.cutoff(l.date) && !deliverNow(S);
+      when = sealedOnce
+        ? (date.cn(date.addDays(l.date, 1)) + ' 6:00 送到')
+        : (date.cn(date.localDate(at)) + ' ' + date.hm(at) + ' 收到');
+    }
   }
   return {
     paras: paras,

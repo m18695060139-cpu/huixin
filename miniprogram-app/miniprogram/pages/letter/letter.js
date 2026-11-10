@@ -92,6 +92,7 @@ Page({
     }
   },
   back() { wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/today/today' }) }); },
+  goToday() { wx.switchTab({ url: '/pages/today/today' }); },
   takeBack() {
     state.setWriteTarget(this.data.date, true);
     wx.switchTab({ url: '/pages/write/write' });

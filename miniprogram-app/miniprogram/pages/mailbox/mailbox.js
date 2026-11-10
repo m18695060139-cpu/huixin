@@ -111,6 +111,12 @@ Page({
       ctx.moveTo(0, y(1) + 2);
       ctx.lineTo(w, y(1) + 2);
       ctx.stroke();
+      ctx.setLineDash([2, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, y(3));
+      ctx.lineTo(w, y(3));
+      ctx.stroke();
+      ctx.setLineDash([]);
       ctx.strokeStyle = chart.ink;
       ctx.lineWidth = 2.4;
       ctx.lineJoin = 'round';

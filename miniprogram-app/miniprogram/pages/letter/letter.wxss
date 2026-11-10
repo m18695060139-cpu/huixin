@@ -1,12 +1,12 @@
 .reply-p {
   display: block;
-  margin: 0 0 26.923rpx;
+  margin: 0;
   font-family: var(--letter-font);
   font-size: 30.769rpx;
   line-height: 1.95;
 }
-.reply-sign text { font-size: 23.077rpx; color: var(--sub); }
-.sign-b { font-size: 26.923rpx; color: var(--ink); font-weight: 700; }
+.reply-sign .sign-b { font-size: 26.923rpx; color: var(--ink); font-weight: 700; }
+.reply-sign .when { font-size: 23.077rpx; color: var(--sub); }
 .mine-body { padding: 0 30.769rpx 30.769rpx; font-size: 28.846rpx; line-height: 1.85; color: var(--sub); }
 .lens-k { display: block; font-size: 25rpx; font-weight: 600; color: var(--sub); }
 .lens-v { display: block; font-size: 28.846rpx; line-height: 1.5; }

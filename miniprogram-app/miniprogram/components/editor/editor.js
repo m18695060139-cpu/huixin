@@ -1,4 +1,6 @@
 const { DROP_REASONS } = require('../../utils/defaults');
+const chrome = require('../../utils/chrome');
+const { cn } = require('../../utils/date');
 
 Component({
   properties: {
@@ -14,27 +16,27 @@ Component({
     due: '',
     note: '',
     focusNote: false,
+    droppedLabel: '',
     statusBar: 20,
     safeBottom: 0,
   },
   lifetimes: {
     attached() {
-      try {
-        const sys = wx.getSystemInfoSync();
-        const safeBottom = sys.safeArea && sys.screenHeight ? Math.max(0, sys.screenHeight - sys.safeArea.bottom) : 0;
-        this.setData({ statusBar: sys.statusBarHeight || 20, safeBottom: safeBottom });
-      } catch (e) { /* 用默认 */ }
+      const box = chrome.measure();
+      this.setData({ statusBar: box.statusBar, safeBottom: box.safeBottom });
     },
   },
   observers: {
     'show, token': function (show) {
       if (!show) return;
       const item = this.data.item || {};
+      const dropped = item.dropped_at ? String(item.dropped_at).slice(0, 10) : '';
       this.setData({
         text: item.text || '',
         due: item.due || '',
         note: item.note || '',
         focusNote: !!item.focusNote,
+        droppedLabel: dropped ? (cn(dropped) + ' 放下了这件事') : '',
       });
     },
   },

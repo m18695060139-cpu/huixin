@@ -1,3 +1,9 @@
+.editor-wrap { position: relative; }
+.editor-ph {
+  position: absolute; left: 0; top: 0; right: 0;
+  color: #C7C7CC; font-family: var(--letter-font); font-size: 32.692rpx; line-height: 1.9;
+  white-space: pre-wrap; pointer-events: none;
+}
 .day-title { font-size: 30.769rpx; font-weight: 600; display: block; text-align: center; }
 .nav-btn.off { color: var(--ring); }
 .round-btn.ghost { background: transparent; }

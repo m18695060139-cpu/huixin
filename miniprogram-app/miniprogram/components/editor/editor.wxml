@@ -4,7 +4,7 @@
       <view>
         <view class="sp"></view>
         <text class="t">{{mode === 'drop' ? '放下这件事' : (mode === 'idea' ? (item.id ? '编辑点子' : '记一个点子') : (item.id ? '编辑待办' : '加一件事'))}}</text>
-        <button class="x" bindtap="onClose" aria-label="关闭">×</button>
+        <button class="x" bindtap="onClose" aria-label="关闭"><view class="i i-x"></view></button>
       </view>
     </view>
     <view class="page">
@@ -17,7 +17,7 @@
         <view class="chips wrap">
           <button class="chip" wx:for="{{reasons}}" wx:key="*this" data-v="{{item}}" bindtap="onReason">{{item}}</button>
         </view>
-        <text class="note">放下的事会和原因一起留在「完成 / 放下」里，随时可以恢复。</text>
+        <text class="note">放下的事会和原因一起留在「完成 / 放下」里，随时可以恢复。回信和周信也会看到。</text>
         <view style="display:flex;gap:19.231rpx;margin-top:42.308rpx;">
           <button class="btn" bindtap="onDrop">放下</button>
           <button class="btn ghost" bindtap="onClose">先不放下</button>
@@ -27,7 +27,7 @@
       <block wx:elif="{{mode === 'idea'}}">
         <view class="field">
           <text class="lab">点子</text>
-          <textarea class="input" value="{{text}}" bindinput="onText" maxlength="300" placeholder="想到什么就记下" placeholder-class="ph" auto-height="true" />
+          <textarea class="input" value="{{text}}" bindinput="onText" maxlength="300" placeholder-class="ph" auto-height="true" />
         </view>
         <text class="note" wx:if="{{item.source}}">{{item.source}}</text>
         <view style="display:flex;gap:19.231rpx;margin-top:50rpx;flex-wrap:wrap;">
@@ -40,7 +40,7 @@
       <block wx:else>
         <view class="field">
           <text class="lab">要做的事</text>
-          <textarea class="input" value="{{text}}" bindinput="onText" maxlength="200" placeholder="一件具体的事" placeholder-class="ph" auto-height="true" />
+          <textarea class="input" value="{{text}}" bindinput="onText" maxlength="200" placeholder-class="ph" auto-height="true" />
         </view>
         <view class="field">
           <text class="lab">截止日期</text>
@@ -51,9 +51,9 @@
         </view>
         <view class="field">
           <text class="lab">备注</text>
-          <textarea class="input" id="note" value="{{note}}" focus="{{focusNote}}" bindinput="onNote" maxlength="500" placeholder="进展、感受，或者为什么做不了" placeholder-class="ph" auto-height="true" />
+          <textarea class="input" id="note" value="{{note}}" focus="{{focusNote}}" bindinput="onNote" maxlength="500" placeholder="进展、新想法，做完的感受，或者为什么做不了，都可以写。回信和周信会看到。" placeholder-class="ph" auto-height="true" />
         </view>
-        <text class="note" wx:if="{{item.dropped_at}}">{{item.dropped_at}} 放下了这件事</text>
+        <text class="note" wx:if="{{droppedLabel}}">{{droppedLabel}}</text>
         <text class="note" wx:if="{{item.source}}">{{item.source}}</text>
         <view style="display:flex;gap:19.231rpx;margin-top:50rpx;flex-wrap:wrap;">
           <button class="btn" bindtap="onSave">保存</button>

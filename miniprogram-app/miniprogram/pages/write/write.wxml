@@ -2,15 +2,15 @@
   <view class="top-shield" style="height: {{statusBar}}px;"></view>
   <view class="page {{editing ? 'bare' : 'tab-pad'}}">
     <view class="wbar stick-top" style="padding-top: {{statusBar + 12}}px;">
-      <view wx:if="{{editing}}" class="round-btn" bindtap="closeWrite" aria-label="关闭">×</view>
+      <view wx:if="{{editing}}" class="round-btn" bindtap="closeWrite" aria-label="关闭"><view class="i i-x"></view></view>
       <view wx:else class="round-btn ghost"></view>
       <view class="daynav">
-        <view class="nav-btn" bindtap="onPrev" aria-label="前一天">‹</view>
+        <view class="nav-btn" bindtap="onPrev" aria-label="前一天"><view class="i i-left"></view></view>
         <view class="lab">
           <text class="day-title">{{meta.label}}</text>
           <text class="sub">{{meta.sub}}</text>
         </view>
-        <view class="nav-btn {{meta.canNext ? '' : 'off'}}" bindtap="onNext" aria-label="后一天">›</view>
+        <view class="nav-btn {{meta.canNext ? '' : 'off'}}" bindtap="onNext" aria-label="后一天"><view class="i i-right"></view></view>
       </view>
       <text class="save-state">{{editing ? saveState : ''}}</text>
     </view>
@@ -21,7 +21,12 @@
         <text class="paper-label">{{meta.to}}</text>
         <text class="no-tag">No.{{meta.no}}</text>
       </view>
-      <textarea wx:if="{{editing}}" class="editor" value="{{text}}" bindinput="onInput" maxlength="20000" auto-height="true" placeholder="{{placeholder}}" placeholder-class="ph" />
+      <view wx:if="{{editing}}" class="editor-wrap">
+        <textarea class="editor" value="{{text}}" bindinput="onInput" maxlength="20000" auto-height="true" placeholder="" />
+        <text wx:if="{{!text}}" class="editor-ph">今天过得怎么样？做了什么、想到什么、哪里卡住了，随便写。
+
+写完点「寄出」，回信会帮你整理好其余的一切。</text>
+      </view>
       <text wx:else class="letter-text">{{meta.text}}</text>
     </view>
     <view class="warn" wx:if="{{warn}}">{{warn}} 草稿还在，改一改再存。</view>
@@ -42,23 +47,28 @@
     </view>
 
     <block wx:if="{{!editing && meta.sent}}">
-      <view class="card stats mt" wx:if="{{meta.energy || meta.mood}}">
-        <view class="stat"><text>精力</text><text class="b">{{meta.energy || '—'}}<text class="unit" wx:if="{{meta.energy}}"> / 5</text></text></view>
-        <view class="stat"><text>心情</text><text class="b">{{meta.mood || '—'}}</text></view>
-        <view class="stat"><text>字数</text><text class="b">{{meta.chars}}</text></view>
-      </view>
       <view wx:if="{{meta.sealed}}" class="card hero sealed">
         <view class="hero-top">
-          <view class="hero-ic"><view class="i i-box"></view></view>
-          <view>
-            <text class="hero-t">已寄出</text>
-            <text class="hero-s">回信正在连夜整理，明早 6:00 送到</text>
+          <view class="hero-ic"><view class="i i-box" style="width:34.615rpx;height:34.615rpx;"></view></view>
+          <view style="flex:1;min-width:0;">
+            <text class="hero-t">{{meta.sealedTitle}}</text>
+            <text class="hero-s">回信明早 6:00 送到</text>
           </view>
+          <button class="btn sm ghost" hover-class="tap-on" bindtap="takeBack">拿回来改</button>
         </view>
       </view>
-      <view style="padding:0 7.692rpx;">
-        <button class="lk" hover-class="none" bindtap="takeBack">修改这封信</button>
-        <button class="lk" hover-class="none" bindtap="openLetter">在信里查看</button>
+      <block wx:elif="{{letter.hasReply}}">
+        <view class="card reply-letter">
+          <text wx:for="{{letter.reply.paras}}" wx:key="*this" class="reply-p">{{item}}</text>
+        </view>
+        <button wx:if="{{letter.showGo}}" class="btn full" hover-class="tap-on" style="margin-top:38.462rpx;" bindtap="goToday">去看今天要做的</button>
+      </block>
+      <view wx:else class="card pad sealed">
+        <text class="muted">这封信还没有回信。</text>
+        <button class="btn sm" hover-class="tap-on" style="align-self:flex-start;margin-top:23.077rpx;" bindtap="retryReply">让回信回一封</button>
+      </view>
+      <view wx:if="{{!meta.sealed}}" style="padding:0 7.692rpx;">
+        <button class="lk" hover-class="tap-on" bindtap="takeBack">修改这封信</button>
       </view>
     </block>
   </view>
@@ -66,7 +76,8 @@
   <view wx:if="{{editing}}" class="send-bar">
     <view class="send-inner">
       <view class="send-row">
-        <button class="btn" hover-class="none" bindtap="onSend" disabled="{{!canSend}}">{{meta.sendLabel || '寄出'}}</button>
+        <button wx:if="{{editing && meta.hasReply}}" class="btn ghost" hover-class="tap-on" bindtap="cancelEdit">取消</button>
+        <button class="btn" hover-class="tap-on" bindtap="onSend" disabled="{{!canSend}}"><view class="i i-send"></view>{{meta.sendLabel || '寄出'}}</button>
       </view>
       <text class="send-note">{{meta.note}}</text>
     </view>
@@ -75,10 +86,10 @@
   <view class="sent" wx:if="{{sentShow}}">
     <view class="env-wrap">
       <view class="env-big">
-        <view class="env-big-flap"></view>
+        <image class="env-big-flap stroke" mode="aspectFit" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 80'%3E%3Cpath d='M8 8 L150 70 L292 8' fill='none' stroke='%23E5E5EA' stroke-width='2'/%3E%3C/svg%3E" />
         <view class="env-stamp">回</view>
-        <view class="pm-stamp">
-          <text>{{sentDate}}</text>
+        <view class="pm-stamp pm">
+          <text class="pm-date">{{sentDate}}</text>
           <text>No.{{sentNo}}</text>
         </view>
         <text class="env-big-to">致 明早的我</text>
@@ -88,8 +99,9 @@
     <text class="lead">好好睡一觉，剩下的交给回信。</text>
     <view class="steps">
       <view class="row"><view class="dot ok"><view class="tick"></view></view><text class="t">信已寄出</text><text class="tm">{{sentTime}}</text></view>
-      <view class="row"><view class="dot {{sentReady ? 'ok' : ''}}"><view class="tick" wx:if="{{sentReady}}"></view></view><text class="t">{{sentBusy ? '连夜拆信、整理待办和点子' : (sentReady ? '待办和点子都整理好了' : '整理时出了点问题，明早再试')}}</text></view>
-      <view class="row"><view class="dot"><view class="sent-steps-clock"></view></view><text class="t dim">明早 6:00 拆开</text></view>
+      <view class="row" wx:if="{{sentFail}}"><view class="dot err">!</view><text class="t">整理时出了点问题</text><button class="btn sm" hover-class="tap-on" bindtap="retryReply">再试</button></view>
+      <view class="row" wx:else><view class="dot {{sentReady ? 'ok' : ''}}"><view class="tick" wx:if="{{sentReady}}"></view></view><text class="t">{{sentBusy ? '连夜拆信、整理待办和点子' : '待办和点子都整理好了'}}</text></view>
+      <view class="row"><view class="dot"><view class="sent-steps-clock"></view></view><text class="t dim">明早 6:00 送到</text></view>
     </view>
     <view class="sent-btns">
       <button class="btn dark" hover-class="none" bindtap="takeBack">拿回来改</button>

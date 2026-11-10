@@ -46,6 +46,7 @@ Page({
     const energy = meta.energy || 0;
     const dirty = draft && draft.text != null && draft.text !== saved;
     const showEditor = !!editing || !meta.sent || !!dirty;
+    const letter = model.letterModel(state.get(), day, new Date());
     this._text = text;
     this.setData({
       date: day,
@@ -57,7 +58,9 @@ Page({
       saveState: text ? '已存' : '',
       warn: state.get().warn || '',
       sentShow: false,
+      sentFail: false,
       meta: meta,
+      letter: letter,
     });
     this.setTab(1, !showEditor);
   },
@@ -67,6 +70,7 @@ Page({
     const meta = model.writeMeta(state.get(), day, new Date());
     this.setData({
       meta: meta,
+      letter: model.letterModel(state.get(), day, new Date()),
       warn: this.data.warn || state.get().warn || '',
       online: state.get().online,
     });
@@ -152,9 +156,9 @@ Page({
           (body.todos || []).forEach(t => state.upsertTodo(Object.assign({ done: false, note: '', dropped_at: '' }, t)));
           (body.ideas || []).forEach(i => state.upsertIdea(Object.assign({ status: 'open', dropped_at: '' }, i)));
         }
-        this.setData({ sentBusy: false, sentReady: !!body.ok });
+        this.setData({ sentBusy: false, sentReady: !!body.ok, sentFail: !body.ok });
       } catch (e) {
-        this.setData({ sentBusy: false, sentReady: false });
+        this.setData({ sentBusy: false, sentReady: false, sentFail: true });
       }
     } else {
       this.setData({ sentBusy: false, sentReady: true });
@@ -163,6 +167,20 @@ Page({
       await actions.markOpened(this.data.date);
       wx.navigateTo({ url: '/pages/letter/letter?date=' + this.data.date });
     }
+  },
+  cancelEdit() { this.loadDay(this.data.date, false); },
+  goToday() { wx.switchTab({ url: '/pages/today/today' }); },
+  retryReply() {
+    const date = this.data.date;
+    this.setData({ sentBusy: true, sentFail: false, sentReady: false });
+    wx.cloud.callFunction({ name: 'reply', data: { date: date } }).then(res => {
+      const body = (res && res.result) || {};
+      if (body.ok && body.reply) {
+        state.upsertLetter(date, { reply: body.reply, replied_at: body.replied_at || '', mood: body.reply.mood, energy: body.reply.energy });
+      }
+      this.setData({ sentBusy: false, sentReady: !!body.ok, sentFail: !body.ok });
+      this.paintAround();
+    }).catch(() => this.setData({ sentBusy: false, sentFail: true, sentReady: false }));
   },
   takeBack() {
     this.setData({ sentShow: false, editing: true, text: this._text || this.data.meta.text || '' });
