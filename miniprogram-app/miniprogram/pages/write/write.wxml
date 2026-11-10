@@ -86,7 +86,8 @@
   <view class="sent" wx:if="{{sentShow}}">
     <view class="env-wrap">
       <view class="env-big">
-        <image class="env-big-flap stroke" mode="aspectFit" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 300 80'%3E%3Cpath d='M8 8 L150 70 L292 8' fill='none' stroke='%23E5E5EA' stroke-width='2'/%3E%3C/svg%3E" />
+        <view class="env-big-arm l"></view>
+        <view class="env-big-arm r"></view>
         <view class="env-stamp">回</view>
         <view class="pm-stamp pm">
           <text class="pm-date">{{sentDate}}</text>

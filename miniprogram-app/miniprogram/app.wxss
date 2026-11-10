@@ -509,7 +509,22 @@ button::after { display: none; border: none; }
 }
 .pm-stamp .pm-date { font-size: 15.385rpx; opacity: .85; }
 .pm-stamp text:last-child { font-size: 23.077rpx; font-weight: 700; }
-.env-big-flap.stroke { width: 100%; height: 180rpx; border: none; background: none; }
+.env-ghost {
+  width: 230.769rpx; height: 153.846rpx; position: relative; box-sizing: border-box;
+  border-radius: 23.077rpx; border: 3.846rpx dashed var(--ring); background: var(--tile); overflow: hidden;
+}
+.env-ghost-arm {
+  position: absolute; top: 12rpx; width: 130rpx; height: 0;
+  border-top: 3.846rpx dashed var(--ring);
+}
+.env-ghost-arm.l { left: 10rpx; transform: rotate(36deg); transform-origin: left center; }
+.env-ghost-arm.r { right: 10rpx; transform: rotate(-36deg); transform-origin: right center; }
+.env-big-arm {
+  position: absolute; top: 16rpx; width: 280rpx; height: 0;
+  border-top: 3.846rpx solid #E5E5EA;
+}
+.env-big-arm.l { left: 16rpx; transform: rotate(34deg); transform-origin: left center; }
+.env-big-arm.r { right: 16rpx; transform: rotate(-34deg); transform-origin: right center; }
 .env-big-to { position: absolute; left: 46.154rpx; bottom: 30.769rpx; color: #6C6C70; font-size: 26.923rpx; }
 .sent .h1 { margin-top: 69.231rpx; font-size: 53.846rpx; text-align: center; font-weight: 700; display: block; }
 .mood-box { margin-top: 23.077rpx; padding: 26.923rpx 26.923rpx 30.769rpx; display: flex; flex-direction: column; gap: 15.385rpx; }
@@ -652,7 +667,8 @@ button.btn {
   font-size: 30.769rpx;
   font-weight: 600;
 }
-button.btn.full, .send-row button.btn { width: 100%; flex: 1; height: 100rpx; border-radius: 50rpx; font-size: 32.692rpx; }
+button.btn.full { width: 100%; flex: none; align-self: stretch; height: 100rpx; min-height: 100rpx; border-radius: 50rpx; font-size: 32.692rpx; }
+.send-row button.btn { width: auto; flex: 1; height: 100rpx; min-height: 100rpx; border-radius: 50rpx; font-size: 32.692rpx; }
 button.btn.ghost { background-color: var(--tile); color: var(--text); }
 button.btn.sm { height: 69.231rpx; border-radius: 34.615rpx; padding: 0 30.769rpx; font-size: 26.923rpx; width: auto; flex: none; }
 button.btn.dark { background-color: #2C2C2E; color: #FFFFFF; }
@@ -785,7 +801,7 @@ button.theme-opt:not([size=mini]) {
   margin-right: 0;
 }
 button.btn:not(.full) { width: auto; }
-button.btn.full:not([size=mini]) { width: 100%; min-height: 0; }
+button.btn.full:not([size=mini]) { width: 100%; flex: none; height: 100rpx; min-height: 100rpx; }
 button.grp-h { width: 100%; }
 button.toast-act { width: auto; line-height: inherit; min-height: 0; }
 button.ck { margin: 0 -17.308rpx; }

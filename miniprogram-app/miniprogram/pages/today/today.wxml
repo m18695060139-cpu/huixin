@@ -12,7 +12,12 @@
 
     <block wx:if="{{hero.type === 'envelope'}}">
       <button class="envelope" hover-class="tap-on" data-date="{{hero.date}}" bindtap="openEnv">
-        <image class="env-art bob" mode="aspectFit" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='128' viewBox='0 0 200 128'%3E%3Crect width='200' height='128' rx='14' fill='%23FFFFFF'/%3E%3Cpath d='M6 6 L100 74 L194 6' fill='%23FFE3DE' stroke='%23E5E5EA' stroke-width='2'/%3E%3Ccircle cx='100' cy='72' r='16' fill='%23D0402B'/%3E%3Ctext x='100' y='78' text-anchor='middle' font-size='15' font-weight='700' fill='%23FFFFFF'%3E%E5%9B%9E%3C/text%3E%3C/svg%3E" />
+        <view class="env-art bob">
+          <view class="env-card">
+            <view class="env-flap"></view>
+            <view class="env-seal">回</view>
+          </view>
+        </view>
         <view class="env-copy">
           <text class="env-t">{{hero.title}}</text>
           <text class="env-s">{{hero.sub}}</text>
@@ -33,7 +38,10 @@
     </view>
 
     <view wx:elif="{{hero.type === 'backfill'}}" class="card hero" style="align-items:center;text-align:center;padding-top:46.154rpx;">
-      <image style="width:230.769rpx;height:153.846rpx;" mode="aspectFit" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='80' viewBox='0 0 120 80'%3E%3Crect x='2' y='2' width='116' height='76' rx='12' fill='%23F2F2F7' stroke='%23C7C7CC' stroke-width='2' stroke-dasharray='6 5'/%3E%3Cpath d='M6 7 L60 46 L114 7' fill='none' stroke='%23C7C7CC' stroke-width='2' stroke-dasharray='6 5'/%3E%3C/svg%3E" />
+      <view class="env-ghost">
+        <view class="env-ghost-arm l"></view>
+        <view class="env-ghost-arm r"></view>
+      </view>
       <text class="hero-t" style="font-size:38.462rpx;">{{hero.title}}</text>
       <text class="hero-s" style="font-size:26.923rpx;line-height:1.6;">{{hero.sub}}</text>
       <button class="btn full" hover-class="tap-on" data-date="{{hero.date}}" bindtap="goWrite">补写 {{hero.dateLabel}}的信</button>
