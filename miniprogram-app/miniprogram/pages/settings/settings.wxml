@@ -3,7 +3,7 @@
     <view>
       <view class="sp"></view>
       <text class="t">设置</text>
-      <button class="x" hover-class="none" bindtap="back" aria-label="关闭"><view class="i i-x"></view></button>
+      <button class="x" hover-class="tap-on" bindtap="back" aria-label="关闭"><view class="i i-x"></view></button>
     </view>
   </view>
   <view class="page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
@@ -45,7 +45,7 @@
     <view class="field">
       <text class="lab">外观</text>
       <view class="themes">
-        <button wx:for="{{themes}}" wx:key="id" class="theme-opt {{item.on ? 'on' : ''}}" hover-class="none" data-id="{{item.id}}" bindtap="onTheme">
+        <button wx:for="{{themes}}" wx:key="id" class="theme-opt {{item.on ? 'on' : ''}}" hover-class="tap-on" data-id="{{item.id}}" bindtap="onTheme">
           <view class="swatch" style="background: {{item.auto ? 'linear-gradient(90deg,#F2F2F7 50%,#000 50%)' : item.sw[0]}};">
             <view class="bar" style="background: {{item.sw[2]}}; width: 60%;"></view>
             <view class="bar" style="background: {{item.sw[1]}}; width: 85%;"></view>
@@ -60,18 +60,18 @@
         <view wx:if="{{!habits.length}}" class="empty">还没有习惯</view>
         <view class="row" wx:for="{{habits}}" wx:key="id">
           <input class="input" style="background:none;padding:0;min-height:92.308rpx;" value="{{item.name}}" data-id="{{item.id}}" bindblur="onRename" maxlength="30" />
-          <button class="lk" hover-class="none" style="color:var(--danger);" data-id="{{item.id}}" bindtap="onDelHabit">删除</button>
+          <button class="lk" hover-class="tap-on" style="color:var(--danger);" data-id="{{item.id}}" bindtap="onDelHabit">删除</button>
         </view>
       </view>
       <view style="display:flex;gap:15.385rpx;margin-top:15.385rpx;">
         <input class="input" value="{{habitName}}" bindinput="onHabitName" maxlength="30" placeholder="新习惯，比如：运动 30 分钟" placeholder-class="ph" />
-        <button class="btn sm" hover-class="none" style="height:92.308rpx;" bindtap="onAddHabit">添加</button>
+        <button class="btn sm" hover-class="tap-on" style="height:92.308rpx;" bindtap="onAddHabit">添加</button>
       </view>
     </view>
     <view class="field">
       <text class="lab">回信写信时会想着的问题（一行一个）</text>
       <textarea class="input" value="{{qText}}" bindinput="onQ" maxlength="1200" auto-height="true" placeholder-class="ph" />
-      <button class="btn sm ghost" hover-class="none" style="align-self:flex-start;" bindtap="onSaveQ">保存问题</button>
+      <button class="btn sm ghost" hover-class="tap-on" style="align-self:flex-start;" bindtap="onSaveQ">保存问题</button>
     </view>
     <view class="field">
       <text class="lab">账号</text>
@@ -91,9 +91,9 @@
           <text class="chev">›</text>
         </view>
       </view>
-      <button class="btn ghost" hover-class="none" style="margin-top:23.077rpx;" bindtap="onWipe">清空我的全部数据</button>
-      <button class="btn ghost" hover-class="none" style="margin-top:23.077rpx;" bindtap="onSeed">载入示例数据</button>
-      <button class="btn ghost" hover-class="none" style="margin-top:23.077rpx;" bindtap="onClearDemo">清除示例数据</button>
+      <button class="btn ghost" hover-class="tap-on" style="margin-top:23.077rpx;" bindtap="onWipe">清空我的全部数据</button>
+      <button class="btn ghost" hover-class="tap-on" style="margin-top:23.077rpx;" bindtap="onSeed">载入示例数据</button>
+      <button class="btn ghost" hover-class="tap-on" style="margin-top:23.077rpx;" bindtap="onClearDemo">清除示例数据</button>
       <text class="note">示例数据和网页版演示账号同一套：信、回信、待办、点子、习惯、周信和季信。写进你自己的云数据库，并标上 demo。清除时只删这些。</text>
     </view>
     <text class="note" style="margin-top:76.923rpx;text-align:center;">回信 Re: · 今晚写给明早的自己</text>

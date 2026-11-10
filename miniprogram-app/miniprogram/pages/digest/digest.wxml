@@ -3,7 +3,7 @@
     <view>
       <view class="sp"></view>
       <text class="t"></text>
-      <button class="x" hover-class="none" bindtap="back" aria-label="关闭"><view class="i i-x"></view></button>
+      <button class="x" hover-class="tap-on" bindtap="back" aria-label="关闭"><view class="i i-x"></view></button>
     </view>
   </view>
   <view class="page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
@@ -66,7 +66,7 @@
         <view class="card pad" style="font-size:28.846rpx;line-height:1.6;">{{themes}}</view>
       </block>
       <view wx:if="{{!imported}}" style="margin-top:50rpx;">
-        <button class="btn ghost sm" hover-class="none" bindtap="rewrite" disabled="{{busy}}">让回信重写这封{{kindName}}</button>
+        <button class="btn ghost sm" hover-class="tap-on" bindtap="rewrite" disabled="{{busy}}">让回信重写这封{{kindName}}</button>
       </view>
     </block>
   </view>

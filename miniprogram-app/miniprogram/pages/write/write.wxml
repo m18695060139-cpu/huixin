@@ -40,7 +40,7 @@
 
     <view wx:if="{{meta.showHabits}}" class="card habits">
       <text class="habit-lab">{{meta.habitLabel}}</text>
-      <button wx:for="{{meta.habits}}" wx:key="id" class="hb {{item.on ? 'on' : ''}}" hover-class="none" data-id="{{item.id}}" bindtap="onHabit">
+      <button wx:for="{{meta.habits}}" wx:key="id" class="hb {{item.on ? 'on' : ''}}" hover-class="tap-on" data-id="{{item.id}}" bindtap="onHabit">
         <view class="tick" wx:if="{{item.on}}"></view>
         <text>{{item.name}}</text>
       </button>
@@ -104,8 +104,8 @@
       <view class="row"><view class="dot"><view class="sent-steps-clock"></view></view><text class="t dim">明早 6:00 送到</text></view>
     </view>
     <view class="sent-btns">
-      <button class="btn dark" hover-class="none" bindtap="takeBack">拿回来改</button>
-      <button class="btn light" hover-class="none" bindtap="sentClose">晚安</button>
+      <button class="btn dark" hover-class="tap-on" bindtap="takeBack">拿回来改</button>
+      <button class="btn light" hover-class="tap-on" bindtap="sentClose">晚安</button>
     </view>
   </view>
 

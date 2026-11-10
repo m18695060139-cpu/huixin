@@ -3,7 +3,7 @@
     <view>
       <view class="sp"></view>
       <text class="t"></text>
-      <button class="x" hover-class="none" bindtap="back" aria-label="关闭"><view class="i i-x"></view></button>
+      <button class="x" hover-class="tap-on" bindtap="back" aria-label="关闭"><view class="i i-x"></view></button>
     </view>
   </view>
   <view class="page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
@@ -97,14 +97,14 @@
         </view>
         <view wx:if="{{letter.fail}}" class="card pad mt fail-card">
           <text>{{letter.fail}}</text>
-          <button class="btn sm" hover-class="none" bindtap="retryReply">再试一次</button>
+          <button class="btn sm" hover-class="tap-on" bindtap="retryReply">再试一次</button>
         </view>
         <view wx:if="{{!letter.loading}}" class="card paper mt">
           <text class="letter-text">{{letter.text}}</text>
         </view>
         <text class="note" wx:if="{{letter.note}}">{{letter.note}}</text>
         <view style="padding:0 7.692rpx;margin-top:15.385rpx;">
-          <button class="lk" hover-class="none" bindtap="takeBack">在写信里打开</button>
+          <button class="lk" hover-class="tap-on" bindtap="takeBack">在写信里打开</button>
         </view>
       </block>
     </block>

@@ -20,7 +20,7 @@
     </view>
 
     <view class="tiles">
-      <button wx:for="{{tiles}}" wx:key="key" class="tile" hover-class="none" data-key="{{item.key}}" bindtap="goLists">
+      <button wx:for="{{tiles}}" wx:key="key" class="tile" hover-class="tap-on" data-key="{{item.key}}" bindtap="goLists">
         <text>{{item.label}}</text>
         <text class="b">{{item.n}}</text>
       </button>
@@ -29,7 +29,7 @@
     <block wx:if="{{tab === 'week' || tab === 'quarter' || tab === 'year'}}">
       <text class="note" style="margin-top:34.615rpx;">{{kindHead.note}}</text>
       <view style="padding:0 7.692rpx;">
-        <button class="lk" hover-class="none" data-kind="{{kindHead.kind}}" data-key="{{kindHead.key}}" bindtap="genDigest">{{kindHead.gen}}</button>
+        <button class="lk" hover-class="tap-on" data-kind="{{kindHead.kind}}" data-key="{{kindHead.key}}" bindtap="genDigest">{{kindHead.gen}}</button>
       </view>
       <block wx:if="{{kindDigests.length}}">
         <view wx:for="{{kindDigests}}" wx:key="key" style="margin-top:23.077rpx;">
@@ -68,7 +68,7 @@
       </view>
 
       <view wx:if="{{empty}}" class="card empty mt">信箱还是空的。今晚写第一封信吧。
-        <button class="lk" hover-class="none" data-date="{{writeDate}}" bindtap="goWrite">去写信 ›</button>
+        <button class="lk" hover-class="tap-on" data-date="{{writeDate}}" bindtap="goWrite">去写信 ›</button>
       </view>
 
       <block wx:for="{{groups}}" wx:key="wk">
@@ -85,7 +85,7 @@
           <text class="digest-more">{{item.digest.read}}</text>
         </view>
         <view class="card">
-          <view wx:for="{{item.rows}}" wx:for-item="row" wx:key="date" class="row day {{row.kind === 'gap' ? 'gapday' : ''}}" hover-class="none" data-date="{{row.date}}" data-kind="{{row.kind}}" bindtap="onRow">
+          <view wx:for="{{item.rows}}" wx:for-item="row" wx:key="date" class="row day {{row.kind === 'gap' ? 'gapday' : ''}}" hover-class="tap-on" data-date="{{row.date}}" data-kind="{{row.kind}}" bindtap="onRow">
             <view class="dt {{row.kind === 'gap' ? 'gap' : ''}}">
               <text class="num">{{row.num}}</text>
               <text class="wd">{{row.wd}}</text>
@@ -97,12 +97,12 @@
             <view class="i i-chev"></view>
           </view>
           <view class="row foot" wx:if="{{item.canGen}}">
-            <button class="lk" hover-class="none" data-kind="week" data-key="{{item.wk}}" bindtap="genDigest">让回信写这一周的周信 ›</button>
+            <button class="lk" hover-class="tap-on" data-kind="week" data-key="{{item.wk}}" bindtap="genDigest">让回信写这一周的周信 ›</button>
           </view>
         </view>
       </block>
       <view wx:if="{{more}}" style="text-align:center;margin-top:38.462rpx;">
-        <button class="btn ghost sm" hover-class="none" bindtap="older">更早的信</button>
+        <button class="btn ghost sm" hover-class="tap-on" bindtap="older">更早的信</button>
       </view>
     </block>
   </view>
