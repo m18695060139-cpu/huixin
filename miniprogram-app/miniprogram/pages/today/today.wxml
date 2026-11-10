@@ -94,11 +94,11 @@
         </button>
         <text class="pill green">{{item.pill || '完成'}}</text>
       </view>
-      <button wx:if="{{showDoneLine}}" class="row done-line" hover-class="none" data-tab="done" bindtap="goLists">
+      <view wx:if="{{showDoneLine}}" class="row done-line" hover-class="none" data-tab="done" bindtap="goLists">
         <view class="ck on"><view class="box"><view class="tick"></view></view></view>
         <view class="row-main"><text class="row-t">今天完成了 {{doneCount}} 件</text></view>
         <text class="lk muted">查看 ›</text>
-      </button>
+      </view>
       <view class="row foot">
         <button class="lk" hover-class="none" bindtap="newTodo">＋ 加一件事</button>
         <button class="lk muted" hover-class="none" data-tab="todos" bindtap="goLists">{{todoMoreLabel}}</button>

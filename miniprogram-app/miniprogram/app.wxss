@@ -102,7 +102,7 @@ h2 { margin: 0; font-size: 38.462rpx; font-weight: 700; }
 .small { font-size: 25rpx; }
 
 /* ── 卡片与分组 ── */
-.card { background: var(--card); border-radius: var(--r); overflow: hidden; }
+.card { background-color: var(--card, #FFFFFF); border-radius: var(--r); overflow: hidden; display: block; }
 .card.pad { padding: 30.769rpx; }
 .gh { display: flex; justify-content: space-between; align-items: baseline; gap: 23.077rpx; padding: 42.308rpx 7.692rpx 15.385rpx; }
 .gh span { font-size: 25rpx; color: var(--sub); }
@@ -575,6 +575,7 @@ button {
   border-radius: 0;
 }
 button::after { display: none; border: none; }
+button.row, .row.day { background-color: transparent; }
 button.card, button.envelope, button.tile, button.row, button.digest {
   width: 100%;
   margin-left: 0;

@@ -83,7 +83,7 @@
           <text class="digest-more">{{item.digest.read}}</text>
         </view>
         <view class="card">
-          <button wx:for="{{item.rows}}" wx:for-item="row" wx:key="date" class="row day {{row.kind === 'gap' ? 'gapday' : ''}}" hover-class="none" data-date="{{row.date}}" data-kind="{{row.kind}}" bindtap="onRow">
+          <view wx:for="{{item.rows}}" wx:for-item="row" wx:key="date" class="row day {{row.kind === 'gap' ? 'gapday' : ''}}" hover-class="none" data-date="{{row.date}}" data-kind="{{row.kind}}" bindtap="onRow">
             <view class="dt {{row.kind === 'gap' ? 'gap' : ''}}">
               <text class="num">{{row.num}}</text>
               <text class="wd">{{row.wd}}</text>
@@ -93,7 +93,7 @@
               <text class="sub">{{row.kind === 'gap' ? '点一下补写' : row.meta}}</text>
             </view>
             <text class="chev">›</text>
-          </button>
+          </view>
           <view class="row foot" wx:if="{{item.canGen}}">
             <button class="lk" hover-class="none" data-kind="week" data-key="{{item.wk}}" bindtap="genDigest">让回信写这一周的周信 ›</button>
           </view>
