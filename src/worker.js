@@ -23,7 +23,7 @@ export default {
     }
   },
 
-  // 每天北京时间 7:00：周一送周信，季初送季信，元旦送年信
+  // 每天北京时间 6:00：周一送周信，季初送季信，元旦送年信
   async scheduled(event, env, ctx) {
     ctx.waitUntil(deliverDue(env, cstDate()));
   },

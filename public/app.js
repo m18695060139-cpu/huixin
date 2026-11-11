@@ -873,7 +873,7 @@
   function digestList(kind, t) {
     const list = S.digests.filter(d => d.kind === kind);
     const kindN = { week: '周信', quarter: '季信', year: '年信' }[kind];
-    const when = { week: '每周一早上 7 点', quarter: '每季度第一天早上 7 点', year: '每年元旦早上 7 点' }[kind];
+    const when = { week: '每周一早上 6 点', quarter: '每季度第一天早上 6 点', year: '每年元旦早上 6 点' }[kind];
     const curKey = kind === 'week' ? weekKey(t) : kind === 'quarter' ? quarterKey(t) : t.slice(0, 4);
     const curName = { week: '本周', quarter: '这一季', year: '今年' }[kind];
     let html = `<p class="note" style="margin-top:18px">${kindN}会在${when}自动送达。也可以现在就让回信先写一封${curName}到目前为止的。</p>
