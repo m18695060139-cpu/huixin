@@ -132,12 +132,6 @@
             <view class="i i-chev st-chev"></view>
           </view>
         </view>
-        <view class="st-row" hover-class="st-hover" bindtap="onImport">
-          <view class="st-body">
-            <text class="st-t st-grow">从网页版导入 JSON</text>
-            <view class="i i-chev st-chev"></view>
-          </view>
-        </view>
       </view>
     </view>
 
