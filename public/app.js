@@ -1065,7 +1065,7 @@
 
   // ───────────── 设置 · API 密钥（只读接口） ─────────────
   // V.key：{ loading, data: { exists, hint, created_at, last_used_at }, fresh（刚生成的完整密钥，只显示这一次）, busy, error }
-  const KEY_RISK = '有了这串密钥，任何人或工具都能读到你全部的信、回信、待办、点子、习惯和周信季信。只交给你信任的 agent 或工具；不要发到群里、截图，也不要提交到代码仓库。对方拿到的数据会离开回信，之后怎么用，回信管不了。怀疑泄露就马上作废。接口只能读，不能改。';
+  const KEY_RISK = '有了这串密钥，就能读到你全部的信、待办、点子和习惯。只交给你信任的 agent，别发给别人；担心泄露就点作废。接口只能读，不能改。';
   async function loadKey() {
     V.key = { loading: true };
     try { V.key = { data: await api('GET', '/api-key') }; } catch (e) { V.key = { error: e.message }; }
@@ -1091,21 +1091,23 @@
   }
   function keySettings() {
     const K = V.key || {};
-    const wrap = inner => `<div class="field"><span class="lab">API 密钥</span>${inner}
-      <p class="note" style="margin:0 4px">${KEY_RISK}</p></div>`;
+    const wrap = inner => `<div class="field"><span class="lab">API 密钥</span>${inner}</div>`;
+    const risk = `<div class="keyrisk">${KEY_RISK}</div>`;
     if (K.loading) return wrap(`<div class="group"><div class="empty" style="padding:14px">读取中…</div></div>`);
     if (K.error || !K.data) return wrap(`<div class="group"><div class="empty" style="padding:14px">${esc(K.error || '联网后可以设置')}</div></div>`);
     const d = K.data;
     let rows;
     if (!d.exists) {
       rows = `<div class="row"><span class="row-main"><span>还没有密钥</span><span class="sub">生成后，你信任的 agent 或工具可以用它读取你的数据</span></span></div>
+        ${risk}
         <div class="row foot"><button class="lk" data-act="key-new" ${K.busy ? 'disabled' : ''}>${K.busy ? '生成中…' : '生成密钥'}</button></div>`;
     } else {
       rows = `<div class="row"><span class="row-main"><span>密钥 ${esc(d.hint)}…</span><span class="sub">${esc(bjTime(d.created_at))} 生成 · ${d.last_used_at ? '最近使用 ' + esc(bjTime(d.last_used_at)) : '还没用过'}</span></span></div>
+        ${risk}
         <div class="keydoc-wrap">
           <pre class="keybox" id="key-doc">${esc(keyDoc(K.fresh))}</pre>
           <div class="keydoc-foot"><button class="btn sm" data-act="key-copy">${K.fresh ? '复制' : '复制用法'}</button>
-          <span class="sub">${K.fresh ? '只显示这一次。现在复制好，关掉设置就再也看不到了。' : '整段交给你的 agent，再把密钥那一行换成你保存的密钥。'}</span></div></div>
+          <span class="keyhint">${K.fresh ? '只显示这一次，先复制好。' : '把密钥那行换成你保存的密钥。'}</span></div></div>
         <div class="row foot"><button class="lk" data-act="key-regen" ${K.busy ? 'disabled' : ''}>${K.busy ? '生成中…' : '重新生成'}</button>
         <button class="lk" style="color:var(--danger)" data-act="key-revoke" ${K.busy ? 'disabled' : ''}>作废</button></div>`;
     }

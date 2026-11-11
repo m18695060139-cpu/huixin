@@ -430,4 +430,6 @@ textarea.input { line-height: 1.6; resize: vertical; }
 .keydoc-wrap { padding: 12px 14px 14px; border-top: .5px solid var(--sep); }
 .keybox { margin: 0; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; word-break: break-all; max-width: 100%; overflow-x: hidden; background: var(--tile); color: var(--text); border-radius: 10px; padding: 10px 12px; user-select: all; -webkit-user-select: all; }
 .keydoc-foot { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
-.keydoc-foot .sub { flex: 1; min-width: 0; line-height: 1.45; }
+.keyhint { flex: 1; min-width: 0; font-size: 15px; line-height: 1.5; color: var(--text); }
+.keyrisk { padding: 12px 14px; border-top: .5px solid var(--sep); font-size: 15px; line-height: 1.6; color: var(--text); }
+.keyrisk + .row { border-top: .5px solid var(--sep); }
