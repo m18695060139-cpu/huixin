@@ -40,6 +40,7 @@ Page({
     this.data.replyLoading = true;
     this.data.replyFail = '';
     this.setData({ replyLoading: true, replyFail: '' });
+    state.setReplying(this.data.date);
     this.paint();
     try {
       const res = await wx.cloud.callFunction({ name: 'reply', data: { date: this.data.date } });
@@ -67,6 +68,8 @@ Page({
       this.data.replyFail = '回信这次没写成，稍后再试。你写的信还在。';
       this.setData({ replyLoading: false, replyFail: this.data.replyFail });
       this.paint();
+    } finally {
+      state.setReplying('');
     }
   },
   retryReply() {

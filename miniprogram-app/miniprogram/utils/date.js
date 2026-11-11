@@ -1,39 +1,55 @@
-// 日子按手机本地时间算。使用时把手机时区设为北京时间，和网页版一致：凌晨 4 点前算前一天。
+// 日子、凌晨 4 点换日、早上 6 点送达，一律按北京时间（UTC+8），不看手机时区。
 
 function pad(n) {
   return (n < 10 ? '0' : '') + n;
 }
 
+function parts(d) {
+  const u = new Date((d || new Date()).getTime() + 8 * 3600e3);
+  return {
+    y: u.getUTCFullYear(),
+    m: u.getUTCMonth() + 1,
+    day: u.getUTCDate(),
+    h: u.getUTCHours(),
+    min: u.getUTCMinutes(),
+  };
+}
+
 function localDate(d) {
-  d = d || new Date();
-  return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const p = parts(d || new Date());
+  return p.y + '-' + pad(p.m) + '-' + pad(p.day);
 }
 
 function addDays(s, n) {
-  const d = new Date(s + 'T00:00:00');
-  d.setDate(d.getDate() + n);
-  return localDate(d);
+  const d = new Date(s + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + n);
+  return d.toISOString().slice(0, 10);
 }
 
 function diffDays(a, b) {
-  return Math.round((new Date(a + 'T00:00:00') - new Date(b + 'T00:00:00')) / 86400e3);
+  return Math.round((new Date(a + 'T00:00:00Z') - new Date(b + 'T00:00:00Z')) / 86400e3);
 }
 
 const WD = ['日', '一', '二', '三', '四', '五', '六'];
 function wd(s) {
-  return WD[new Date(s + 'T00:00:00').getDay()];
+  return WD[new Date(s + 'T00:00:00Z').getUTCDay()];
 }
 
 function cn(s) {
   return Number(s.slice(5, 7)) + '月' + Number(s.slice(8, 10)) + '日';
 }
 
+function hour(d) {
+  return parts(d || new Date()).h;
+}
+
 function hm(d) {
-  return pad(d.getHours()) + ':' + pad(d.getMinutes());
+  const p = parts(d || new Date());
+  return pad(p.h) + ':' + pad(p.min);
 }
 
 function weekKey(s) {
-  return addDays(s, -((new Date(s + 'T00:00:00').getDay() + 6) % 7));
+  return addDays(s, -((new Date(s + 'T00:00:00Z').getUTCDay() + 6) % 7));
 }
 
 function today(now) {
@@ -42,15 +58,15 @@ function today(now) {
 
 function letterDay(now) {
   now = now || new Date();
-  return now.getHours() < 4 ? addDays(today(now), -1) : today(now);
+  return hour(now) < 4 ? addDays(today(now), -1) : today(now);
 }
 
 function cutoff(d) {
-  return new Date(addDays(d, 1) + 'T04:00:00');
+  return new Date(addDays(d, 1) + 'T04:00:00+08:00');
 }
 
 function deliverAt(d) {
-  return new Date(addDays(d, 1) + 'T06:00:00');
+  return new Date(addDays(d, 1) + 'T06:00:00+08:00');
 }
 
 function sendsTonight(d, now) {
@@ -72,6 +88,6 @@ function isDate(s) {
 }
 
 module.exports = {
-  pad, localDate, addDays, diffDays, wd, cn, hm, weekKey,
+  pad, localDate, addDays, diffDays, wd, cn, hour, hm, weekKey,
   today, letterDay, cutoff, deliverAt, sendsTonight, hash, isDate,
 };

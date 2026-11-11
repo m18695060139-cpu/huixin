@@ -40,12 +40,14 @@ function uid(prefix) {
 }
 
 function stillSealed(letter, deliver) {
-  if (deliver === 'now' || !letter.sent_at || letter.opened) return false;
-  const sent = new Date(letter.sent_at).getTime();
+  if (deliver === 'now' || !letter || letter.opened) return false;
+  if (!letter.reply || letter.reply.imported) return false;
+  const stamp = new Date(letter.replied_at || Date.now()).getTime();
+  if (isNaN(stamp)) return false;
   const next = addDays(letter.date, 1);
   const cutoff = new Date(next + 'T04:00:00+08:00').getTime();
   const deliverAt = new Date(next + 'T06:00:00+08:00').getTime();
-  if (!(sent < cutoff)) return false;
+  if (!(stamp < cutoff)) return false;
   return Date.now() < deliverAt;
 }
 
@@ -215,7 +217,7 @@ exports.main = async (event) => {
       replied_at: repliedAt,
       todos: madeTodos,
       ideas: madeIdeas,
-      sealed: stillSealed(letter, settings.deliver),
+      sealed: stillSealed(Object.assign({}, letter, { reply: reply, replied_at: repliedAt }), settings.deliver),
     };
   } catch (e) {
     console.error(e);

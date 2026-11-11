@@ -27,8 +27,16 @@ function blank() {
 
 let data = blank();
 let writeTarget = null;
+let replyingDate = '';
 
 function get() { return data; }
+
+function setReplying(date) {
+  replyingDate = date || '';
+  emit();
+}
+
+function getReplying() { return replyingDate; }
 
 function subscribe(fn) {
   listeners.push(fn);
@@ -358,5 +366,6 @@ async function refresh() {
 module.exports = {
   get, subscribe, boot, refresh, setOnline, clearWarn, hold, unhold,
   upsertLetter, markOpened, upsertTodo, removeTodo, removeIdea, upsertIdea, upsertHabit, setLog,
+  setReplying, getReplying,
   patchSettings, skipBackfill, setWriteTarget, takeWriteTarget, noteCloudId, resetLocal,
 };

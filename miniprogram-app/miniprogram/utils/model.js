@@ -24,10 +24,10 @@ function deliverNow(S) {
 function isSealed(S, d, now) {
   if (deliverNow(S)) return false;
   const l = letterOf(S, d);
-  if (!l || !l.sent_at || l.opened) return false;
+  if (!l || !l.reply || l.reply.imported || l.opened) return false;
   now = now || new Date();
   if (now >= date.deliverAt(d)) return false;
-  const sentAt = new Date(l.sent_at);
+  const sentAt = l.replied_at ? new Date(l.replied_at) : now;
   if (isNaN(sentAt.getTime())) return false;
   return sentAt < date.cutoff(d);
 }
@@ -162,9 +162,9 @@ function firstLine(text) {
   return lines.find(s => !/^[^，。,]{1,12}[，,：:]$/.test(s)) || lines[0] || '';
 }
 
-function heroBlock(S, now) {
+function heroBlock(S, now, replying) {
   const t = date.today(now);
-  const h = now.getHours();
+  const h = date.hour(now);
   const night = h >= 17 || h < 4;
   const ld = date.letterDay(now);
   const yday = date.addDays(t, -1);
@@ -177,12 +177,13 @@ function heroBlock(S, now) {
       sub: 'No.' + letterNo(S, u.date) + ((u.reply && u.reply.todos && u.reply.todos.length) ? (' · ' + u.reply.todos.length + ' 件待办') : '') + ((u.reply && u.reply.ideas && u.reply.ideas.length) ? (' · ' + u.reply.ideas.length + ' 个点子') : ''),
     };
   }
-  if (hasSent(S, ld) && isSealed(S, ld, now)) {
+  const busy = !!(replying && replying.date === ld && date.sendsTonight(ld, now));
+  if (hasText(S, ld) && (isSealed(S, ld, now) || busy)) {
     return {
       type: 'sealed',
       date: ld,
       title: ld === date.letterDay(now) ? '今晚的信已寄出' : date.cn(ld) + '的信已寄出',
-      sub: '回信明早 6:00 送到',
+      sub: busy ? '回信正在连夜整理…' : '回信明早 6:00 送到',
     };
   }
   const skip = S.skip || {};
@@ -245,7 +246,7 @@ function todayModel(S, now, opts) {
   opts = opts || {};
   now = now || new Date();
   const t = date.today(now);
-  const h = now.getHours();
+  const h = date.hour(now);
   const just = opts.justDone || {};
   const todos = openTodos(S, t, now);
   const showT = todos.slice(0, 4).map(x => todoView(S, x, t));
@@ -279,7 +280,7 @@ function todayModel(S, now, opts) {
     hello: (h >= 4 && h < 11) ? '早上好' : '今天',
     count: totalLetters(S),
     todoTitle: (h >= 4 && h < 12) ? '今天要做的' : '待处理',
-    hero: heroBlock(S, now),
+    hero: heroBlock(S, now, opts.replying),
     todos: showT,
     justDone: justList,
     todoMore: Math.max(0, todos.length - showT.length),
@@ -303,7 +304,7 @@ function writeMeta(S, day, now) {
   now = now || new Date();
   const t = date.today(now);
   const ld = date.letterDay(now);
-  const h = now.getHours();
+  const h = date.hour(now);
   const isToday = day === ld;
   const label = isToday ? ((h >= 17 || h < 4) ? '今晚' : '今天') : (day === date.addDays(ld, -1) ? '补写昨天' : '补写');
   const l = letterOf(S, day) || {};

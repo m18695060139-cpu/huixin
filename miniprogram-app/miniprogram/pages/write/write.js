@@ -143,6 +143,7 @@ Page({
     });
     this.setTab(1, !tonight);
     if (AI_ENABLED && wx.cloud) {
+      state.setReplying(this.data.date);
       try {
         const res = await wx.cloud.callFunction({ name: 'reply', data: { date: this.data.date } });
         const body = (res && res.result) || {};
@@ -160,6 +161,7 @@ Page({
       } catch (e) {
         this.setData({ sentBusy: false, sentReady: false, sentFail: true });
       }
+      state.setReplying('');
     } else {
       this.setData({ sentBusy: false, sentReady: true });
     }
@@ -173,6 +175,7 @@ Page({
   retryReply() {
     const date = this.data.date;
     this.setData({ sentBusy: true, sentFail: false, sentReady: false });
+    state.setReplying(date);
     wx.cloud.callFunction({ name: 'reply', data: { date: date } }).then(res => {
       const body = (res && res.result) || {};
       if (body.ok && body.reply) {
@@ -180,9 +183,11 @@ Page({
       }
       this.setData({ sentBusy: false, sentReady: !!body.ok, sentFail: !body.ok });
       this.paintAround();
-    }).catch(() => this.setData({ sentBusy: false, sentFail: true, sentReady: false }));
+    }).catch(() => this.setData({ sentBusy: false, sentFail: true, sentReady: false }))
+      .then(() => state.setReplying(''));
   },
   takeBack() {
+    state.setReplying('');
     this.setData({ sentShow: false, editing: true, text: this._text || this.data.meta.text || '' });
     this.setTab(1, false);
   },

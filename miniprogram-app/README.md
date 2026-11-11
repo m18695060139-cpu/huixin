@@ -61,7 +61,7 @@
 4. 云环境 ID 已写成 `huixin-d1g2tdmkz68dc5a5d`（`miniprogram/config.js`，云函数的 `cloud.init` 也是这个环境）。
 5. 工具里对 `cloudfunctions` 下每个函数右键「上传并部署：云端安装依赖」。`reply`、`digest`、`demoSeed` 各做一次，否则拆信、周信和示例数据会找不到函数。或用下面的上传脚本。
 6. 云开发控制台新建集合（第一次写入有时会自动出现）：`letters`、`todos`、`ideas`、`habits`、`habit_logs`、`settings`、`digests`。权限全部选 **仅创建者可读写**。规则原文在 `docs/数据库权限.json`。
-7. 查询若提示缺索引，按开发者工具里的链接创建即可。建议字段也写在那份 JSON 里。
+7. 查询若提示缺索引，按开发者工具里的链接创建即可。周信按日期范围查库，建议在云开发控制台为这些字段建复合索引（代码不会替你建）：`letters` 的 `_openid + date`，`todos` 的 `_openid + done_at`、`_openid + dropped_at`、`_openid + updated_at`，`ideas` 的 `_openid + status + created`，`habit_logs` 的 `_openid + date`，`digests` 的 `_openid + kind + key`。
 
 保存文字时，云函数 `save` 会调用 `cloud.openapi.security.msgSecCheck`（场景值 1，version 2）。判定为 risky：提示「内容包含不适合保存的信息，请修改后再存」，草稿留在输入框。review 或接口故障：仍保存，并在记录上做标记，不因为接口挡住你。
 
@@ -71,7 +71,9 @@
 
 网页版这个分支**没有**加导出按钮（不能改网页版文件）。在已登录的网页版里打开浏览器开发工具，请求 `GET /api/bootstrap`，把返回的 JSON 存成文件，发到微信「文件传输助手」。小程序「设置 → 选择 JSON 文件」会交给云函数 `importFromWeb`。
 
-导入保留：信的正文、心情、精力、待办、点子、习惯和打卡、称呼、外观、自省问题。丢掉：回信正文、周信季信年信、账号密码。同一天的信、同一个 id 再导一次会覆盖更新，不会复制出两份。想看带回复的整套示例，用设置里的「载入示例数据」。
+导入保留：信的正文、回信正文（`reply`）和写好的时间（`replied_at`）、周信季信年信、心情、精力、待办、点子、习惯和打卡、称呼、外观、自省问题。丢掉：账号密码。
+
+已经导入过的账号，用同一个 JSON 再走一次「设置 → 选择 JSON 文件」即可补回信和周信。已经在小程序里的信、待办、点子、习惯不会被盖掉，也不会被删掉；只填当时空着的回信、`replied_at` 和还没有的周信季信年信。想看带回复的整套示例，用设置里的「载入示例数据」。
 
 `/api/bootstrap` 只含最近大约 120 天的信和未完成的待办。文件里有多少，就进多少。
 

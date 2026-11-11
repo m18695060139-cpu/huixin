@@ -5,6 +5,7 @@ const { guard } = require('./sec');
 
 cloud.init({ env: 'huixin-d1g2tdmkz68dc5a5d', timeout: 60000 });
 const db = cloud.database();
+const _ = db.command;
 
 const HUNYUAN_MODEL = 'hy3';
 const HUNYUAN_FALLBACK = 'hy3-preview';
@@ -108,6 +109,10 @@ async function listWhere(coll, where) {
   return out;
 }
 
+function inRange(start, end) {
+  return _.gte(start).and(_.lte(end));
+}
+
 async function makeDigest(openid, kind, key) {
   if (kind === 'week') key = weekKey(isDate(key) ? key : cstToday());
   if (kind === 'quarter' && !/^\d{4}-Q[1-4]$/.test(key)) key = quarterKey(cstToday());
@@ -115,25 +120,28 @@ async function makeDigest(openid, kind, key) {
   const range = periodRange(kind, key);
   const start = range[0];
   const end = range[1];
-  const letters = (await listWhere('letters', { _openid: openid })).filter(l => l.date >= start && l.date <= end && String(l.text || '').trim());
+  const nextDay = addDays(end, 1);
+  const letters = (await listWhere('letters', { _openid: openid, date: inRange(start, end) })).filter(l => String(l.text || '').trim());
   letters.sort((a, b) => a.date < b.date ? -1 : 1);
   if (!letters.length) return null;
-  const settings = (await listWhere('settings', { _openid: openid }))[0] || {};
-  const todos = await listWhere('todos', { _openid: openid });
-  const ideas = await listWhere('ideas', { _openid: openid });
+  const settingsRes = await db.collection('settings').where({ _openid: openid }).limit(1).get();
+  const settings = (settingsRes.data && settingsRes.data[0]) || {};
+  const done = (await listWhere('todos', { _openid: openid, done_at: inRange(start, end) })).filter(t => t.done);
+  const dropped = (await listWhere('todos', { _openid: openid, dropped_at: inRange(start, end) })).filter(t => t.dropped_at);
+  const pending = (await listWhere('todos', { _openid: openid, updated_at: _.gte(start).and(_.lt(nextDay)) })).filter(t => !t.done && !t.dropped_at && t.note && String(t.updated_at || '').slice(0, 10) >= start && String(t.updated_at || '').slice(0, 10) <= end);
+  const ideas = kind === 'week'
+    ? (await listWhere('ideas', { _openid: openid, status: 'open', created: _.lte(end) })).filter(i => i.created && i.created <= end).slice(0, 8)
+    : [];
   const habits = await listWhere('habits', { _openid: openid });
-  const logs = await listWhere('habit_logs', { _openid: openid });
+  const logs = await listWhere('habit_logs', { _openid: openid, date: inRange(start, end) });
   const per = kind === 'week' ? 900 : kind === 'quarter' ? 220 : 90;
   const lines = ['【时间】' + start + ' 至 ' + end, '【他的名字】' + (settings.name || '（未设置）'), '【每天的信】'];
   letters.forEach(l => {
     const body = kind === 'week' ? l.text : ((l.reply && l.reply.summary) || l.text);
     lines.push(l.date + (l.energy ? ' · 精力 ' + l.energy + '/5' : '') + (l.mood ? ' · ' + l.mood : '') + '\n' + String(body).slice(0, per));
   });
-  const done = todos.filter(t => t.done && t.done_at >= start && t.done_at <= end);
   lines.push('【完成的待办】' + (done.length ? '\n' + done.map(t => '- ' + t.text + (t.note ? '（他的备注：' + String(t.note).slice(0, 120) + '）' : '')).join('\n') : '（无）'));
-  const dropped = todos.filter(t => t.dropped_at && t.dropped_at >= start && t.dropped_at <= end);
   if (dropped.length) lines.push('【放下的待办（决定不做或做不了）】\n' + dropped.map(t => '- ' + t.text + (t.note ? '（原因 / 备注：' + String(t.note).slice(0, 120) + '）' : '')).join('\n'));
-  const pending = todos.filter(t => !t.done && !t.dropped_at && t.note && String(t.updated_at || '').slice(0, 10) >= start && String(t.updated_at || '').slice(0, 10) <= end);
   if (pending.length) lines.push('【还在做的待办和他写的备注】\n' + pending.map(t => '- ' + t.text + '：' + String(t.note).slice(0, 120)).join('\n'));
   const days = Math.round((new Date(end + 'T00:00:00Z') - new Date(start + 'T00:00:00Z')) / 86400e3) + 1;
   const active = habits.filter(h => !h.archived);
@@ -143,12 +151,11 @@ async function makeDigest(openid, kind, key) {
       return '- ' + h.name + '：' + n + ' / ' + days + ' 天';
     }).join('\n'));
   }
-  if (kind === 'week') {
-    const stale = ideas.filter(i => i.status === 'open' && i.created && i.created <= end).slice(0, 8);
-    if (stale.length) lines.push('【点子库里还没动的】\n' + stale.map(i => '- ' + i.text + '（' + i.created + ' 记下）').join('\n'));
+  if (kind === 'week' && ideas.length) {
+    lines.push('【点子库里还没动的】\n' + ideas.map(i => '- ' + i.text + '（' + i.created + ' 记下）').join('\n'));
   }
   if (kind === 'year') {
-    const qs = (await listWhere('digests', { _openid: openid, kind: 'quarter' })).filter(d => String(d.key || '').indexOf(key + '-') === 0);
+    const qs = await listWhere('digests', { _openid: openid, kind: 'quarter', key: _.gte(key + '-').and(_.lt(key + '.')) });
     if (qs.length) lines.push('【这一年的季信】\n' + qs.map(q => q.key + '：' + ((q.content && q.content.letter) || '')).join('\n'));
   }
   const asked = await ask([
@@ -164,22 +171,29 @@ async function makeDigest(openid, kind, key) {
   content.stats = { letters: letters.length, days: days, energyAvg: avg, todosDone: done.length };
   content.range = [start, end];
   const now = new Date().toISOString();
-  const existing = (await listWhere('digests', { _openid: openid, kind: kind, key: key }))[0];
+  const existingRes = await db.collection('digests').where({ _openid: openid, kind: kind, key: key }).limit(1).get();
+  const existing = (existingRes.data && existingRes.data[0]) || null;
   const data = { kind: kind, key: key, content: content, created_at: now, _openid: openid };
   if (existing) await db.collection('digests').doc(existing._id).update({ data: { content: content, created_at: now } });
   else await db.collection('digests').add({ data: data });
   return { kind: kind, key: key, created_at: now, content: content };
 }
 
-async function openids() {
-  const rows = await listWhere('settings', {});
+async function distinctOpenids(coll) {
   const set = {};
-  rows.forEach(r => { if (r._openid) set[r._openid] = true; });
-  if (!Object.keys(set).length) {
-    const letters = await listWhere('letters', {});
-    letters.forEach(r => { if (r._openid) set[r._openid] = true; });
+  for (let skip = 0; skip < 2000; skip += 100) {
+    const res = await db.collection(coll).where({ _id: _.exists(true) }).field({ _openid: true }).skip(skip).limit(100).get();
+    const rows = res.data || [];
+    rows.forEach(r => { if (r._openid) set[r._openid] = true; });
+    if (rows.length < 100) break;
   }
   return Object.keys(set);
+}
+
+async function openids() {
+  const fromSettings = await distinctOpenids('settings');
+  if (fromSettings.length) return fromSettings;
+  return distinctOpenids('letters');
 }
 
 async function deliverDue(today) {

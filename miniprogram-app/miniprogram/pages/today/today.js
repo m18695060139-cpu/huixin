@@ -18,9 +18,11 @@ Page({
     state.refresh().finally(() => wx.stopPullDownRefresh());
   },
   paint() {
+    const replyingDate = state.getReplying();
     const view = model.todayModel(state.get(), new Date(), {
       justDone: this._just || {},
       memoryOffset: this.data.memoryOffset || 0,
+      replying: replyingDate ? { date: replyingDate } : null,
     });
     this.setData(view);
     this.setTab(0, true);
