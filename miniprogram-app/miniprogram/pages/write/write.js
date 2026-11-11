@@ -166,7 +166,7 @@ Page({
       this.setData({ sentBusy: false, sentReady: true });
     }
     if (!tonight) {
-      await actions.markOpened(this.data.date);
+      actions.markOpened(this.data.date);
       wx.navigateTo({ url: '/pages/letter/letter?date=' + this.data.date });
     }
   },

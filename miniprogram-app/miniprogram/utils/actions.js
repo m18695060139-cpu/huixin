@@ -218,8 +218,13 @@ async function ideaToTodo(id) {
   if (!i) return { ok: false };
   const t = today();
   const due = require('./date').addDays(t, 3);
-  await setIdeaStatus(id, 'todo');
-  return saveTodo({ text: i.text, due: due, source_date: i.source_date || '', created: t });
+  // 两条一起寄，不用等第一条回来；待办没过检查就把点子放回点子库
+  const [, r] = await Promise.all([
+    setIdeaStatus(id, 'todo'),
+    saveTodo({ text: i.text, due: due, source_date: i.source_date || '', created: t }),
+  ]);
+  if (r && r.code === 'risky') setIdeaStatus(id, i.status || 'open');
+  return r;
 }
 
 async function saveHabit(fields) {

@@ -39,9 +39,9 @@ Page({
   skipBackfill(e) {
     state.skipBackfill(e.currentTarget.dataset.date);
   },
-  async openEnv(e) {
+  openEnv(e) {
     const d = e.currentTarget.dataset.date;
-    await actions.markOpened(d);
+    actions.markOpened(d);   // 本机先标成已拆，云端后台存，不用等
     wx.navigateTo({ url: '/pages/letter/letter?date=' + d });
   },
   openRead(e) {
@@ -50,11 +50,11 @@ Page({
   goLists(e) {
     wx.navigateTo({ url: '/pages/lists/lists?tab=' + (e.currentTarget.dataset.tab || 'todos') });
   },
-  async onToggle(e) {
+  onToggle(e) {
     const id = e.currentTarget.dataset.id;
-    const before = (state.get().todos || []).find(t => t.id === id);
-    await actions.toggleTodo(id);
-    if (before && !before.done) {
+    const before = Object.assign({}, (state.get().todos || []).find(t => t.id === id));
+    actions.toggleTodo(id);   // 本机马上打勾，云端后台存
+    if (before.id && !before.done) {
       this._just = this._just || {};
       this._just[id] = true;
       const self = this;
@@ -68,14 +68,13 @@ Page({
   },
   onIdeaDrop(e) {
     const id = e.currentTarget.dataset.id;
-    actions.setIdeaStatus(id, 'dropped').then(() => {
-      this.toast('已放下', { act: 'idea-undrop', id: id, label: '撤回' });
-    });
+    actions.setIdeaStatus(id, 'dropped');
+    this.toast('已放下', { act: 'idea-undrop', id: id, label: '撤回' });
   },
   onIdeaTodo(e) {
+    this.toast('已转成待办');
     actions.ideaToTodo(e.currentTarget.dataset.id).then(r => {
       if (r && r.code === 'risky') this.toast(r.message);
-      else this.toast('已转成待办');
     });
   },
 });

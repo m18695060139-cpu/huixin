@@ -61,38 +61,44 @@ module.exports = Behavior({
       const bar = typeof this.getTabBar === 'function' && this.getTabBar();
       if (bar) bar.setData({ hidden: false });
     },
-    async onEditorSubmit(e) {
+    // 跟网页版一样先改本机、马上关掉面板，云端在后台慢慢存。
+    // 只有内容安全检查没过时才退回：本机已经回滚，再把刚写的内容原样放回面板，不会丢。
+    onEditorSubmit(e) {
       const d = e.detail || {};
+      const edItem = (this.data.ed && this.data.ed.item) || {};
       if (d.action === 'ask-drop') {
-        const item = Object.assign({}, (this.data.ed && this.data.ed.item) || {}, { note: d.note, text: d.text, id: d.id });
+        const item = Object.assign({}, edItem, { note: d.note, text: d.text, id: d.id });
         this.setData({
           ed: { show: true, mode: 'drop', item: item, token: Date.now() },
         });
         return;
       }
-      let r = { ok: true };
+      let job;
       let msg = '';
       let undo = null;
+      let reopen = null;
       if (d.mode === 'drop') {
-        r = await actions.dropTodo(d.id, d.note, true);
+        job = actions.dropTodo(d.id, d.note, true);
         msg = '已放下';
+        reopen = { mode: 'drop', item: Object.assign({}, edItem, { note: d.note }) };
       } else if (d.action === 'undrop') {
-        r = await actions.dropTodo(d.id, d.note, false);
+        job = actions.dropTodo(d.id, d.note, false);
         msg = '已恢复成待办';
       } else if (d.action === 'delete') {
-        r = await actions.deleteTodo(d.id);
+        job = actions.deleteTodo(d.id);
       } else if (d.action === 'to-todo') {
-        r = await actions.ideaToTodo(d.id);
+        job = actions.ideaToTodo(d.id);
         msg = '已转成待办';
       } else if (d.action === 'idea-drop') {
-        r = await actions.setIdeaStatus(d.id, 'dropped');
+        job = actions.setIdeaStatus(d.id, 'dropped');
         msg = '已放下';
         undo = { act: 'idea-undrop', id: d.id, label: '撤回' };
       } else if (d.mode === 'idea') {
-        r = await actions.saveIdea({ id: d.id, text: d.text, source_date: d.source_date || '' });
+        job = actions.saveIdea({ id: d.id, text: d.text, source_date: d.source_date || '' });
         msg = '已保存';
+        reopen = { mode: 'idea', item: Object.assign({}, edItem, { text: d.text }) };
       } else {
-        r = await actions.saveTodo({
+        job = actions.saveTodo({
           id: d.id,
           text: d.text,
           due: d.due,
@@ -100,14 +106,17 @@ module.exports = Behavior({
           source_date: d.source_date || '',
         });
         msg = '已保存';
-      }
-      if (r && r.code === 'risky') {
-        this.toast(r.message);
-        return;
+        reopen = { mode: 'todo', item: Object.assign({}, edItem, { text: d.text, due: d.due, note: d.note, focusNote: false }) };
       }
       this.closeEditor();
       if (msg) this.toast(msg, undo);
       if (typeof this.paint === 'function') this.paint();
+      Promise.resolve(job).then(r => {
+        if (!(r && r.code === 'risky')) return;
+        if (typeof this.paint === 'function') this.paint();
+        if (reopen && !(this.data.ed && this.data.ed.show)) this.openEditor(reopen.mode, reopen.item);
+        this.toast(r.message);
+      }).catch(() => { /* 网络失败已进离线队列，联网后自动补寄 */ });
     },
     onToastAct(e) {
       const act = e.detail || {};

@@ -48,25 +48,26 @@ Page({
   toggleDropped() {
     this.setData({ showDropped: !this.data.showDropped }, () => this.paint());
   },
-  async onToggle(e) {
+  onToggle(e) {
     const id = e.currentTarget.dataset.id;
-    await actions.toggleTodo(id);
+    actions.toggleTodo(id);   // 本机马上打勾，云端后台存
     this.paint();
   },
   onIdeaDrop(e) {
     const id = e.currentTarget.dataset.id;
+    this.toast('已放下', { act: 'idea-undrop', id: id, label: '撤回' });
     actions.setIdeaStatus(id, 'dropped').then(r => {
       if (r && r.code === 'risky') this.toast(r.message);
-      else this.toast('已放下', { act: 'idea-undrop', id: id, label: '撤回' });
     });
   },
   onIdeaTodo(e) {
+    this.toast('已转成待办');
     actions.ideaToTodo(e.currentTarget.dataset.id).then(r => {
       if (r && r.code === 'risky') this.toast(r.message);
-      else this.toast('已转成待办');
     });
   },
   onRestore(e) {
-    actions.setIdeaStatus(e.currentTarget.dataset.id, 'open').then(() => this.toast('已恢复到点子库'));
+    actions.setIdeaStatus(e.currentTarget.dataset.id, 'open');
+    this.toast('已恢复到点子库');
   },
 });

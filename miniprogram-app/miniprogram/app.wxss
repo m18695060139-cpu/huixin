@@ -226,7 +226,7 @@ h2 { margin: 0; font-size: 38.462rpx; font-weight: 700; }
 
 /* ── 寄出（夜色，固定深色） ── */
 .sent {
-  position: fixed; inset: 0; z-index: 30; background: #000000; color: #FFFFFF; overflow-y: auto;
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 30; background: #000000; color: #FFFFFF; overflow-y: auto;
   padding: calc(var(--safe-top) + 138.462rpx) 30.769rpx calc(var(--safe-bottom) + 46.154rpx);
   display: flex; flex-direction: column; align-items: center;
 }
@@ -346,7 +346,7 @@ details.mine .letter-text { padding: 0 30.769rpx 30.769rpx; font-size: 28.846rpx
 
 /* ── 二级页面（从底部升起的面板） ── */
 .sheet {
-  position: fixed; inset: 0; z-index: 20; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch;
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 20; background: var(--bg); overflow-y: auto; -webkit-overflow-scrolling: touch;
 }
 .sheet.enter { animation: sheetin .28s cubic-bezier(.2,.8,.2,1); }
 @keyframes sheetin { from { transform: translateY(76.923rpx); opacity: 0 } to { transform: none; opacity: 1 } }
@@ -551,7 +551,8 @@ button::after { display: none; border: none; }
 .privacy-body { font-size: 28.846rpx; line-height: 1.7; color: var(--text); }
 .privacy-body .h { font-size: 30.769rpx; font-weight: 700; margin: 34.615rpx 0 11.538rpx; }
 .tabbar .tab { position: relative; }
-.editor-root { position: relative; z-index: 30; }
+/* 要盖过页面的吸顶标题（40）、顶部挡板（39）和二级页顶栏（40）；提示条是 50，仍在面板上面 */
+.editor-root { position: relative; z-index: 45; }
 
 /* WXML 没有 h1/span/b，用同名 class 接上原来的元素选择器 */
 .h1 { margin: 0; font-family: var(--title-font); font-size: 65.385rpx; font-weight: 700; letter-spacing: -0.962rpx; line-height: 1.2; display: block; }

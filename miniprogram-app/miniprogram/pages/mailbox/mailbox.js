@@ -85,7 +85,7 @@ Page({
       return found || (g.rows || []).find(r => r.date === d);
     }, null);
     const letter = (state.get().letters || {})[d];
-    if (letter && letter.sent_at && !letter.opened && !(row && row.sealed)) await actions.markOpened(d);
+    if (letter && letter.sent_at && !letter.opened && !(row && row.sealed)) actions.markOpened(d);
     wx.navigateTo({ url: '/pages/letter/letter?date=' + d });
   },
   draw(chart) {
