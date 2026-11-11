@@ -54,7 +54,6 @@
 
 /* API 密钥：刚生成的完整密钥 */
 .st-key-body { flex-direction: column; align-items: stretch; gap: 19.231rpx; padding-top: 23.077rpx; padding-bottom: 23.077rpx; }
-.st-key { display: block; font-family: Menlo, Consolas, monospace; font-size: 25rpx; line-height: 1.5; word-break: break-all; color: var(--text); background-color: var(--tile); border-radius: 19.231rpx; padding: 19.231rpx 23.077rpx; }
+.st-key { display: block; font-family: Menlo, Consolas, monospace; font-size: 24rpx; line-height: 1.6; white-space: pre-wrap; word-break: break-all; overflow-wrap: anywhere; overflow: hidden; color: var(--text); background-color: var(--tile); border-radius: 19.231rpx; padding: 19.231rpx 23.077rpx; }
 .st-key-foot { display: flex; align-items: center; gap: 23.077rpx; }
 .st-copy { flex: none; height: 69.231rpx; line-height: 69.231rpx; padding: 0 30.769rpx; border-radius: 34.615rpx; background-color: var(--ink); color: var(--on-ink); font-size: 26.923rpx; font-weight: 600; }
-.st-foot + .st-foot { padding-top: 11.538rpx; }

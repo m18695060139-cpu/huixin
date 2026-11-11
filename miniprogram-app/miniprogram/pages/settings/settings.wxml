@@ -142,12 +142,12 @@
               </view>
             </view>
           </view>
-          <view class="st-row" wx:if="{{key.fresh}}">
+          <view class="st-row">
             <view class="st-body st-key-body">
-              <text class="st-key" user-select="true">{{key.fresh}}</text>
+              <text class="st-key" user-select="true">{{key.doc}}</text>
               <view class="st-key-foot">
-                <text class="st-sub st-grow">只显示这一次。现在复制好，关掉设置就再也看不到了。</text>
-                <view class="st-copy" hover-class="st-act-on" bindtap="onKeyCopy">复制</view>
+                <view class="st-copy" hover-class="st-act-on" bindtap="onKeyCopy">{{key.fresh ? '复制' : '复制用法'}}</view>
+                <text class="st-sub st-grow">{{key.fresh ? '只显示这一次。现在复制好，关掉设置就再也看不到了。' : '整段交给你的 agent，再把密钥那一行换成你保存的密钥。'}}</text>
               </view>
             </view>
           </view>
@@ -160,7 +160,6 @@
         </block>
       </view>
       <text class="st-foot">{{keyRisk}}</text>
-      <text class="st-foot">{{keyUsage}}</text>
     </view>
 
     <!-- 账号 -->

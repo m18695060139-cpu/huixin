@@ -6,7 +6,19 @@ const { AI_ENABLED } = require('../../config');
 
 // 只读 API 密钥：网页版设置里同一段话
 const KEY_RISK = '有了这串密钥，任何人或工具都能读到你全部的信、回信、待办、点子、习惯和周信季信。只交给你信任的 agent 或工具；不要发到群里、截图，也不要提交到代码仓库。对方拿到的数据会离开回信，之后怎么用，回信管不了。怀疑泄露就马上作废。接口只能读，不能改。';
-const keyUsage = url => '用法：GET ' + (url || '（接口地址开通后显示在这里）') + '，请求头 Authorization: Bearer 你的密钥。可选参数 since=YYYY-MM-DD，type=letters,todos,ideas,habits,digests。';
+// 给 agent 的一整段说明：地址、请求头（带上密钥）、参数、示例、返回什么。一个按钮整段复制（和网页版同一段）
+const KEY_HIDDEN = '你的密钥（只在生成时显示过，忘了就重新生成）';
+function keyDoc(url, key) {
+  const now = new Date(Date.now() + 8 * 3600e3).toISOString();
+  const since = now.slice(0, 8) + '01';
+  return ['回信只读 API',
+    '地址：GET ' + (url || '（接口地址开通后显示在这里）'),
+    '请求头：Authorization: Bearer ' + (key || KEY_HIDDEN),
+    '可选参数：since=YYYY-MM-DD（只要这天以后的）；type=letters,todos,ideas,habits,digests（只要某几类，逗号分隔）',
+    '示例：curl -H "Authorization: Bearer ' + (key || '<你的密钥>') + '" "' + (url || '<接口地址>') + '?since=' + since + '"',
+    '返回 JSON：letters（信和回信）、todos、ideas、habits、habit_logs、digests（周信季信年信）。只能读，不能改。每分钟最多 30 次。',
+  ].join('\n');
+}
 // ISO 时间 → 北京时间「11月11日 12:30」
 function bjTime(iso) {
   const t = new Date(iso).getTime();
@@ -16,6 +28,7 @@ function bjTime(iso) {
 }
 function keyView(r, fresh) {
   return {
+    doc: r.exists ? keyDoc(r.url || '', fresh) : '',
     exists: !!r.exists,
     hint: r.hint || '',
     createdText: bjTime(r.created_at),
@@ -27,7 +40,7 @@ function keyView(r, fresh) {
 Page({
   behaviors: [behavior],
   data: { themes: [], habits: [], name: '', qText: '', habitName: '', themeId: 'auto', deliver: 'morning',
-    key: { loading: true }, keyRisk: KEY_RISK, keyUsage: keyUsage('') },
+    key: { loading: true }, keyRisk: KEY_RISK },
   onShow() {
     this.hideShare();
     this.syncChrome();
@@ -36,7 +49,7 @@ Page({
     this.loadKey();
   },
   // 离开设置页就收起刚生成的完整密钥，和网页版关掉设置一样
-  onHide() { if (this.unsub) this.unsub(); this.setData({ 'key.fresh': '' }); },
+  onHide() { if (this.unsub) this.unsub(); this.setData({ 'key.fresh': '', 'key.doc': '' }); },
   onUnload() { if (this.unsub) this.unsub(); },
   paint(resetText) {
     const s = state.get().settings || {};
@@ -133,14 +146,14 @@ Page({
     if (!(this.data.key && this.data.key.fresh)) this.setData({ key: { loading: true } });
     this.keyCall('status').then(r => {
       const fresh = this.data.key && this.data.key.fresh;
-      this.setData({ key: keyView(r, fresh), keyUsage: keyUsage(r.url) });
+      this.setData({ key: keyView(r, fresh) });
     }).catch(e => this.setData({ key: { error: e.message } }));
   },
   makeKey() {
     if (this.data.key.busy) return;
     this.setData({ 'key.busy': true });
     this.keyCall('create').then(r => {
-      this.setData({ key: keyView(r, r.key), keyUsage: keyUsage(r.url) });
+      this.setData({ key: keyView(r, r.key) });
       this.toast('已生成，只显示这一次');
     }).catch(e => { this.setData({ 'key.busy': false }); this.toast(e.message); });
   },
@@ -163,19 +176,19 @@ Page({
         if (!res.confirm) return;
         this.setData({ 'key.busy': true });
         this.keyCall('revoke').then(r => {
-          this.setData({ key: keyView(r, ''), keyUsage: keyUsage(r.url) });
+          this.setData({ key: keyView(r, '') });
           this.toast('已作废');
         }).catch(e => { this.setData({ 'key.busy': false }); this.toast(e.message); });
       },
     });
   },
   onKeyCopy() {
-    const k = this.data.key && this.data.key.fresh;
-    if (!k) return;
+    const doc = this.data.key && this.data.key.doc;
+    if (!doc) return;
     wx.setClipboardData({
-      data: k,
+      data: doc,
       success: () => { if (wx.hideToast) wx.hideToast(); this.toast('已复制'); },
-      fail: () => this.toast('没复制上，可以长按密钥自己复制'),
+      fail: () => this.toast('没复制上，可以长按上面那段自己复制'),
     });
   },
   goPrivacy() { wx.navigateTo({ url: '/pages/privacy/privacy' }); },
