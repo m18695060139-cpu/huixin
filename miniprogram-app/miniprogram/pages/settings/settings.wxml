@@ -78,8 +78,8 @@
       <view class="group">
         <view class="row">
           <view class="row-main">
-            <text class="row-t">微信登录</text>
-            <text class="sub">内容只给你自己看，没有另外的账号密码</text>
+            <text class="row-t">已用微信登录</text>
+            <text class="sub">打开就自动登录了，内容只给你自己看</text>
           </view>
         </view>
         <view class="row" bindtap="goPrivacy">
