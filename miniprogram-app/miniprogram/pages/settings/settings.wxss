@@ -1,10 +1,53 @@
-.theme-opt.on { border-color: var(--ink); font-weight: 600; }
-.swatch .bar { height: 7.692rpx; border-radius: 3.846rpx; display: block; }
-.field { align-items: stretch; }
-.opt { display: flex; align-items: center; gap: 23.077rpx; min-height: 100rpx; padding: 0 26.923rpx; }
-.theme-opt text { text-align: center; display: block; width: 100%; }
-.tick-mark { width: 34.615rpx; height: 34.615rpx; background-color: var(--ink); }
-.opt + .opt { border-top: 0.962rpx solid var(--sep); }
-.opt-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3.846rpx; }
-.opt-sub { font-size: 23.077rpx; color: var(--sub); line-height: 1.4; }
-.tick-mark { color: var(--ink); font-size: 34.615rpx; font-weight: 700; flex: none; }
+/* 设置页：手机 App 分组列表。只在本页用 st- 前缀，颜色仍走外观变量。1px ≈ 1.923rpx */
+.st-sec { margin-top: 53.846rpx; display: flex; flex-direction: column; }
+.st-sec:first-of-type { margin-top: 30.769rpx; }
+.st-head { display: block; font-size: 25rpx; font-weight: 600; color: var(--sub); padding: 0 30.769rpx 13.462rpx; }
+.st-foot { display: block; font-size: 23.077rpx; line-height: 1.55; color: var(--sub); padding: 13.462rpx 30.769rpx 0; }
+.st-group { background-color: var(--card); border-radius: 26.923rpx; overflow: hidden; }
+.theme-mono .st-group { border-radius: 7.692rpx; }
+
+.st-row { padding-left: 30.769rpx; background-color: var(--card); transition: background-color .15s ease; }
+.st-hover { background-color: var(--tile); }
+.theme-ink .st-hover, .theme-mono .st-hover { background-color: #E5E5EA; }
+.theme-paper .st-hover { background-color: #EFE7DA; }
+.st-body { display: flex; align-items: center; gap: 23.077rpx; min-height: 100rpx; padding: 15.385rpx 30.769rpx 15.385rpx 0; }
+.st-row + .st-row > .st-body { border-top: 0.962rpx solid var(--sep); }
+
+.st-t { font-size: 30.769rpx; line-height: 1.4; color: var(--text); flex: none; }
+.st-grow { flex: 1; min-width: 0; }
+.st-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3.846rpx; }
+.st-sub { font-size: 23.077rpx; line-height: 1.45; color: var(--sub); }
+.st-accent { color: var(--ink); }
+.st-danger { color: var(--danger); }
+.st-center { justify-content: center; }
+.st-center .st-t { text-align: center; font-weight: 600; }
+.st-empty { font-size: 28.846rpx; color: var(--sub); }
+
+.st-in { flex: 1; min-width: 0; height: 69.231rpx; min-height: 69.231rpx; font-size: 30.769rpx; text-align: right; color: var(--text); background: transparent; padding: 0; }
+.st-in.st-left { text-align: left; }
+.st-act { flex: none; font-size: 28.846rpx; padding: 15.385rpx 0 15.385rpx 15.385rpx; }
+.st-act-on { opacity: .5; }
+
+.st-tick { width: 34.615rpx; height: 34.615rpx; background-color: var(--ink); flex: none; }
+.st-chev { width: 26.923rpx; height: 26.923rpx; background-color: var(--ring); flex: none; }
+.st-ok { width: 50rpx; height: 50rpx; border-radius: 25rpx; background-color: var(--green); color: #FFFFFF; display: flex; align-items: center; justify-content: center; flex: none; }
+.st-ok .i { width: 28.846rpx; height: 28.846rpx; background-color: #FFFFFF; }
+.theme-mono .st-ok { background-color: #000000; }
+.theme-night .st-ok .i { background-color: #000000; }
+
+.st-area-body { padding-top: 19.231rpx; padding-bottom: 19.231rpx; }
+.st-area { width: 100%; min-height: 153.846rpx; font-size: 30.769rpx; line-height: 1.6; color: var(--text); background: transparent; padding: 0; }
+
+.st-themes { display: flex; justify-content: space-between; padding: 26.923rpx 23.077rpx 23.077rpx; }
+.st-theme { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 11.538rpx; }
+.st-ring { width: 107.692rpx; padding: 5.769rpx; border-radius: 25rpx; border: 3.846rpx solid transparent; }
+.st-theme.on .st-ring { border-color: var(--ink); }
+.st-sw { width: 100%; height: 92.308rpx; border-radius: 15.385rpx; display: flex; flex-direction: column; justify-content: flex-end; padding: 11.538rpx; gap: 5.769rpx; border: 0.962rpx solid rgba(0,0,0,.1); overflow: hidden; }
+.theme-night .st-sw { border-color: rgba(255,255,255,.14); }
+.st-bar { height: 6.731rpx; border-radius: 3.846rpx; display: block; }
+.st-tn { font-size: 23.077rpx; color: var(--sub); white-space: nowrap; text-align: center; }
+.st-theme.on .st-tn { color: var(--ink); font-weight: 600; }
+.theme-mono .st-ring { border-radius: 11.538rpx; }
+.theme-mono .st-sw { border-radius: 5.769rpx; }
+
+.st-tag { display: block; margin-top: 76.923rpx; font-size: 23.077rpx; color: var(--sub); text-align: center; }
