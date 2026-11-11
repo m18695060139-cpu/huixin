@@ -196,15 +196,4 @@ Page({
   onHabit(e) {
     actions.toggleHabit(e.currentTarget.dataset.id, this.data.date);
   },
-  pickSentence(e) {
-    const text = e.currentTarget.dataset.text;
-    this.openEditor('todo', {
-      text: text,
-      due: require('../../utils/date').addDays(require('../../utils/date').today(), 3),
-      source_date: this.data.date,
-    });
-  },
-  openLetter() {
-    wx.navigateTo({ url: '/pages/letter/letter?date=' + this.data.date });
-  },
 });

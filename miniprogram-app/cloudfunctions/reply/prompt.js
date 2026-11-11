@@ -1,6 +1,5 @@
 // 每日回信的提示词。从网页版 src/ai.js 的 writeReply / REPLY_SYSTEM 迁来。
-// 只在云函数里使用，不下发到小程序。
-// TODO: 周信 / 季信 / 年信（writeDigest）先不做。
+// 只在云函数里使用，不下发到小程序。周信、季信、年信在 cloudfunctions/digest。
 
 const HUNYUAN_MODEL = 'hy3';
 const HUNYUAN_FALLBACK = 'hy3-preview';

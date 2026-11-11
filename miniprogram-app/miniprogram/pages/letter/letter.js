@@ -2,7 +2,6 @@ const behavior = require('../../behaviors/page');
 const state = require('../../utils/state');
 const model = require('../../utils/model');
 const { AI_ENABLED } = require('../../config');
-const { addDays, today } = require('../../utils/date');
 
 Page({
   behaviors: [behavior],
@@ -96,12 +95,5 @@ Page({
   takeBack() {
     state.setWriteTarget(this.data.date, true);
     wx.switchTab({ url: '/pages/write/write' });
-  },
-  pickSentence(e) {
-    this.openEditor('todo', {
-      text: e.currentTarget.dataset.text,
-      due: addDays(today(), 3),
-      source_date: this.data.date,
-    });
   },
 });

@@ -43,7 +43,8 @@ function letterNo(S, d) {
 
 function unopenedLetter(S, t, now) {
   const hit = Object.keys(S.letters || {}).filter(d => {
-    return hasSent(S, d) && !isSealed(S, d, now) && !(S.letters[d].opened) && d >= date.addDays(t, -3);
+    const l = S.letters[d];
+    return hasSent(S, d) && l.reply && !l.reply.imported && !isSealed(S, d, now) && !l.opened && d >= date.addDays(t, -3);
   }).sort();
   return hit.length ? S.letters[hit[hit.length - 1]] : null;
 }
@@ -69,12 +70,22 @@ function dueInfo(td, t) {
   return { cls: '', label: n < 7 ? '周' + date.wd(td.due) : date.cn(td.due), rank: 3 };
 }
 
-function sourceHidden(S, x) {
-  return !!(x && x.source_date && isSealed(S, x.source_date, new Date()));
+function sourceHidden(S, x, now, unopenedDate) {
+  if (!x || !x.source_date) return false;
+  now = now || new Date();
+  if (isSealed(S, x.source_date, now)) return true;
+  if (unopenedDate === undefined) {
+    const u = unopenedLetter(S, date.today(now), now);
+    unopenedDate = u ? u.date : '';
+  }
+  return unopenedDate === x.source_date;
 }
 
-function openTodos(S, t) {
-  return (S.todos || []).filter(x => !x.done && !x.archived && !x.dropped_at && !sourceHidden(S, x)).sort((a, b) => {
+function openTodos(S, t, now) {
+  now = now || new Date();
+  const u = unopenedLetter(S, date.today(now), now);
+  const ud = u ? u.date : '';
+  return (S.todos || []).filter(x => !x.done && !x.archived && !x.dropped_at && !sourceHidden(S, x, now, ud)).sort((a, b) => {
     const da = dueInfo(a, t);
     const db = dueInfo(b, t);
     const ra = da ? da.rank : 4;
@@ -88,8 +99,11 @@ function openTodos(S, t) {
   });
 }
 
-function openIdeas(S) {
-  return (S.ideas || []).filter(i => i.status === 'open' && !sourceHidden(S, i));
+function openIdeas(S, now) {
+  now = now || new Date();
+  const u = unopenedLetter(S, date.today(now), now);
+  const ud = u ? u.date : '';
+  return (S.ideas || []).filter(i => i.status === 'open' && !sourceHidden(S, i, now, ud));
 }
 
 function srcLine(S, x, t) {
@@ -146,15 +160,6 @@ function ideaView(i, t) {
 function firstLine(text) {
   const lines = String(text || '').split('\n').map(s => s.trim()).filter(Boolean);
   return lines.find(s => !/^[^，。,]{1,12}[，,：:]$/.test(s)) || lines[0] || '';
-}
-
-function sentencesOf(text) {
-  const out = [];
-  String(text || '').split(/[。！？!?\n]/).forEach(s => {
-    const t = s.trim();
-    if (t.length >= 2 && t.length <= 80) out.push(t);
-  });
-  return out.slice(0, 12);
 }
 
 function heroBlock(S, now) {
@@ -242,11 +247,11 @@ function todayModel(S, now, opts) {
   const t = date.today(now);
   const h = now.getHours();
   const just = opts.justDone || {};
-  const todos = openTodos(S, t);
+  const todos = openTodos(S, t, now);
   const showT = todos.slice(0, 4).map(x => todoView(S, x, t));
-  const recentDone = (S.todos || []).filter(x => x.done && x.done_at === t && !x.dropped_at && !x.archived);
+  const recentDone = (S.todos || []).filter(x => x.done && x.done_at === t && !x.dropped_at && !x.archived && !sourceHidden(S, x, now));
   const justList = recentDone.filter(x => just[x.id]).map(x => todoView(S, x, t));
-  const ideas = openIdeas(S);
+  const ideas = openIdeas(S, now);
   let ideaBlock = null;
   if (ideas.length) {
     const limit = todos.length <= 1 ? 5 : 3;
@@ -325,7 +330,6 @@ function writeMeta(S, day, now) {
     mood: l.mood || '',
     energy: l.energy || 0,
     preview: firstLine(l.text || ''),
-    sentences: sentencesOf(l.text || ''),
     chars: String(l.text || '').trim().length,
   };
 }
@@ -421,41 +425,6 @@ function dayRow(S, d, now) {
   return { kind: 'day', date: d, num: num, wd: w, line: line, meta: meta, sealed: sealed };
 }
 
-function weekSummary(S, now) {
-  const t = date.today(now);
-  const wk = date.weekKey(t);
-  const end = date.addDays(wk, 6);
-  let letters = 0;
-  let energySum = 0;
-  let energyN = 0;
-  const span = Math.min(7, date.diffDays(t, wk) + 1);
-  for (let i = 0; i < span; i++) {
-    const d = date.addDays(wk, i);
-    if (hasText(S, d) && !isSealed(S, d, now)) {
-      letters++;
-      const l = S.letters[d];
-      if (l.energy) { energySum += Number(l.energy); energyN++; }
-    }
-  }
-  const habits = activeHabits(S).slice(0, 4).map(h => {
-    let c = 0;
-    for (let i = 0; i < span; i++) if (S.logs && S.logs[h.id + '|' + date.addDays(wk, i)]) c++;
-    return h.name + ' ' + Math.round(c / Math.max(1, span) * 100) + '%';
-  }).join(' · ');
-  let todosDone = 0;
-  (S.todos || []).forEach(x => {
-    if (x.done && !x.dropped_at && x.done_at && x.done_at >= wk && x.done_at <= end) todosDone++;
-  });
-  return {
-    range: date.cn(wk) + ' – ' + date.cn(end),
-    letters: letters,
-    days: span,
-    energy: energyN ? (energySum / energyN).toFixed(1) : '—',
-    habits: habits,
-    todosDone: todosDone,
-  };
-}
-
 function digestCard(d) {
   const c = d.content || {};
   const st = c.stats || {};
@@ -523,15 +492,14 @@ function mailboxModel(S, now, ui) {
     eyebrow: days ? ('已经往来 ' + days + ' 天 · ' + dates.length + ' 封信') : '还没有信',
     tab: (ui.tab === 'week' || ui.tab === 'quarter' || ui.tab === 'year') ? ui.tab : 'all',
     tiles: [
-      { key: 'todos', label: '待办', n: openTodos(S, t).length, link: true },
-      { key: 'ideas', label: '点子', n: openIdeas(S).length, link: true },
+      { key: 'todos', label: '待办', n: openTodos(S, t, now).length, link: true },
+      { key: 'ideas', label: '点子', n: openIdeas(S, now).length, link: true },
       { key: 'month', label: month + '月的信', n: monthN, link: false },
     ],
     state: stateCard(S, t, now, theme),
     groups: groups,
     empty: !dates.length,
     more: more,
-    week: weekSummary(S, now),
     writeDate: date.letterDay(now),
     kindDigests: (S.digests || []).filter(d => d.kind === ((ui.tab === 'week' || ui.tab === 'quarter' || ui.tab === 'year') ? ui.tab : '')).map(digestCard),
     kindHead: kindHead((ui.tab === 'week' || ui.tab === 'quarter' || ui.tab === 'year') ? ui.tab : '', t),
@@ -589,7 +557,6 @@ function letterModel(S, day, now) {
     mood: l.mood || '',
     energy: l.energy || 0,
     chars: String(l.text || '').trim().length,
-    sentences: hideBody || reply ? [] : sentencesOf(l.text || ''),
     hasReply: !!reply,
     showGo: !!(reply && day >= yday),
     canAsk: !!(l.sent_at && !hideBody && !sealed && !reply),
@@ -718,12 +685,12 @@ function listsModel(S, now, ui) {
   now = now || new Date();
   const t = date.today(now);
   const tab = ui.tab || 'todos';
-  const ideas = openIdeas(S).slice().sort((a, b) => String(a.created || '') < String(b.created || '') ? 1 : -1);
+  const ideas = openIdeas(S, now).slice().sort((a, b) => String(a.created || '') < String(b.created || '') ? 1 : -1);
   const dropped = (S.ideas || []).filter(i => i.status === 'dropped')
     .slice().sort((a, b) => String(a.dropped_at || a.updated_at || '') < String(b.dropped_at || b.updated_at || '') ? 1 : -1);
   return {
     tab: tab,
-    todos: openTodos(S, t).map(x => todoView(S, x, t)),
+    todos: openTodos(S, t, now).map(x => todoView(S, x, t)),
     ideas: ideas.map(i => ideaView(i, t)),
     showDropped: !!ui.showDropped,
     dropped: dropped.map(i => ideaView(i, t)),
@@ -733,6 +700,6 @@ function listsModel(S, now, ui) {
 
 module.exports = {
   hasText, hasSent, isSealed, letterNo, totalLetters, unopenedLetter,
-  habitItems, sentencesOf, todayModel, writeMeta, mailboxModel, letterModel, listsModel,
+  habitItems, todayModel, writeMeta, mailboxModel, letterModel, listsModel,
   openTodos, openIdeas,
 };

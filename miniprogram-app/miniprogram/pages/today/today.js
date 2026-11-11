@@ -2,7 +2,6 @@ const behavior = require('../../behaviors/page');
 const state = require('../../utils/state');
 const actions = require('../../utils/actions');
 const model = require('../../utils/model');
-const { today } = require('../../utils/date');
 
 Page({
   behaviors: [behavior],
@@ -48,9 +47,6 @@ Page({
   },
   goLists(e) {
     wx.navigateTo({ url: '/pages/lists/lists?tab=' + (e.currentTarget.dataset.tab || 'todos') });
-  },
-  onHabit(e) {
-    actions.toggleHabit(e.currentTarget.dataset.id, today());
   },
   async onToggle(e) {
     const id = e.currentTarget.dataset.id;
