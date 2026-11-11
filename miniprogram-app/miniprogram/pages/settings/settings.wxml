@@ -113,6 +113,56 @@
       </view>
     </view>
 
+    <!-- API 密钥（只读接口） -->
+    <view class="st-sec">
+      <text class="st-head">API 密钥</text>
+      <view class="st-group">
+        <view class="st-row" wx:if="{{key.loading || key.error}}">
+          <view class="st-body"><text class="st-empty">{{key.loading ? '读取中…' : key.error}}</text></view>
+        </view>
+        <block wx:elif="{{!key.exists}}">
+          <view class="st-row">
+            <view class="st-body">
+              <view class="st-main">
+                <text class="st-t">还没有密钥</text>
+                <text class="st-sub">生成后，你信任的 agent 或工具可以用它读取你的数据</text>
+              </view>
+            </view>
+          </view>
+          <view class="st-row" hover-class="st-hover" bindtap="onKeyNew">
+            <view class="st-body"><text class="st-t st-accent st-grow">{{key.busy ? '生成中…' : '生成密钥'}}</text></view>
+          </view>
+        </block>
+        <block wx:else>
+          <view class="st-row">
+            <view class="st-body">
+              <view class="st-main">
+                <text class="st-t">密钥 {{key.hint}}…</text>
+                <text class="st-sub">{{key.createdText}} 生成 · {{key.usedText}}</text>
+              </view>
+            </view>
+          </view>
+          <view class="st-row" wx:if="{{key.fresh}}">
+            <view class="st-body st-key-body">
+              <text class="st-key" user-select="true">{{key.fresh}}</text>
+              <view class="st-key-foot">
+                <text class="st-sub st-grow">只显示这一次。现在复制好，关掉设置就再也看不到了。</text>
+                <view class="st-copy" hover-class="st-act-on" bindtap="onKeyCopy">复制</view>
+              </view>
+            </view>
+          </view>
+          <view class="st-row" hover-class="st-hover" bindtap="onKeyRegen">
+            <view class="st-body"><text class="st-t st-accent st-grow">{{key.busy ? '生成中…' : '重新生成'}}</text></view>
+          </view>
+          <view class="st-row" hover-class="st-hover" bindtap="onKeyRevoke">
+            <view class="st-body"><text class="st-t st-danger st-grow">作废</text></view>
+          </view>
+        </block>
+      </view>
+      <text class="st-foot">{{keyRisk}}</text>
+      <text class="st-foot">{{keyUsage}}</text>
+    </view>
+
     <!-- 账号 -->
     <view class="st-sec">
       <text class="st-head">账号</text>

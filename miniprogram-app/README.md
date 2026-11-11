@@ -24,7 +24,7 @@
 |---|---|
 | `miniprogram/` | 小程序前端。`config.js` 的 `ENV_ID` 为 `huixin-d1g2tdmkz68dc5a5d` |
 | `miniprogram/pages/` | 今天、写信、信箱，以及信、列表、设置、隐私说明 |
-| `cloudfunctions/` | `login`、`save`、`importFromWeb`、`wipe`、`reply`、`digest`、`demoSeed` |
+| `cloudfunctions/` | `login`、`save`、`importFromWeb`、`wipe`、`reply`、`digest`、`demoSeed`、`api`（只读 API 密钥） |
 | `docs/用户隐私保护指引.md` | 填到公众平台的隐私指引草稿 |
 | `docs/数据库权限.json` | 六个集合的「仅创建者可读写」规则 |
 | `scripts/upload.js` | 用 miniprogram-ci 上传代码并部署云函数 |
@@ -132,3 +132,22 @@ npm run upload
 ## 本地检查
 
 本仓库用 Node 做了语法检查（`node --check`）和「明早拆信」的日期逻辑检查。没有微信开发者工具，**不能**在模拟器里点页面，也没有连真实云环境跑 `msgSecCheck`。请用你电脑上的开发者工具预览。
+
+
+## 只读 API（给用户自己的 agent 读数据）
+
+和网页版同一套规则：用户在「设置 → API 密钥」里自己生成（每人一把，重新生成即作废旧的），集合 `api_keys` 只存 SHA-256，完整密钥只显示一次。「清空我的全部数据」会一并删掉密钥。
+
+云函数 `api` 同时处理两种调用：
+
+- 小程序里 `wx.cloud.callFunction({ name: 'api', data: { action: 'status' | 'create' | 'revoke' } })`，按调用者的 OPENID。
+- 外部 HTTP（云开发 **HTTP 访问服务**）：`GET <域名>/api/v1/export`，请求头 `Authorization: Bearer hx_…`，可选 `since=YYYY-MM-DD`、`type=letters,todos,ideas,habits,digests`。只有 GET；密钥不对或已作废 401；每把每分钟 30 次，超了 429；返回超过 1MB 时 413，请用 since / type 分批。
+
+开通步骤：
+
+1. 开发者工具里对 `cloudfunctions/api` 右键 **上传并部署：云端安装依赖**（改过的 `wipe` 也要再部署一次）。
+2. 云开发控制台 → 数据库 → 新建集合 `api_keys`（第一次生成密钥时函数也会自己建），权限改成「所有用户不可读写」——只让云函数读写。
+3. 云开发控制台 → 环境管理（或「环境配置」）→ **HTTP 访问服务**：打开总开关 → 路由管理「新建」：域名选默认域名，触发路径 `/api/v1/export`，关联资源选「云函数」→ `api`，版本 `$DEFAULT`；**身份认证保持关闭**（鉴权由函数里的密钥负责），可以顺手设限频。保存后约 3–5 分钟生效。
+4. 云函数 `api` → 函数配置 → 环境变量加 `API_URL` = `https://<默认域名>/api/v1/export`，设置页的「用法」就会显示这个地址。
+
+默认域名（`*.app.tcloudbase.com`）官方说明只适合开发测试：有访问频率限制、有效期（到期在控制台「续期」），浏览器直接打开会先出安全提示页。长期用要绑定已备案的自定义域名。

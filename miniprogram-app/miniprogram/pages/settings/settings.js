@@ -4,16 +4,39 @@ const actions = require('../../utils/actions');
 const { THEMES } = require('../../utils/theme');
 const { AI_ENABLED } = require('../../config');
 
+// 只读 API 密钥：网页版设置里同一段话
+const KEY_RISK = '有了这串密钥，任何人或工具都能读到你全部的信、回信、待办、点子、习惯和周信季信。只交给你信任的 agent 或工具；不要发到群里、截图，也不要提交到代码仓库。对方拿到的数据会离开回信，之后怎么用，回信管不了。怀疑泄露就马上作废。接口只能读，不能改。';
+const keyUsage = url => '用法：GET ' + (url || '（接口地址开通后显示在这里）') + '，请求头 Authorization: Bearer 你的密钥。可选参数 since=YYYY-MM-DD，type=letters,todos,ideas,habits,digests。';
+// ISO 时间 → 北京时间「11月11日 12:30」
+function bjTime(iso) {
+  const t = new Date(iso).getTime();
+  if (!iso || isNaN(t)) return '';
+  const d = new Date(t + 8 * 3600e3).toISOString();
+  return Number(d.slice(5, 7)) + '月' + Number(d.slice(8, 10)) + '日 ' + d.slice(11, 16);
+}
+function keyView(r, fresh) {
+  return {
+    exists: !!r.exists,
+    hint: r.hint || '',
+    createdText: bjTime(r.created_at),
+    usedText: r.last_used_at ? '最近使用 ' + bjTime(r.last_used_at) : '还没用过',
+    fresh: fresh || '',
+  };
+}
+
 Page({
   behaviors: [behavior],
-  data: { themes: [], habits: [], name: '', qText: '', habitName: '', themeId: 'auto', deliver: 'morning' },
+  data: { themes: [], habits: [], name: '', qText: '', habitName: '', themeId: 'auto', deliver: 'morning',
+    key: { loading: true }, keyRisk: KEY_RISK, keyUsage: keyUsage('') },
   onShow() {
     this.hideShare();
     this.syncChrome();
     this.paint(true);
     this.unsub = state.subscribe(() => this.paint(false));
+    this.loadKey();
   },
-  onHide() { if (this.unsub) this.unsub(); },
+  // 离开设置页就收起刚生成的完整密钥，和网页版关掉设置一样
+  onHide() { if (this.unsub) this.unsub(); this.setData({ 'key.fresh': '' }); },
   onUnload() { if (this.unsub) this.unsub(); },
   paint(resetText) {
     const s = state.get().settings || {};
@@ -90,6 +113,69 @@ Page({
       confirmText: '删除',
       confirmColor: '#C0352B',
       success: (res) => { if (res.confirm) actions.archiveHabit(id); },
+    });
+  },
+  keyCall(action) {
+    return new Promise((resolve, reject) => {
+      if (!wx.cloud) { reject(new Error('云端还没连上')); return; }
+      wx.cloud.callFunction({
+        name: 'api',
+        data: { action: action },
+        success: (res) => {
+          const r = (res && res.result) || {};
+          if (r.ok) resolve(r); else reject(new Error(r.message || '没办成，请稍后再试'));
+        },
+        fail: () => reject(new Error('云端还没连上，请稍后再试')),
+      });
+    });
+  },
+  loadKey() {
+    if (!(this.data.key && this.data.key.fresh)) this.setData({ key: { loading: true } });
+    this.keyCall('status').then(r => {
+      const fresh = this.data.key && this.data.key.fresh;
+      this.setData({ key: keyView(r, fresh), keyUsage: keyUsage(r.url) });
+    }).catch(e => this.setData({ key: { error: e.message } }));
+  },
+  makeKey() {
+    if (this.data.key.busy) return;
+    this.setData({ 'key.busy': true });
+    this.keyCall('create').then(r => {
+      this.setData({ key: keyView(r, r.key), keyUsage: keyUsage(r.url) });
+      this.toast('已生成，只显示这一次');
+    }).catch(e => { this.setData({ 'key.busy': false }); this.toast(e.message); });
+  },
+  onKeyNew() { this.makeKey(); },
+  onKeyRegen() {
+    wx.showModal({
+      title: '重新生成密钥？',
+      content: '旧密钥会立刻作废，用它的 agent 或工具要换成新的。',
+      confirmText: '重新生成',
+      success: (res) => { if (res.confirm) this.makeKey(); },
+    });
+  },
+  onKeyRevoke() {
+    wx.showModal({
+      title: '作废这个密钥？',
+      content: '作废后，用它的 agent 或工具马上就读不到你的数据了。',
+      confirmText: '作废',
+      confirmColor: '#C0352B',
+      success: (res) => {
+        if (!res.confirm) return;
+        this.setData({ 'key.busy': true });
+        this.keyCall('revoke').then(r => {
+          this.setData({ key: keyView(r, ''), keyUsage: keyUsage(r.url) });
+          this.toast('已作废');
+        }).catch(e => { this.setData({ 'key.busy': false }); this.toast(e.message); });
+      },
+    });
+  },
+  onKeyCopy() {
+    const k = this.data.key && this.data.key.fresh;
+    if (!k) return;
+    wx.setClipboardData({
+      data: k,
+      success: () => { if (wx.hideToast) wx.hideToast(); this.toast('已复制'); },
+      fail: () => this.toast('没复制上，可以长按密钥自己复制'),
     });
   },
   goPrivacy() { wx.navigateTo({ url: '/pages/privacy/privacy' }); },
