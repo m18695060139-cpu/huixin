@@ -15,7 +15,10 @@
         <view class="env-art bob">
           <view class="env-card">
             <view class="env-flap"></view>
-            <view class="env-seal">回</view>
+            <view class="env-edge l"></view>
+            <view class="env-edge r"></view>
+            <view class="env-seal"></view>
+            <view class="env-seal-t"><view class="env-seal-base"></view><text class="env-seal-ch">回</text></view>
           </view>
         </view>
         <view class="env-copy">

@@ -478,15 +478,26 @@ button::after { display: none; border: none; }
 .env-card {
   width: 384.615rpx; height: 246.154rpx; border-radius: 26.923rpx; background: var(--card); position: relative; overflow: hidden;
 }
+/* 网页版是 200×128 的 SVG：封盖是 (6,6)→(100,74)→(194,6) 的三角，填 --tint，两条斜边描 2px 的 --sep。
+   这里用边框三角画填色，两条斜边各用一根 2px 的细条转过去盖上（顺序和 SVG 一样：先填色后描边）。 */
 .env-flap {
-  position: absolute; left: 0; top: 0; width: 0; height: 0;
-  border-left: 192.308rpx solid transparent; border-right: 192.308rpx solid transparent; border-top: 142.308rpx solid var(--tint);
+  position: absolute; left: 11.538rpx; top: 11.538rpx; width: 0; height: 0;
+  border-left: 180.769rpx solid transparent; border-right: 180.769rpx solid transparent; border-top: 130.769rpx solid var(--tint);
 }
+.env-edge {
+  position: absolute; top: 75rpx; width: 223.115rpx; height: 3.846rpx; background: var(--sep);
+}
+.env-edge.l { left: -9.635rpx; transform: rotate(35.88deg); }
+.env-edge.r { left: 171.135rpx; transform: rotate(-35.88deg); }
 .env-seal {
   position: absolute; left: 161.538rpx; top: 107.692rpx; width: 61.538rpx; height: 61.538rpx; border-radius: 30.769rpx;
-  background: var(--ink); color: var(--on-ink); font-size: 28.846rpx; font-weight: 700;
-  display: flex; align-items: center; justify-content: center;
+  background: var(--ink);
 }
+/* 「回」字照网页版 SVG 的写法：基线钉在 y=78、水平居中，不随字体的上下留白漂。
+   左边一个 0 宽、78px 高的空块，按基线对齐时它的底边就是基线。 */
+.env-seal-t { position: absolute; left: 0; top: 0; width: 384.615rpx; display: flex; align-items: baseline; }
+.env-seal-base { width: 0; height: 150rpx; flex: none; }
+.env-seal-ch { flex: 1; text-align: center; font-size: 28.846rpx; font-weight: 700; line-height: 1; color: var(--on-ink); }
 .env-big {
   width: 576.923rpx; height: 365.385rpx; border-radius: 30.769rpx; background: #FFFFFF; position: relative; overflow: hidden; margin: 0 auto;
 }
