@@ -10,6 +10,7 @@ Page({
   data: {
     date: '',
     text: '',
+    empty: true,
     mood: '',
     energy: 0,
     editing: true,
@@ -51,6 +52,7 @@ Page({
     this.setData({
       date: day,
       text: text,
+      empty: !text,
       mood: mood,
       energy: energy,
       editing: showEditor,
@@ -76,10 +78,14 @@ Page({
     });
   },
   onInput(e) {
+    // 不回写 text：输入时 setData 输入框的值会打断安卓输入法、光标乱跳。
+    // 但「空不空」必须 setData，否则渲染层一直以为是空的，灰色提示字会叠在正文后面（重影）。
     this._text = e.detail.value;
-    this.data.text = this._text;
     const date = this.data.date;
-    this.setData({ canSend: !!String(this._text).trim(), saveState: '保存中', warn: '' });
+    const patch = { canSend: !!String(this._text).trim(), saveState: '保存中', warn: '' };
+    const empty = !this._text;
+    if (empty !== this.data.empty) patch.empty = empty;
+    this.setData(patch);
     state.clearWarn();
     actions.writeDraft(date, { text: this._text, mood: this.data.mood, energy: this.data.energy });
     clearTimeout(this._saveT);
@@ -110,7 +116,7 @@ Page({
     const cur = this._text || '';
     const text = cur.replace(/\s*$/, '') + (cur.trim() ? '\n' : '') + q;
     this._text = text;
-    this.setData({ text: text, canSend: !!text.trim(), saveState: '保存中' });
+    this.setData({ text: text, empty: !text, canSend: !!text.trim(), saveState: '保存中' });
     this.onInput({ detail: { value: text } });
   },
   async onSend() {
@@ -188,7 +194,9 @@ Page({
   },
   takeBack() {
     state.setReplying('');
-    this.setData({ sentShow: false, editing: true, text: this._text || this.data.meta.text || '' });
+    const text = this._text || this.data.meta.text || '';
+    this._text = text;
+    this.setData({ sentShow: false, editing: true, text: text, empty: !text, canSend: !!text.trim() });
     this.setTab(1, false);
   },
   sentClose() {

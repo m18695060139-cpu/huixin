@@ -90,7 +90,7 @@ Page({
     const v = e.currentTarget.dataset.v === 'now' ? 'now' : 'morning';
     actions.saveSettings({ deliver: v });
   },
-  onQ(e) { this.setData({ qText: e.detail.value }); },
+  onQ(e) { this.data.qText = e.detail.value; },
   onSaveQ() {
     const qs = String(this.data.qText || '').split('\n').map(s => s.trim()).filter(Boolean);
     if (!qs.length) { this.toast('至少留一个问题'); return; }

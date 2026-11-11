@@ -43,8 +43,9 @@ Component({
   methods: {
     noop() {},
     onClose() { this.triggerEvent('close'); },
-    onText(e) { this.setData({ text: e.detail.value }); },
-    onNote(e) { this.setData({ note: e.detail.value }); },
+    // 输入时只记在逻辑层，不回写输入框：边打字边 setData 会打断安卓输入法、光标乱跳、字叠在一起
+    onText(e) { this.data.text = e.detail.value; },
+    onNote(e) { this.data.note = e.detail.value; },
     onDue(e) { this.setData({ due: e.detail.value }); },
     clearDue() { this.setData({ due: '' }); },
     onReason(e) {

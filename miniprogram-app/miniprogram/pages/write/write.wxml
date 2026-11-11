@@ -22,8 +22,8 @@
         <text class="no-tag">No.{{meta.no}}</text>
       </view>
       <view wx:if="{{editing}}" class="editor-wrap">
-        <textarea class="editor" value="{{text}}" bindinput="onInput" maxlength="20000" auto-height="true" placeholder="" />
-        <text wx:if="{{!text}}" class="editor-ph">今天过得怎么样？做了什么、想到什么、哪里卡住了，随便写。
+        <textarea class="editor" value="{{text}}" bindinput="onInput" maxlength="-1" auto-height="true" disable-default-padding="true" adjust-position="true" placeholder="" />
+        <text wx:if="{{empty}}" class="editor-ph">今天过得怎么样？做了什么、想到什么、哪里卡住了，随便写。
 
 写完点「寄出」，回信会帮你整理好其余的一切。</text>
       </view>
