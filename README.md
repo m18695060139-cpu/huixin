@@ -46,7 +46,7 @@ AI 的 Key：`npx wrangler secret put AI_API_KEY`。
 
 ## 示例账号
 
-给别人演示前，把示例账号的数据按今天的日期重铺一遍（只动这个账号的信、待办、点子、习惯、周信季信，账号密码不变）：
+给别人演示前，把示例账号的数据按今天的日期重铺一遍（只动这个账号的信、待办、点子、习惯、周信季信年信，账号密码不变）。内容在 `scripts/demo-data.cjs`：一个人五六周的信，从「开会的间隙做设计」到决定换工作，旁边是跑步、早睡和画楼下的小店；和小程序 `cloudfunctions/demoSeed/data.js` 是同一个文件，改了要两边一起换：
 
 ```bash
 node scripts/demo-reset.mjs <示例账号> [回信怎么称呼] > demo.sql
