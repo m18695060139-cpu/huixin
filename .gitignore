@@ -10,3 +10,4 @@ node_modules/
 .demo-user.sql
 
 backup/
+.claude/
