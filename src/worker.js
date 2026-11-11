@@ -4,6 +4,7 @@ import { login, logout, register, currentUser } from './auth.js';
 import { writeReply, writeDigest, DEFAULT_QUESTIONS, PROVIDERS, testAI } from './ai.js';
 import { encryptKey, decryptKey } from './secret.js';
 import { importBackup } from './importer.js';
+import { apiKeyStatus, apiKeyCreate, apiKeyRevoke, exportApi } from './apikey.js';
 import {
   json, err, cstDate, addDays, weekKey, quarterKey, periodRange, uid, nowIso, norm, parseJSON, isDate,
 } from './util.js';
@@ -36,6 +37,8 @@ async function api(req, env, ctx, url) {
   if (p === '/login' && m === 'POST') return login(req, env);
   if (p === '/register' && m === 'POST') return register(req, env);
   if (p === '/logout' && m === 'POST') return logout(req, env);
+  // 对外只读接口：凭 API 密钥读取自己的数据，不看登录 cookie
+  if (p === '/v1/export') return exportApi(req, env, ctx, url);
 
   const user = await currentUser(req, env);
   if (!user) return err('请先登录', 401);
@@ -217,6 +220,12 @@ async function api(req, env, ctx, url) {
     try { return json({ ok: true, ...(await testAI(cfg)) }); }
     catch (e) { return json({ ok: false, error: e.message }); }
   }
+
+  // ── API 密钥（只读接口用）：生成、查看、作废 ──
+  if (p === '/api-key' && m === 'GET') return json(await apiKeyStatus(env, U));
+  if (p === '/api-key' && m !== 'GET' && DEMO_USERS.includes(user.username)) return err('示例账号不能生成 API 密钥');
+  if (p === '/api-key' && m === 'POST') return json(await apiKeyCreate(env, U));
+  if (p === '/api-key' && m === 'DELETE') return json(await apiKeyRevoke(env, U));
 
   // ── 导入 Life OS 旧数据 ──
   if (p === '/import' && m === 'POST') return json(await importBackup(env, U, body));

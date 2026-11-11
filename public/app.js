@@ -1010,6 +1010,7 @@
           <form id="habit-form" style="display:flex;gap:8px"><input class="input" id="habit-new" placeholder="新习惯，比如：运动 30 分钟" aria-label="新习惯"><button class="btn sm" style="height:48px" type="submit">添加</button></form></div>
         <div class="field"><label for="set-q">回信写信时会想着的问题（一行一个）</label><textarea class="input" id="set-q" rows="8">${esc((S.settings.questions || []).join('\n'))}</textarea>
           <button class="btn sm ghost" style="align-self:flex-start" data-act="save-q">保存问题</button></div>
+        ${keySettings()}
         <div class="field"><span class="lab">账号</span><div class="muted small" style="padding:0 4px">当前登录：${esc(S.user.username)}</div>
           <button class="btn sm ghost" style="align-self:flex-start" data-act="logout">退出登录</button></div>
         <p class="note" style="margin-top:40px;text-align:center">回信 Re: · 今晚写给明早的自己</p>`;
@@ -1060,6 +1061,43 @@
         <p class="note" style="margin:0">接上之后，你的回信和周信都用你自己的 AI 写，花的是你自己的额度。Key 加密保存在服务器上，网页里只显示后 4 位。DeepSeek、智谱、通义千问、Kimi、硅基流动等大多数服务商都能这样接入；模型名以服务商控制台为准。自己的 AI 出错时，会自动改用免费模型，不会漏掉回信。</p>
       </div>` : ''}
     </div>`;
+  }
+
+  // ───────────── 设置 · API 密钥（只读接口） ─────────────
+  // V.key：{ loading, data: { exists, hint, created_at, last_used_at }, fresh（刚生成的完整密钥，只显示这一次）, busy, error }
+  const KEY_RISK = '有了这串密钥，任何人或工具都能读到你全部的信、回信、待办、点子、习惯和周信季信。只交给你信任的 agent 或工具；不要发到群里、截图，也不要提交到代码仓库。对方拿到的数据会离开回信，之后怎么用，回信管不了。怀疑泄露就马上作废。接口只能读，不能改。';
+  async function loadKey() {
+    V.key = { loading: true };
+    try { V.key = { data: await api('GET', '/api-key') }; } catch (e) { V.key = { error: e.message }; }
+    if (V.sheets.length && V.sheets[V.sheets.length - 1].type === 'settings') render();
+  }
+  // ISO 时间 → 北京时间「11月11日 12:30」
+  function bjTime(iso) {
+    const d = new Date(new Date(iso).getTime() + 8 * 3600e3).toISOString();
+    return cn(d.slice(0, 10)) + ' ' + d.slice(11, 16);
+  }
+  function keySettings() {
+    const K = V.key || {};
+    const wrap = inner => `<div class="field"><span class="lab">API 密钥</span>${inner}
+      <p class="note" style="margin:0 4px">${KEY_RISK}</p>
+      <p class="note" style="margin:0 4px">用法：GET ${esc(location.origin)}/api/v1/export，请求头 Authorization: Bearer 你的密钥。可选参数 since=YYYY-MM-DD，type=letters,todos,ideas,habits,digests。</p></div>`;
+    if (K.loading) return wrap(`<div class="group"><div class="empty" style="padding:14px">读取中…</div></div>`);
+    if (K.error || !K.data) return wrap(`<div class="group"><div class="empty" style="padding:14px">${esc(K.error || '联网后可以设置')}</div></div>`);
+    const d = K.data;
+    let rows;
+    if (!d.exists) {
+      rows = `<div class="row"><span class="row-main"><span>还没有密钥</span><span class="sub">生成后，你信任的 agent 或工具可以用它读取你的数据</span></span></div>
+        <div class="row foot"><button class="lk" data-act="key-new" ${K.busy ? 'disabled' : ''}>${K.busy ? '生成中…' : '生成密钥'}</button></div>`;
+    } else {
+      rows = `<div class="row"><span class="row-main"><span>密钥 ${esc(d.hint)}…</span><span class="sub">${esc(bjTime(d.created_at))} 生成 · ${d.last_used_at ? '最近使用 ' + esc(bjTime(d.last_used_at)) : '还没用过'}</span></span></div>`;
+      if (K.fresh) rows += `<div style="padding:12px 14px;border-top:.5px solid var(--sep)">
+          <div class="keybox" id="key-fresh">${esc(K.fresh)}</div>
+          <div style="display:flex;align-items:center;gap:12px;margin-top:10px"><button class="btn sm" data-act="key-copy">复制</button>
+          <span class="sub" style="flex:1">只显示这一次。现在复制好，关掉设置就再也看不到了。</span></div></div>`;
+      rows += `<div class="row foot"><button class="lk" data-act="key-regen" ${K.busy ? 'disabled' : ''}>${K.busy ? '生成中…' : '重新生成'}</button>
+        <button class="lk" style="color:var(--danger)" data-act="key-revoke" ${K.busy ? 'disabled' : ''}>作废</button></div>`;
+    }
+    return wrap(`<div class="group">${rows}</div>`);
   }
 
   // ───────────── 渲染后的绑定（输入框、表单） ─────────────
@@ -1395,7 +1433,28 @@
         } catch (err) { toast(err.message); }
         break;
       }
-      case 'settings': V.ai = { loading: true }; openSheet({ type: 'settings' }); loadAI(); break;
+      case 'settings': V.ai = { loading: true }; V.key = { loading: true }; openSheet({ type: 'settings' }); loadAI(); loadKey(); break;
+      case 'key-new': case 'key-regen': {
+        if (act === 'key-regen' && !confirm('重新生成密钥？旧密钥会立刻作废，用它的 agent 或工具要换成新的。')) return;
+        V.key.busy = true; render();
+        try { const d = await api('POST', '/api-key'); V.key = { data: d, fresh: d.key }; toast('已生成，只显示这一次'); }
+        catch (e2) { V.key.busy = false; toast(e2.message); }
+        render(); break;
+      }
+      case 'key-revoke': {
+        if (!confirm('作废这个密钥？作废后，用它的 agent 或工具马上就读不到你的数据了。')) return;
+        V.key.busy = true; render();
+        try { V.key = { data: await api('DELETE', '/api-key') }; toast('已作废'); }
+        catch (e2) { V.key.busy = false; toast(e2.message); }
+        render(); break;
+      }
+      case 'key-copy': {
+        const k = V.key && V.key.fresh;
+        if (!k) return;
+        try { await navigator.clipboard.writeText(k); toast('已复制'); }
+        catch (e2) { const r = document.createRange(); const el = $('#key-fresh'); if (el) { r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } toast('已选中，长按或 Ctrl+C 复制'); }
+        break;
+      }
       case 'deliver':
         S.settings.deliver = v; queue('PUT', '/settings', { deliver: v }); toCache(); render();
         toast(v === 'now' ? '之后寄出的信，马上就能看到回信' : '之后今晚寄出的信，回信明早 6:00 送到'); break;
