@@ -1076,11 +1076,23 @@
     const d = new Date(new Date(iso).getTime() + 8 * 3600e3).toISOString();
     return cn(d.slice(0, 10)) + ' ' + d.slice(11, 16);
   }
+  // 给 agent 的一整段说明：地址、请求头（带上密钥）、参数、示例、返回什么。一个按钮整段复制
+  const KEY_HIDDEN = '你的密钥（只在生成时显示过，忘了就重新生成）';
+  function keyDoc(key) {
+    const url = location.origin + '/api/v1/export';
+    const since = today().slice(0, 8) + '01';
+    return ['回信只读 API',
+      `地址：GET ${url}`,
+      `请求头：Authorization: Bearer ${key || KEY_HIDDEN}`,
+      '可选参数：since=YYYY-MM-DD（只要这天以后的）；type=letters,todos,ideas,habits,digests（只要某几类，逗号分隔）',
+      `示例：curl -H "Authorization: Bearer ${key || '<你的密钥>'}" "${url}?since=${since}"`,
+      '返回 JSON：letters（信和回信）、todos、ideas、habits、habit_logs、digests（周信季信年信）。只能读，不能改。每分钟最多 30 次。',
+    ].join('\n');
+  }
   function keySettings() {
     const K = V.key || {};
     const wrap = inner => `<div class="field"><span class="lab">API 密钥</span>${inner}
-      <p class="note" style="margin:0 4px">${KEY_RISK}</p>
-      <p class="note" style="margin:0 4px">用法：GET ${esc(location.origin)}/api/v1/export，请求头 Authorization: Bearer 你的密钥。可选参数 since=YYYY-MM-DD，type=letters,todos,ideas,habits,digests。</p></div>`;
+      <p class="note" style="margin:0 4px">${KEY_RISK}</p></div>`;
     if (K.loading) return wrap(`<div class="group"><div class="empty" style="padding:14px">读取中…</div></div>`);
     if (K.error || !K.data) return wrap(`<div class="group"><div class="empty" style="padding:14px">${esc(K.error || '联网后可以设置')}</div></div>`);
     const d = K.data;
@@ -1089,12 +1101,12 @@
       rows = `<div class="row"><span class="row-main"><span>还没有密钥</span><span class="sub">生成后，你信任的 agent 或工具可以用它读取你的数据</span></span></div>
         <div class="row foot"><button class="lk" data-act="key-new" ${K.busy ? 'disabled' : ''}>${K.busy ? '生成中…' : '生成密钥'}</button></div>`;
     } else {
-      rows = `<div class="row"><span class="row-main"><span>密钥 ${esc(d.hint)}…</span><span class="sub">${esc(bjTime(d.created_at))} 生成 · ${d.last_used_at ? '最近使用 ' + esc(bjTime(d.last_used_at)) : '还没用过'}</span></span></div>`;
-      if (K.fresh) rows += `<div style="padding:12px 14px;border-top:.5px solid var(--sep)">
-          <div class="keybox" id="key-fresh">${esc(K.fresh)}</div>
-          <div style="display:flex;align-items:center;gap:12px;margin-top:10px"><button class="btn sm" data-act="key-copy">复制</button>
-          <span class="sub" style="flex:1">只显示这一次。现在复制好，关掉设置就再也看不到了。</span></div></div>`;
-      rows += `<div class="row foot"><button class="lk" data-act="key-regen" ${K.busy ? 'disabled' : ''}>${K.busy ? '生成中…' : '重新生成'}</button>
+      rows = `<div class="row"><span class="row-main"><span>密钥 ${esc(d.hint)}…</span><span class="sub">${esc(bjTime(d.created_at))} 生成 · ${d.last_used_at ? '最近使用 ' + esc(bjTime(d.last_used_at)) : '还没用过'}</span></span></div>
+        <div class="keydoc-wrap">
+          <pre class="keybox" id="key-doc">${esc(keyDoc(K.fresh))}</pre>
+          <div class="keydoc-foot"><button class="btn sm" data-act="key-copy">${K.fresh ? '复制' : '复制用法'}</button>
+          <span class="sub">${K.fresh ? '只显示这一次。现在复制好，关掉设置就再也看不到了。' : '整段交给你的 agent，再把密钥那一行换成你保存的密钥。'}</span></div></div>
+        <div class="row foot"><button class="lk" data-act="key-regen" ${K.busy ? 'disabled' : ''}>${K.busy ? '生成中…' : '重新生成'}</button>
         <button class="lk" style="color:var(--danger)" data-act="key-revoke" ${K.busy ? 'disabled' : ''}>作废</button></div>`;
     }
     return wrap(`<div class="group">${rows}</div>`);
@@ -1449,10 +1461,10 @@
         render(); break;
       }
       case 'key-copy': {
-        const k = V.key && V.key.fresh;
-        if (!k) return;
-        try { await navigator.clipboard.writeText(k); toast('已复制'); }
-        catch (e2) { const r = document.createRange(); const el = $('#key-fresh'); if (el) { r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } toast('已选中，长按或 Ctrl+C 复制'); }
+        if (!V.key || !V.key.data || !V.key.data.exists) return;
+        const doc = keyDoc(V.key.fresh);
+        try { await navigator.clipboard.writeText(doc); toast('已复制'); }
+        catch (e2) { const r = document.createRange(); const el = $('#key-doc'); if (el) { r.selectNodeContents(el); const sel = getSelection(); sel.removeAllRanges(); sel.addRange(r); } toast('已选中，长按或 Ctrl+C 复制'); }
         break;
       }
       case 'deliver':
