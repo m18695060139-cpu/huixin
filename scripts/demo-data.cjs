@@ -170,6 +170,8 @@ const TODOS = [
   { text: '会员改版上线', src: 'w3mon', due: { s: 3 }, done: { s: 3 }, note: '点击比旧版高了一点，老周在群里说了句辛苦了' },
   { text: '整理作品集，发给工作室', src: 'w2mon', due: { s: 1 }, done: { s: 1 }, note: '挑了六个项目，删掉了一半想放的' },
   { text: '交书店借阅卡的小题目', src: 'w2wed', due: { s: 5 }, done: { s: 2 }, note: '画了三版，交了最简单的那版' },
+  { text: '给妈妈打电话，说 offer 的事', created: { at: 'w1mon' }, due: { at: 'w1tue' }, done: { at: 'w1tue' }, note: '她说「你自己想好就行，别老熬夜」' },
+  { text: '交这个月的房租', created: { at: 'w1mon' }, due: { at: 'w1fri' }, done: { at: 'w1wed', n: 1 } },
   { text: '回复工作室的 offer', src: 'w1mon', due: { s: 3 }, done: { s: 2 }, note: '回复了接受，入职日期等和老周谈完再定' },
   { text: '找老周谈一次', src: 'w1wed', due: { s: 5 }, done: { t: -1 }, note: '打了四十分钟电话，说好月底前交接完' },
   // 放下的：带着原因
