@@ -289,9 +289,8 @@ function pick(o, keys) {
 // 读出来给网页看：永远不返回 Key，只给后 4 位
 async function aiConfigOut(env, U) {
   const row = await env.DB.prepare('SELECT provider, base_url, model, key_last4, updated_at FROM ai_config WHERE user_id = ?').bind(U).first();
-  const providers = Object.fromEntries(Object.entries(PROVIDERS).map(([k, v]) => [k, v]));
-  if (!row) return { configured: false, providers };
-  return { configured: true, provider: row.provider, base_url: row.base_url, model: row.model, last4: row.key_last4, updated_at: row.updated_at, providers };
+  if (!row) return { configured: false, providers: PROVIDERS };
+  return { configured: true, provider: row.provider, base_url: row.base_url, model: row.model, last4: row.key_last4, updated_at: row.updated_at, providers: PROVIDERS };
 }
 
 // 校验网页提交的配置；Key 留空表示沿用已保存的
