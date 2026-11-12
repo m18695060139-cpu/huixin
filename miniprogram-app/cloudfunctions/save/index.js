@@ -70,7 +70,14 @@ async function upsert(coll, openid, match, data) {
 async function saveLetter(openid, payload) {
   if (!isDate(payload.date)) return fail('日期不对');
   const cur = await find('letters', openid, { date: payload.date }) || {};
-  const text = ('text' in payload) ? clip(payload.text, 20000) : (cur.text || '');
+  let text = ('text' in payload) ? clip(payload.text, 20000) : (cur.text || '');
+  // 已寄出的信不要被一次空的保存盖掉正文（补写后回信还在、正文却没了）。
+  const hadText = String(cur.text || '').trim();
+  const incomingEmpty = ('text' in payload) && !String(text || '').trim();
+  const alreadySent = !!(('sent_at' in payload) ? payload.sent_at : cur.sent_at);
+  if (incomingEmpty && hadText && alreadySent) {
+    text = cur.text;
+  }
   let review = !!cur.sec_review;
   let unchecked = !!cur.sec_unchecked;
   if ('text' in payload) {

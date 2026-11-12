@@ -118,9 +118,8 @@ exports.main = async (event) => {
   if (!isDate(date)) return fail('日期不对', 'bad');
   try {
     const letter = await findOne('letters', OPENID, { date: date });
-    if (!letter || !String(letter.text || '').trim()) return fail('这封信还是空的', 'empty');
     if (event && event.feedback && event.feedback.block) {
-      const fbLetter = await findOne('letters', OPENID, { date: date });
+      const fbLetter = letter;
       if (!fbLetter || !fbLetter.reply) return fail('还没有回信', 'empty');
       const reply = fbLetter.reply;
       const v = Number(event.feedback.value) || 0;
@@ -128,9 +127,11 @@ exports.main = async (event) => {
       await db.collection('letters').doc(fbLetter._id).update({ data: { reply: reply } });
       return { ok: true, reply: reply };
     }
-    if (letter.reply && letter.reply.summary) {
+    // 先还已有回信。补写后如果正文被一次空的保存盖掉，空检查会把已经写好的回信挡住。
+    if (letter && letter.reply && letter.reply.summary) {
       return { ok: true, reply: letter.reply, replied_at: letter.replied_at || '', cached: true, sealed: stillSealed(letter, (await findOne('settings', OPENID, {}) || {}).deliver) };
     }
+    if (!letter || !String(letter.text || '').trim()) return fail('这封信还是空的', 'empty');
     const settings = await findOne('settings', OPENID, {}) || {};
 
     const todos = await listOwn('todos', OPENID, 100);

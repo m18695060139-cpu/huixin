@@ -85,39 +85,14 @@ button.mic.on { background-color: var(--ink); color: var(--on-ink); }
 .theme-mono .voice-card, .theme-mono .tidy-result { border-radius: 7.692rpx; }
 
 
-/* 下滑关闭：整页跟着手指走，固定底栏也在 track 里所以一起动。 */
-.sheet-track {
+/* 不再用手势位移关闭，避免 tab 页被平移后再次打开是空白。 */
+.sheet-inner {
   position: relative;
   width: 100%;
   min-height: 100%;
-  will-change: transform;
-}
-.sheet-track.reset {
-  transform: translate3d(0, 0, 0) !important;
-  transition: none !important;
-  opacity: 1 !important;
 }
 .screen.rec-lock {
   overflow: hidden;
   height: 100%;
 }
 
-/* iOS 卡片顶部的细条，提示可以下拉关闭。不接点击，手势由 sheet-track 处理。 */
-.sheet-grabber {
-  position: absolute;
-  left: 0;
-  right: 0;
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  pointer-events: none;
-  z-index: 2;
-}
-.sheet-grabber-bar {
-  width: 69.231rpx;
-  height: 9.615rpx;
-  border-radius: 9.615rpx;
-  background: rgba(60, 60, 67, 0.28);
-}
-.theme-night .sheet-grabber-bar { background: rgba(235, 235, 245, 0.36); }
-.theme-mono .sheet-grabber-bar { border-radius: 1.923rpx; }
