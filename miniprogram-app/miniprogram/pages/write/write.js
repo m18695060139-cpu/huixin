@@ -3,7 +3,7 @@ const state = require('../../utils/state');
 const actions = require('../../utils/actions');
 const model = require('../../utils/model');
 const { letterDay, addDays, hm } = require('../../utils/date');
-const { AI_ENABLED } = require('../../config');
+const { AI_ENABLED, VOICE_ENABLED } = require('../../config');
 const voice = require('../../utils/voice');
 
 Page({
@@ -27,6 +27,7 @@ Page({
     prompts: ['今天哪一刻最有劲？', '有什么在回避？', '明天要做的事：', '今天想记住的一句话：'],
     placeholder: '今天过得怎么样？做了什么、想到什么、哪里卡住了，随便写。\n\n写完点「寄出」，回信会帮你整理好其余的一切。',
     aiOn: !!AI_ENABLED,
+    voiceOn: false,
     rec: { on: false, cancel: false, clock: '0:00' },
     tidy: { show: false, preview: false, busy: false, result: '', canAll: false, used: false },
     winHeight: 667,
@@ -424,9 +425,24 @@ Page({
 
   // ── 语音输入 ──
   initVoice() {
-    if (this._mgr || this._mgrFail) return;
+    if (!VOICE_ENABLED) {
+      if (this.data.voiceOn) this.setData({ voiceOn: false });
+      return;
+    }
+    if (this._mgr) {
+      if (!this.data.voiceOn) this.setData({ voiceOn: true });
+      return;
+    }
+    if (this._mgrFail) {
+      if (this.data.voiceOn) this.setData({ voiceOn: false });
+      return;
+    }
     const r = voice.createManager();
-    if (!r.ok) { this._mgrFail = r.message; return; }
+    if (!r.ok) {
+      this._mgrFail = r.message;
+      this.setData({ voiceOn: false });
+      return;
+    }
     const mgr = r.manager;
     const self = this;
     mgr.onStart = function () {
@@ -443,6 +459,7 @@ Page({
     mgr.onStop = function (res) { self.onRecStop(res); };
     mgr.onError = function (res) { self.onRecError(res); };
     this._mgr = mgr;
+    this.setData({ voiceOn: true });
   },
   tickRec() {
     const self = this;

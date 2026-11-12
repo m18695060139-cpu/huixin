@@ -117,7 +117,7 @@
         </view>
       </view>
       <view class="send-row">
-        <button class="mic {{rec.on ? 'on' : ''}}" hover-class="{{rec.on ? '' : 'tap-on'}}" bindtouchstart="onMicStart" bindtouchend="onMicEnd" bindtouchcancel="onMicEnd" bindtouchmove="onMicMove" aria-label="按住说话">
+        <button wx:if="{{voiceOn}}" class="mic {{rec.on ? 'on' : ''}}" hover-class="{{rec.on ? '' : 'tap-on'}}" bindtouchstart="onMicStart" bindtouchend="onMicEnd" bindtouchcancel="onMicEnd" bindtouchmove="onMicMove" aria-label="按住说话">
           <view class="i i-mic"></view>
         </button>
         <button wx:if="{{editing && meta.hasReply}}" class="btn ghost" hover-class="tap-on" bindtap="cancelEdit">取消</button>

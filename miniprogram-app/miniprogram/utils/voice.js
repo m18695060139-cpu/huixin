@@ -1,6 +1,11 @@
-// 微信同声传译（WechatSI）语音识别。插件未添加时返回明确错误，写信页仍可手打。
+// 微信同声传译（WechatSI）语音识别。
+// 仅在 VOICE_ENABLED 为 true 且 app.json 已声明插件时才 requirePlugin，否则不在加载时碰插件。
+const { VOICE_ENABLED } = require('../config');
 
 function createManager() {
+  if (!VOICE_ENABLED) {
+    return { ok: false, message: 'off' };
+  }
   try {
     if (typeof requirePlugin !== 'function') {
       return { ok: false, message: '当前基础库还不支持语音插件' };
@@ -35,4 +40,4 @@ function errorMessage(res) {
   return raw || '没听清，请再试一次。';
 }
 
-module.exports = { createManager, errorMessage };
+module.exports = { createManager, errorMessage, VOICE_ENABLED };
