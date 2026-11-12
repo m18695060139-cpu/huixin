@@ -11,6 +11,7 @@ Page({
     date: '',
     text: '',
     empty: true,
+    focused: false,
     mood: '',
     energy: 0,
     editing: true,
@@ -53,6 +54,7 @@ Page({
       date: day,
       text: text,
       empty: !text,
+      focused: false,
       mood: mood,
       energy: energy,
       editing: showEditor,
@@ -77,9 +79,19 @@ Page({
       online: state.get().online,
     });
   },
+  onFocus() {
+    // 聚焦就藏起自定义提示字。iOS 拼音组合时不会触发 bindinput，
+    // 若只靠 empty，组合中的字会叠在灰色提示上。
+    if (!this.data.focused) this.setData({ focused: true });
+  },
+  onBlur(e) {
+    const text = (e.detail && e.detail.value != null) ? e.detail.value : (this._text || '');
+    this._text = text;
+    this.setData({ focused: false, empty: !text, canSend: !!String(text).trim() });
+  },
   onInput(e) {
     // 不回写 text：输入时 setData 输入框的值会打断安卓输入法、光标乱跳。
-    // 但「空不空」必须 setData，否则渲染层一直以为是空的，灰色提示字会叠在正文后面（重影）。
+    // empty 在失焦后用来决定要不要再显示提示字；聚焦时提示字已经藏起来了。
     this._text = e.detail.value;
     const date = this.data.date;
     const patch = { canSend: !!String(this._text).trim(), saveState: '保存中', warn: '' };
