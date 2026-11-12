@@ -917,12 +917,8 @@
         inner += replyView(l, { mine: true, go: !burning && l.date >= yday && s.type === 'reply' });
       }
       if (burning) {
-        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-        const style = burnStyle();
-        return `<div class="burn-stage ${style} ${V.burn.phase}${reduce ? ' reduce' : ''}" id="burn-stage">
+        return `<div class="burn-stage ${V.burn.phase}" id="burn-stage">
           <div class="burn-page">${head}${inner}</div>
-          <div class="burn-edge" aria-hidden="true"></div>
-          <div class="burn-flecks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
           <p class="burn-rest">已经放下了</p>
         </div>`;
       }
@@ -1136,25 +1132,8 @@
 
   // ───────────── 渲染后的绑定（输入框、表单） ─────────────
 
-  function burnStyle() {
-    const q = new URLSearchParams(location.search).get('burn');
-    if (q === 'ash' || q === 'b' || q === 'fade') return 'ash';
-    if (q === 'char' || q === 'a' || q === 'charred') return 'char';
-    return V.burnStyle || 'char';
-  }
-  function setBurnStyle(v) {
-    V.burnStyle = v === 'ash' ? 'ash' : 'char';
-    try {
-      const u = new URL(location.href);
-      u.searchParams.set('burn', V.burnStyle);
-      history.replaceState(null, '', u.pathname + u.search + u.hash);
-    } catch (e) { /* ignore */ }
-  }
-
   function viewBurn() {
     if (!V.burn || V.burn.phase !== 'confirm') return '';
-    const st = burnStyle();
-    const opt = (id, label) => `<button type="button" role="radio" aria-selected="${st === id}" data-act="burn-style" data-v="${id}">${label}</button>`;
     return `<div class="burn-dim" data-act="burn-keep" aria-hidden="true"></div>
       <div class="burn-card" role="dialog" aria-modal="true" aria-labelledby="burn-msg">
         <p class="burn-msg" id="burn-msg">焚毁后，这封信和它的回信都会消失，<br>找不回来。</p>
@@ -1171,10 +1150,6 @@
           </button>
         </div>
         <p class="burn-hint">按住「焚毁」一秒半，松手即取消</p>
-        <div class="burn-styles">
-          <span class="lab">动画预览</span>
-          <div class="mini-seg" role="radiogroup" aria-label="焚毁动画（预览用，选定后会去掉）">${opt('char', '焦边')}${opt('ash', '化灰')}</div>
-        </div>
       </div>`;
   }
 
@@ -1231,9 +1206,8 @@
     if (!b || b.busy || b.phase !== 'confirm') return;
     b.busy = true;
     const date = b.date, items = !!b.items;
-    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const animMs = reduce ? 450 : (burnStyle() === 'ash' ? 1600 : 1800);
-    const restMs = reduce ? 900 : 1500;
+    const animMs = 400;
+    const restMs = 1100;
     b.phase = 'fire';
     render();
     const t0 = performance.now();
@@ -1271,76 +1245,6 @@
     store.set('hx_outbox', outbox);
     store.del('hx_draft_' + date);
   }
-
-  // 按元素在画面里的高低，给焦边/化灰准备「先淡字」的位置
-  function prepBurnInk() {
-    const stage = $('#burn-stage');
-    if (!stage || !V.burn || V.burn.phase !== 'fire' || stage.classList.contains('reduce')) return;
-    const page = stage.querySelector('.burn-page');
-    if (!page) return;
-    const sheet = stage.closest('.sheet');
-    if (sheet) sheet.scrollTop = 0;
-    const sr = stage.getBoundingClientRect();
-    const h = sr.height || 1;
-    const style = burnStyle();
-    page.querySelectorAll('*').forEach(el => {
-      if (el.closest('.burn-edge, .burn-flecks, .burn-rest')) return;
-      const hasText = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
-      const isMark = el.matches('svg, img, .ic, .chev, .pill, .no-tag');
-      if (!hasText && !isMark) return;
-      const r = el.getBoundingClientRect();
-      if (r.height < 2) return;
-      const pos = Math.max(0, Math.min(1, (sr.bottom - (r.top + r.height / 2)) / h));
-      if (style === 'ash') {
-        el.classList.add('ash-line');
-        el.style.setProperty('--ash-start', (pos * 0.48).toFixed(4));
-      } else {
-        el.classList.add('char-ink');
-        el.style.setProperty('--char-pos', pos.toFixed(4));
-      }
-    });
-  }
-
-  function watchAshGrain() {
-    const stage = $('#burn-stage');
-    if (!stage || !stage.classList.contains('ash') || !stage.classList.contains('fire') || stage.classList.contains('reduce')) return;
-    const tick = () => {
-      if (!stage.isConnected || !stage.classList.contains('fire')) return;
-      const b = parseFloat(getComputedStyle(stage).getPropertyValue('--burn')) || 0;
-      stage.classList.toggle('grain', b >= 0.5);
-      if (stage.style.animation && stage.style.animation !== 'none' && b < 1) requestAnimationFrame(tick);
-    };
-    requestAnimationFrame(tick);
-  }
-
-  // 预览动画进度（截图 / 对比用），不调用接口、不删信
-  window.__hxBurnPreview = function (progress, style) {
-    if (style) setBurnStyle(style);
-    if (!V.burn) return false;
-    if (V.burn.phase !== 'fire') {
-      V.burn.phase = 'fire';
-      V.burn.preview = true;
-      V.burn.busy = true;
-      render();
-    }
-    const el = $('#burn-stage');
-    if (!el) return false;
-    const sheet = el.closest('.sheet');
-    if (sheet) sheet.scrollTop = 0;
-    el.style.animation = 'none';
-    el.style.setProperty('--burn', String(progress));
-    el.classList.toggle('grain', burnStyle() === 'ash' && progress >= 0.5);
-    prepBurnInk();
-    return true;
-  };
-  window.__hxBurnConfirm = function () {
-    if (!V.burn) return false;
-    V.burn.phase = 'confirm';
-    V.burn.preview = false;
-    V.burn.busy = false;
-    render();
-    return true;
-  };
 
     function afterRender() {
     const ed = $('#editor');
@@ -1420,8 +1324,6 @@
       S.habits.push(h); queue('PUT', '/habits/' + h.id, h); toCache(); render();
     });
     bindBurnHold();
-    prepBurnInk();
-    watchAshGrain();
     if (V.burn && V.burn.phase === 'confirm' && $('#burn-keep')) $('#burn-keep').focus();
   }
 
@@ -1725,10 +1627,6 @@
         try { V.ai.data = await api('DELETE', '/ai-config'); toast('已改回免费模型'); } catch (e2) { toast(e2.message); }
         render(); break;
       }
-      case 'burn-style':
-        setBurnStyle(v);
-        if (V.burn && V.burn.phase === 'confirm') render();
-        break;
       case 'burn-ask':
         V.burn = { date: v, items: false, phase: 'confirm' };
         render(); break;
