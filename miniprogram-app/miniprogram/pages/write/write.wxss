@@ -1,3 +1,18 @@
+.editor-wrap { position: relative; }
+.editor-ph {
+  position: absolute; left: 0; top: 0; right: 0;
+  color: var(--ring); font-family: var(--letter-font); font-size: 32.692rpx; line-height: 1.9;
+  white-space: pre-wrap; word-break: break-word; pointer-events: none; z-index: 0;
+}
+.day-title { font-size: 30.769rpx; font-weight: 600; display: block; text-align: center; }
+.nav-btn.off { color: var(--ring); }
+.round-btn.ghost { background: transparent; }
+.sent .tick {
+  width: 15.385rpx; height: 9.615rpx; border-left: 3.846rpx solid #000000; border-bottom: 3.846rpx solid #000000;
+  transform: rotate(-45deg); margin-top: -3.846rpx;
+}
+.dot { width: 57.692rpx; height: 57.692rpx; }
+
 /* 写信页语音输入。麦克风图标用 CSS mask，不用 <image> 的 data-URI。 */
 button.mic {
   width: 100rpx;
@@ -84,15 +99,7 @@ button.mic.on { background-color: var(--ink); color: var(--on-ink); }
 .tidy-acts .chip { height: 69.231rpx; padding: 0 30.769rpx; border-radius: 34.615rpx; background: var(--card); font-size: 26.923rpx; display: flex; align-items: center; }
 .theme-mono .voice-card, .theme-mono .tidy-result { border-radius: 7.692rpx; }
 
-
-/* 不再用手势位移关闭，避免 tab 页被平移后再次打开是空白。 */
-.sheet-inner {
-  position: relative;
-  width: 100%;
-  min-height: 100%;
-}
 .screen.rec-lock {
   overflow: hidden;
   height: 100%;
 }
-

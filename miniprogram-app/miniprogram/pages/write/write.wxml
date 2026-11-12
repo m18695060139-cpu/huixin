@@ -1,5 +1,4 @@
 <view class="screen theme-{{theme}} {{rec.on ? 'rec-lock' : ''}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
-  <view class="sheet-inner">
   <view class="top-shield" wx:if="{{!sentShow}}" style="height: {{statusBar}}px;"></view>
   <view class="page {{editing ? 'bare' : 'tab-pad'}}">
     <view class="wbar stick-top" wx:if="{{!sentShow}}" style="padding-top: {{statusBar + 12}}px;">
@@ -151,5 +150,4 @@
 
   <toast id="toast" bind:act="onToastAct" />
   <editor show="{{ed.show}}" mode="{{ed.mode}}" item="{{ed.item}}" token="{{ed.token}}" theme="{{theme}}" bind:close="closeEditor" bind:submit="onEditorSubmit" />
-  </view>
 </view>
