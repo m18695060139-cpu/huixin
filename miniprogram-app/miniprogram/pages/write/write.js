@@ -36,15 +36,20 @@ Page({
     sheetAtTop: true,
     sheetTok: 0,
     sheetResetClass: 'reset',
+    sheetLive: true,
   },
   onLoad() { this.initVoice(); },
   onShow() {
     this._leaving = false;
     this._sheetClosing = false;
     this._pageHidden = false;
+    this._sheetDragging = false;
+    // 作废还在走的关闭动画回调，避免刚打开又被 switchTab 踢走。
+    this._dismissGen = (this._dismissGen || 0) + 1;
+    if (this._dismissT) { clearTimeout(this._dismissT); this._dismissT = null; }
     this.hideShare();
     this.initVoice();
-    this.syncSheetMetrics();
+    this.armSheet();
     this.bindKeyboard();
     const target = state.takeWriteTarget();
     const day = (target && target.date) || this.data.date || letterDay(new Date());
@@ -54,6 +59,9 @@ Page({
   },
   onHide() {
     this._pageHidden = true;
+    this._dismissGen = (this._dismissGen || 0) + 1;
+    if (this._dismissT) { clearTimeout(this._dismissT); this._dismissT = null; }
+    if (this._resetT) { clearTimeout(this._resetT); this._resetT = null; }
     this.unbindKeyboard();
     if (this.unsub) this.unsub();
     this.abortRec(true);
@@ -61,9 +69,15 @@ Page({
     // 安卓系统返回会走这里（tab 页没有页面栈），跟下滑关闭同一条存草稿路径。
     if (this.data.editing) this.flushDraft();
     else clearTimeout(this._saveT);
+    // 写信是 tab 页，关闭后实例还在。WXS setStyle 的位移会留在轨道上，
+    // 只改 sheetTok 在模拟器里经常清不掉，再打开就是空白页。离开时拆掉节点。
+    this.disarmSheet();
   },
   onUnload() {
     this._pageHidden = true;
+    this._dismissGen = (this._dismissGen || 0) + 1;
+    if (this._dismissT) { clearTimeout(this._dismissT); this._dismissT = null; }
+    if (this._resetT) { clearTimeout(this._resetT); this._resetT = null; }
     this.unbindKeyboard();
     if (this.unsub) this.unsub();
     this.abortRec(true);
@@ -367,7 +381,7 @@ Page({
       if (app && app.paintChrome) app.paintChrome(app.resolvedTheme ? app.resolvedTheme() : this.data.theme);
     } catch (e) { /* 主题底色仍由 class 决定 */ }
   },
-  syncSheetMetrics() {
+  sheetMetrics() {
     let win = {};
     try {
       win = (wx.getWindowInfo && wx.getWindowInfo()) || (wx.getSystemInfoSync && wx.getSystemInfoSync()) || {};
@@ -375,18 +389,67 @@ Page({
     const h = win.windowHeight || 667;
     const w = win.windowWidth || 390;
     const head = (this.data.statusBar || 20) + (this.data.editing ? 72 : 60);
+    return { winHeight: h, winWidth: w, sheetHead: head, sheetAtTop: true };
+  },
+  // 只更新尺寸，不重置位移。键盘高度变化若走完整重置，会把正在滑的关闭弹回去。
+  syncSheetMetrics() {
+    if (this._sheetClosing || this._sheetDragging || this._pageHidden) return;
+    this.setData(this.sheetMetrics());
+  },
+  disarmSheet() {
+    this._sheetNeedsMount = true;
+    this._sheetDragging = false;
     this.setData({
-      winHeight: h,
-      winWidth: w,
-      sheetHead: head,
-      sheetAtTop: true,
+      sheetLive: false,
+      sheetResetClass: 'reset',
       sheetTok: Date.now(),
+    });
+  },
+  armSheet() {
+    const metrics = this.sheetMetrics();
+    const tok = Date.now();
+    const payload = Object.assign(metrics, {
+      sheetLive: true,
+      sheetTok: tok,
       sheetResetClass: 'reset',
     });
     const self = this;
-    const clear = function () { self.setData({ sheetResetClass: '' }); };
-    if (wx.nextTick) wx.nextTick(clear);
-    else setTimeout(clear, 40);
+    const after = function () { self.reinforceSheetReset(); };
+    // 节点还在说明 onHide 的卸载可能还没生效；先卸再挂，才能清掉 setStyle 的位移。
+    if (this.data.sheetLive && this._sheetNeedsMount) {
+      this.setData({ sheetLive: false, sheetResetClass: 'reset' });
+      const mount = function () {
+        self._sheetNeedsMount = false;
+        self.setData(payload);
+        after();
+      };
+      if (wx.nextTick) wx.nextTick(mount);
+      else setTimeout(mount, 16);
+      return;
+    }
+    this._sheetNeedsMount = false;
+    this.setData(payload);
+    after();
+  },
+  reinforceSheetReset() {
+    const self = this;
+    const gen = this._dismissGen;
+    if (this._resetT) clearTimeout(this._resetT);
+    // 等 tab 页真正显示后再触发一次 WXS onReset，避免隐藏时的快照把位移盖回来。
+    this._resetT = setTimeout(function () {
+      self._resetT = null;
+      if (self._pageHidden || self._sheetClosing || self._sheetDragging || self._dismissGen !== gen) return;
+      self.setData({
+        sheetTok: Date.now(),
+        sheetResetClass: 'reset',
+        sheetLive: true,
+      });
+      self._resetT = setTimeout(function () {
+        self._resetT = null;
+        if (self._pageHidden || self._sheetClosing || self._sheetDragging) return;
+        self.setData({ sheetResetClass: '' });
+      }, 80);
+    }, 64);
   },
   onPageScroll(e) {
     const at = !e.scrollTop || e.scrollTop <= 0;
@@ -408,16 +471,25 @@ Page({
     this._onKb = null;
   },
   onSheetDragStart() {
+    this._sheetDragging = true;
+    if (this._resetT) { clearTimeout(this._resetT); this._resetT = null; }
     if (wx.hideKeyboard) wx.hideKeyboard();
+  },
+  onSheetDragEnd() {
+    this._sheetDragging = false;
   },
   onSheetDismiss() {
     if (this._sheetClosing) return;
     this._sheetClosing = true;
+    this._sheetDragging = false;
     const self = this;
-    setTimeout(function () {
+    const gen = (this._dismissGen || 0);
+    this._dismissT = setTimeout(function () {
+      self._dismissT = null;
+      if (self._dismissGen !== gen) return;
       self._sheetClosing = false;
       self.closeWrite();
-    }, 260);
+    }, 280);
   },
   onHabit(e) {
     actions.toggleHabit(e.currentTarget.dataset.id, this.data.date);

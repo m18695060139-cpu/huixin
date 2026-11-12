@@ -1,8 +1,9 @@
 <wxs module="sheet" src="./sheet.wxs"></wxs>
 <view class="screen theme-{{theme}} {{rec.on ? 'rec-lock' : ''}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
-  <view class="sheet-track {{sheetResetClass}}"
+  <view wx:if="{{sheetLive}}" class="sheet-track {{sheetResetClass}}"
     change:reset="{{sheet.onReset}}"
     reset="{{sheetTok}}"
+    data-tok="{{sheetTok}}"
     data-on="{{editing && !sentShow && !ed.show}}"
     data-attop="{{sheetAtTop}}"
     data-h="{{winHeight}}"

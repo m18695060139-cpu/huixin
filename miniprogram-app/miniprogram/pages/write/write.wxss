@@ -95,6 +95,7 @@ button.mic.on { background-color: var(--ink); color: var(--on-ink); }
 .sheet-track.reset {
   transform: translate3d(0, 0, 0) !important;
   transition: none !important;
+  opacity: 1 !important;
 }
 .screen.rec-lock {
   overflow: hidden;
