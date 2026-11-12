@@ -3,8 +3,7 @@ const state = require('../../utils/state');
 const actions = require('../../utils/actions');
 const model = require('../../utils/model');
 const { letterDay, addDays, hm } = require('../../utils/date');
-const { AI_ENABLED, VOICE_ENABLED } = require('../../config');
-const voice = require('../../utils/voice');
+const { AI_ENABLED } = require('../../config');
 const nav = require('../../utils/nav');
 
 Page({
@@ -28,21 +27,17 @@ Page({
     prompts: ['今天哪一刻最有劲？', '有什么在回避？', '明天要做的事：', '今天想记住的一句话：'],
     placeholder: '今天过得怎么样？做了什么、想到什么、哪里卡住了，随便写。\n\n写完点「寄出」，回信会帮你整理好其余的一切。',
     aiOn: !!AI_ENABLED,
-    voiceOn: false,
-    rec: { on: false, cancel: false, clock: '0:00' },
     tidy: { show: false, preview: false, busy: false, result: '', canAll: false, used: false },
   },
   onLoad(query) {
     this._qDate = (query && query.date) || '';
     this._qEdit = !query || query.edit !== '0';
     this._needLoad = true;
-    this.initVoice();
   },
   onShow() {
     this._leaving = false;
     this._pageHidden = false;
     this.hideShare();
-    this.initVoice();
     const target = state.takeWriteTarget();
     if (this._needLoad || target) {
       const day = (target && target.date) || this._qDate || this.data.date || letterDay(new Date());
@@ -59,7 +54,6 @@ Page({
     this._pageHidden = true;
     if (this.unsub) this.unsub();
     this.unsub = null;
-    this.abortRec(true);
     this.invalidateTidy();
     // 右滑返回、安卓返回都会先走这里，再走 onUnload。跟关闭按钮同一条存草稿路径。
     if (this.data.editing) this.flushDraft();
@@ -69,7 +63,6 @@ Page({
     this._pageHidden = true;
     if (this.unsub) this.unsub();
     this.unsub = null;
-    this.abortRec(true);
     this.invalidateTidy();
     if (this.data.editing) this.flushDraft();
     else clearTimeout(this._saveT);
@@ -113,7 +106,6 @@ Page({
       sentReady: false,
       meta: meta,
       letter: letter,
-      rec: { on: false, cancel: false, clock: '0:00' },
       tidy: { show: false, preview: false, busy: false, result: '', canAll: false, used: false },
       aiOn: !!AI_ENABLED,
     });
@@ -213,7 +205,6 @@ Page({
     const text = this._text || '';
     if (!text.trim() || this._sending) return;
     this._sending = true;
-    this.abortRec(true);
     this.invalidateTidy();
     this._sendGen = (this._sendGen || 0) + 1;
     const sendGen = this._sendGen;
@@ -323,7 +314,6 @@ Page({
     wx.redirectTo({ url: '/pages/letter/letter?date=' + date });
   },
   cancelEdit() {
-    this.abortRec(true);
     this.invalidateTidy();
     clearTimeout(this._saveT);
     actions.clearDraft(this.data.date);
@@ -379,7 +369,6 @@ Page({
   closeWrite() {
     if (this._leaving) return;
     this._leaving = true;
-    this.abortRec(true);
     this.invalidateTidy();
     this.flushDraft();
     this._pageHidden = true;
@@ -422,215 +411,6 @@ Page({
     actions.toggleHabit(e.currentTarget.dataset.id, this.data.date);
   },
 
-  // ── 语音输入 ──
-  initVoice() {
-    if (!VOICE_ENABLED) {
-      if (this.data.voiceOn) this.setData({ voiceOn: false });
-      return;
-    }
-    if (this._mgr) {
-      if (!this.data.voiceOn) this.setData({ voiceOn: true });
-      return;
-    }
-    if (this._mgrFail) {
-      if (this.data.voiceOn) this.setData({ voiceOn: false });
-      return;
-    }
-    const r = voice.createManager();
-    if (!r.ok) {
-      this._mgrFail = r.message;
-      this.setData({ voiceOn: false });
-      return;
-    }
-    const mgr = r.manager;
-    const self = this;
-    mgr.onStart = function () {
-      if (!self._micHolding) {
-        try { mgr.stop(); } catch (e) { /* 已经松手 */ }
-        return;
-      }
-      self._recStartedAt = Date.now();
-      self._recCancel = false;
-      self.setData({ rec: { on: true, cancel: false, clock: '0:00' } });
-      self.tickRec();
-      if (wx.vibrateShort) wx.vibrateShort({ type: 'light' });
-    };
-    mgr.onStop = function (res) { self.onRecStop(res); };
-    mgr.onError = function (res) { self.onRecError(res); };
-    this._mgr = mgr;
-    this.setData({ voiceOn: true });
-  },
-  tickRec() {
-    const self = this;
-    clearInterval(this._recTick);
-    this._recTick = setInterval(() => {
-      if (!self.data.rec.on) { clearInterval(self._recTick); return; }
-      const sec = Math.max(0, Math.floor((Date.now() - (self._recStartedAt || Date.now())) / 1000));
-      const clock = Math.floor(sec / 60) + ':' + ('0' + (sec % 60)).slice(-2);
-      if (clock !== self.data.rec.clock) self.setData({ 'rec.clock': clock });
-    }, 250);
-  },
-  ensureMic(cb) {
-    const self = this;
-    const go = function () {
-      wx.getSetting({
-        success(res) {
-          const v = res.authSetting && res.authSetting['scope.record'];
-          if (v === true) { cb(); return; }
-          if (v === false) { self.askOpenSetting(); return; }
-          wx.authorize({
-            scope: 'scope.record',
-            success() { cb(); },
-            fail() { self.askOpenSetting(); },
-          });
-        },
-        fail() { self.askOpenSetting(); },
-      });
-    };
-    if (wx.requirePrivacyAuthorize) {
-      wx.requirePrivacyAuthorize({
-        success: go,
-        fail() { self.toast('需要同意隐私说明才能录音'); },
-      });
-    } else go();
-  },
-  askOpenSetting() {
-    this._micHolding = false;
-    this.setData({ rec: { on: false, cancel: false, clock: '0:00' } });
-    wx.showModal({
-      title: '需要麦克风',
-      content: '语音输入要把你说的话写成文字。请在设置里打开麦克风。',
-      confirmText: '去设置',
-      success(r) { if (r.confirm) wx.openSetting(); },
-    });
-  },
-  onMicStart(e) {
-    const t = e.touches && e.touches[0];
-    this._micHolding = true;
-    this._micMoved = false;
-    this._micStartX = t ? t.clientX : 0;
-    this._micStartY = t ? t.clientY : 0;
-    this._recCancel = false;
-    clearTimeout(this._micArmT);
-    const self = this;
-    // 短按或滑过麦克风不算录音，避免滚页面时误触。
-    this._micArmT = setTimeout(() => {
-      if (!self._micHolding || self._micMoved) return;
-      self.ensureMic(() => {
-        if (!self._micHolding || self._micMoved) return;
-        self.startRec();
-      });
-    }, 160);
-  },
-  onMicMove(e) {
-    const t = e.touches && e.touches[0];
-    if (!t) return;
-    const dx = t.clientX - (this._micStartX || 0);
-    const dy = t.clientY - (this._micStartY || 0);
-    if (!(this.data.rec && this.data.rec.on)) {
-      if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
-        this._micMoved = true;
-        this._micHolding = false;
-        clearTimeout(this._micArmT);
-      }
-      return;
-    }
-    if (!this._micHolding) return;
-    const cancel = (this._micStartY - t.clientY) > 72;
-    if (cancel !== this._recCancel) {
-      this._recCancel = cancel;
-      this.setData({ 'rec.cancel': cancel });
-    }
-  },
-  onMicEnd() {
-    clearTimeout(this._micArmT);
-    this._micHolding = false;
-    if (this.data.rec && this.data.rec.on) this.stopRec();
-  },
-  startRec() {
-    this.initVoice();
-    if (!this._mgr) {
-      this._micHolding = false;
-      this.toast(this._mgrFail || '语音还没开通。请先在公众平台添加「微信同声传译」插件。');
-      return;
-    }
-    this._recCancel = false;
-    this._recStartedAt = Date.now();
-    try {
-      this._mgr.start({ duration: 60000, lang: 'zh_CN' });
-    } catch (e) {
-      this._micHolding = false;
-      this.toast('没能开始录音，请再试一次');
-    }
-  },
-  stopRec() {
-    clearInterval(this._recTick);
-    if (this._mgr) {
-      try { this._mgr.stop(); } catch (e) { /* onStop 会收尾 */ }
-    }
-  },
-  abortRec(silent) {
-    this._micHolding = false;
-    this._micMoved = true;
-    this._recCancel = true;
-    clearTimeout(this._micArmT);
-    clearInterval(this._recTick);
-    if (this._mgr && this.data.rec && this.data.rec.on) {
-      try { this._mgr.stop(); } catch (e) { /* 忽略 */ }
-    }
-    if (!silent) this.setData({ rec: { on: false, cancel: false, clock: '0:00' } });
-    else if (this.data.rec && this.data.rec.on) this.setData({ rec: { on: false, cancel: false, clock: '0:00' } });
-  },
-  onRecStop(res) {
-    clearInterval(this._recTick);
-    const cancel = this._recCancel;
-    this._recCancel = false;
-    this._micHolding = false;
-    this.setData({ rec: { on: false, cancel: false, clock: '0:00' } });
-    if (cancel) return;
-    const ms = (res && res.duration) || (Date.now() - (this._recStartedAt || 0));
-    const spoken = String((res && res.result) || '').trim();
-    if (ms < 600 || !spoken) {
-      this.toast('说的时间有点短，再试一次。');
-      return;
-    }
-    this.appendSpoken(spoken);
-  },
-  onRecError(res) {
-    clearInterval(this._recTick);
-    this._micHolding = false;
-    this.setData({ rec: { on: false, cancel: false, clock: '0:00' } });
-    if (this._recCancel) { this._recCancel = false; return; }
-    const msg = voice.errorMessage(res);
-    if (!msg) return;
-    if (msg === 'need-mic') { this.askOpenSetting(); return; }
-    this.toast(msg);
-  },
-  appendSpoken(spoken) {
-    const cur = this._text || '';
-    const sep = !cur ? '' : (/\n\s*$/.test(cur) ? '' : '\n');
-    const start = cur.length + sep.length;
-    const text = cur + sep + spoken;
-    this._text = text;
-    this._dictated = { start: start, end: text.length, text: spoken };
-    this._tidyBackup = null;
-    const canAll = cur.trim().length > 0;
-    this.setData({
-      text: text,
-      empty: !text,
-      canSend: !!String(text).trim(),
-      saveState: '保存中',
-      warn: '',
-      tidy: {
-        show: !!AI_ENABLED,
-        preview: false,
-        busy: false,
-        result: '',
-        canAll: canAll,
-      },
-    });
-    this.queueDraft(text);
-  },
   queueDraft(text) {
     const date = this.data.date;
     actions.writeDraft(date, { text: text, mood: this.data.mood, energy: this.data.energy });

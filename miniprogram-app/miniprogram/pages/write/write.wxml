@@ -1,4 +1,4 @@
-<view class="screen theme-{{theme}} {{rec.on ? 'rec-lock' : ''}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
   <view class="top-shield" wx:if="{{!sentShow}}" style="height: {{statusBar}}px;"></view>
   <view class="page bare">
     <view class="wbar stick-top" wx:if="{{!sentShow}}" style="padding-top: {{statusBar + 12}}px;">
@@ -101,9 +101,6 @@
         </view>
       </view>
       <view class="send-row">
-        <button wx:if="{{voiceOn}}" class="mic {{rec.on ? 'on' : ''}}" hover-class="{{rec.on ? '' : 'tap-on'}}" bindtouchstart="onMicStart" bindtouchend="onMicEnd" bindtouchcancel="onMicEnd" bindtouchmove="onMicMove" aria-label="按住说话">
-          <view class="i i-mic"></view>
-        </button>
         <button wx:if="{{editing && meta.hasReply}}" class="btn ghost" hover-class="tap-on" bindtap="cancelEdit">取消</button>
         <button class="btn" hover-class="tap-on" bindtap="onSend" disabled="{{!canSend}}"><view class="i i-send"></view>{{meta.sendLabel || '寄出'}}</button>
       </view>
@@ -111,12 +108,6 @@
     </view>
   </view>
 
-  <view class="voice-mask" wx:if="{{rec.on}}">
-    <view class="voice-card {{rec.cancel ? 'cancel' : ''}}">
-      <text class="voice-timer">{{rec.clock}}</text>
-      <text class="voice-hint">{{rec.cancel ? '松开取消' : '松开结束 · 上滑取消'}}</text>
-    </view>
-  </view>
 
   <view class="sent" wx:if="{{sentShow}}">
     <view class="env-wrap">

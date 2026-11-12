@@ -45,10 +45,6 @@
   "sitemapLocation": "sitemap.json",
   "usingComponents": {
     "st-nav": "/components/st-nav/st-nav"
-  },
-  "permission": {
-    "scope.record": {
-      "desc": "用于写信时把你说的话转成文字"
-    }
   }
 }
+

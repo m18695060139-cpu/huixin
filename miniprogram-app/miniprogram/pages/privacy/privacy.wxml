@@ -12,8 +12,6 @@
       <text class="bullet">保存文字前会做内容安全检查。若被拦住，会提示你修改，已经写在输入框里的字不会被清掉。</text>
       <text class="h">你可以删掉</text>
       <text class="bullet">设置里的「清空我的全部数据」会删除云端和这台手机上的记录。</text>
-      <text class="h">录音</text>
-      <text class="bullet">写信时按住麦克风，可以把你说的话转成文字写进这封信。录音只用来这一次识别，回信小记不会把语音文件存到云端。</text>
       <text class="h">只读 API 密钥（可选）</text>
       <text class="bullet">只有你自己在设置里点「生成密钥」才会有。不生成，就没有任何外部工具能读你的数据。</text>
       <text class="bullet">有了这串密钥，任何人或工具都能读到你全部的信、回信、待办、点子、习惯和周信季信。接口只能读，不能改。</text>
