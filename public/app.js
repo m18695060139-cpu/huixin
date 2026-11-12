@@ -886,7 +886,7 @@
   // ───────────── 二级页面 ─────────────
   function openSheet(s) { s.fresh = true; V.sheets.push(s); render(); }
   function closeSheet() {
-    if (V.burn && (V.burn.phase === 'fire' || V.burn.phase === 'rest')) return;
+    if (V.burn && V.burn.phase === 'fire') return;
     if (V.burn && V.burn.phase === 'confirm') { V.burn = null; render(); return; }
     V.sheets.pop(); V.droppedIdeas = undefined; if (!V.sheets.length) { V.openGroups = null; V.olderTodos = undefined; } render();
   }
@@ -919,7 +919,6 @@
       if (burning) {
         return `<div class="burn-stage ${V.burn.phase}" id="burn-stage">
           <div class="burn-page">${head}${inner}</div>
-          <p class="burn-rest">已经放下了</p>
         </div>`;
       }
       return head + inner
@@ -1207,17 +1206,12 @@
     b.busy = true;
     const date = b.date, items = !!b.items;
     const animMs = 400;
-    const restMs = 1100;
     b.phase = 'fire';
     render();
     const t0 = performance.now();
     try {
       await api('POST', `/letters/${date}/burn`, { items });
       await sleep(Math.max(0, animMs - (performance.now() - t0)));
-      if (!V.burn || V.burn !== b) return;
-      b.phase = 'rest';
-      render();
-      await sleep(restMs);
       if (!V.burn || V.burn !== b) return;
       applyBurnLocal(date, items);
       V.burn = null;
@@ -1631,7 +1625,7 @@
         V.burn = { date: v, items: false, phase: 'confirm' };
         render(); break;
       case 'burn-keep':
-        if (V.burn && (V.burn.phase === 'fire' || V.burn.phase === 'rest')) return;
+        if (V.burn && V.burn.phase === 'fire') return;
         V.burn = null; render(); break;
       case 'burn-items': {
         if (!V.burn) return;

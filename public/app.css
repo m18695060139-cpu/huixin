@@ -564,6 +564,7 @@ textarea.input { line-height: 1.6; resize: vertical; }
   /* 闷红，不要亮边 */
   background: color-mix(in srgb, var(--danger) 78%, var(--text) 22%);
   pointer-events: none;
+  z-index: 0;
 }
 .burn-hold .lab-idle,
 .burn-hold .lab-on {
@@ -573,11 +574,19 @@ textarea.input { line-height: 1.6; resize: vertical; }
   align-items: center;
   justify-content: center;
   pointer-events: none;
+  /* 两个标签都铺满按钮、文字位置不变，只剪可见的一半，填过的地方不会露出红字 */
 }
-.burn-hold .lab-idle { color: var(--danger); }
+.burn-hold .lab-idle {
+  color: var(--danger);
+  z-index: 1;
+  -webkit-clip-path: inset(0 0 0 calc(var(--hold, 0) * 100%));
+  clip-path: inset(0 0 0 calc(var(--hold, 0) * 100%));
+}
 .burn-hold .lab-on {
   color: var(--card);
-  clip-path: inset(0 calc((1 - var(--hold, 0)) * 100%) 0 0);
+  z-index: 2;
+  -webkit-clip-path: inset(0 calc(100% - var(--hold, 0) * 100%) 0 0);
+  clip-path: inset(0 calc(100% - var(--hold, 0) * 100%) 0 0);
 }
 .burn-hint {
   margin: 12px 0 0;
@@ -605,18 +614,3 @@ textarea.input { line-height: 1.6; resize: vertical; }
 .burn-stage.fire .burn-page {
   animation: burn-fade .4s ease forwards;
 }
-.burn-rest {
-  margin: 0;
-  position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-family: var(--letter-font);
-  font-size: 22px;
-  letter-spacing: .12em;
-  color: var(--sub);
-  opacity: 0;
-  pointer-events: none;
-}
-.burn-stage.rest .burn-page { opacity: 0; }
-.burn-stage.rest .burn-rest { animation: fadein .5s ease forwards; }
