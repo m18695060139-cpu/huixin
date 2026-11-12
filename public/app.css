@@ -426,8 +426,9 @@ textarea.input { line-height: 1.6; resize: vertical; }
 @media (prefers-reduced-motion: reduce) {
   .sheet, .bob, .reply-letter, .pop, .fresh, .sent .env-wrap, .sent .pm, .spin, .mic.on, .burn-card, .burn-dim, .burn-stage.fire { animation: none; }
   button:active:not(:disabled), .tap:active { transform: none; }
-  .burn-stage.fire .burn-page { animation: burn-fade .45s ease forwards; }
-  .burn-ember, .burn-char, .burn-sparks { display: none !important; }
+  .burn-stage.fire .burn-page { animation: burn-fade .45s ease forwards; -webkit-mask-image: none; mask-image: none; transform: none; filter: none; }
+  .burn-edge, .burn-flecks { display: none !important; }
+  .burn-stage.fire .ash-line, .burn-stage.fire .char-ink { opacity: 1 !important; }
 }
 
 /* 设置 · API 密钥：刚生成的完整密钥 */
@@ -540,8 +541,12 @@ textarea.input { line-height: 1.6; resize: vertical; }
   display: flex;
   gap: 10px;
 }
-.burn-actions .btn { flex: 1; }
-
+/* 「留着」：主按钮，墨色，不用品牌红 */
+.burn-keep {
+  flex: 1;
+  background: var(--text);
+  color: var(--card);
+}
 .burn-hold {
   flex: 1;
   position: relative;
@@ -564,16 +569,8 @@ textarea.input { line-height: 1.6; resize: vertical; }
   position: absolute;
   left: 0; top: 0; bottom: 0;
   width: calc(var(--hold, 0) * 100%);
-  background: var(--danger);
-  pointer-events: none;
-}
-.burn-hold .fill::after {
-  content: "";
-  position: absolute;
-  right: -10px; top: 0; bottom: 0;
-  width: 20px;
-  background: linear-gradient(to right, transparent, rgba(255, 210, 140, .45));
-  opacity: calc(min(var(--hold, 0), 1 - var(--hold, 0)) * 4);
+  /* 闷红，不要亮边 */
+  background: color-mix(in srgb, var(--danger) 78%, var(--text) 22%);
   pointer-events: none;
 }
 .burn-hold .lab-idle,
@@ -587,7 +584,7 @@ textarea.input { line-height: 1.6; resize: vertical; }
 }
 .burn-hold .lab-idle { color: var(--danger); }
 .burn-hold .lab-on {
-  color: var(--on-ink);
+  color: var(--card);
   clip-path: inset(0 calc((1 - var(--hold, 0)) * 100%) 0 0);
 }
 .burn-hint {
@@ -597,6 +594,20 @@ textarea.input { line-height: 1.6; resize: vertical; }
   color: var(--sub);
   line-height: 1.4;
 }
+/* 临时：两种动画预览，选定后会去掉 */
+.burn-styles {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: .5px solid var(--sep);
+}
+.burn-styles .lab { font-size: 11px; color: var(--sub); }
+.burn-styles .mini-seg { margin: 0; }
+.burn-styles .mini-seg button { padding: 5px 12px; font-size: 12px; color: var(--sub); }
+.burn-styles .mini-seg button[aria-selected="true"] { color: var(--text); font-weight: 600; }
 
 .sheet.burning { overflow: hidden; }
 .sheet.burning .page {
@@ -611,7 +622,8 @@ textarea.input { line-height: 1.6; resize: vertical; }
   overflow: hidden;
   --burn: 0;
 }
-.burn-stage.fire { animation: burn-go 1.8s ease-in forwards; }
+.burn-stage.char.fire { animation: burn-go 1.8s cubic-bezier(.42,.0,.58,1) forwards; }
+.burn-stage.ash.fire  { animation: burn-go 1.6s cubic-bezier(.42,.0,.58,1) forwards; }
 @keyframes burn-go {
   from { --burn: 0; }
   to { --burn: 1; }
@@ -619,89 +631,117 @@ textarea.input { line-height: 1.6; resize: vertical; }
 @keyframes burn-fade { to { opacity: 0 } }
 @keyframes fadein { from { opacity: 0 } to { opacity: 1 } }
 
-.burn-stage.fire .burn-page {
+/* A · 焦边：不整齐的薄炭边往上走，纸面保持清晰 */
+.burn-stage.char.fire .burn-page {
   height: 100%;
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(
-    to top,
-    transparent 0%,
-    transparent calc(var(--burn) * 100% - 3%),
-    rgba(0,0,0,.4) calc(var(--burn) * 100%),
-    #000 calc(var(--burn) * 100% + 7%),
-    #000 100%
-  );
-  mask-image: linear-gradient(
-    to top,
-    transparent 0%,
-    transparent calc(var(--burn) * 100% - 3%),
-    rgba(0,0,0,.4) calc(var(--burn) * 100%),
-    #000 calc(var(--burn) * 100% + 7%),
-    #000 100%
-  );
-  filter: saturate(calc(1 - var(--burn) * .45)) brightness(calc(1 - var(--burn) * .08));
+  -webkit-mask-image: url(/burn-char.svg?v=26);
+  mask-image: url(/burn-char.svg?v=26);
+  -webkit-mask-size: 100% 200%;
+  mask-size: 100% 200%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: 0 calc(var(--burn) * 100%);
+  mask-position: 0 calc(var(--burn) * 100%);
 }
+.burn-stage.char.fire .char-ink {
+  opacity: clamp(0.12, calc(1 - (var(--burn) - var(--char-pos, 1) + 0.055) / 0.07), 1);
+}
+.burn-edge {
+  display: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+  background: color-mix(in srgb, var(--text) 74%, var(--danger) 26%);
+  /* 同一张焦边蒙版错开几个像素再异或，得到一条和切口重合的细炭线 */
+  -webkit-mask-image: url(/burn-char.svg?v=26), url(/burn-char.svg?v=26);
+  mask-image: url(/burn-char.svg?v=26), url(/burn-char.svg?v=26);
+  -webkit-mask-size: 100% 200%, 100% 200%;
+  mask-size: 100% 200%, 100% 200%;
+  -webkit-mask-repeat: no-repeat, no-repeat;
+  mask-repeat: no-repeat, no-repeat;
+  -webkit-mask-position: 0 calc(var(--burn) * 100%), 0 calc(var(--burn) * 100% - 3.5px);
+  mask-position: 0 calc(var(--burn) * 100%), 0 calc(var(--burn) * 100% - 3.5px);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  opacity: calc(0.88 - var(--burn) * 0.2);
+}
+.burn-stage.char.fire:not(.reduce) .burn-edge { display: block; }
+.burn-flecks {
+  display: none;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 4;
+}
+.burn-stage.char.fire:not(.reduce) .burn-flecks { display: block; }
+.burn-flecks i {
+  position: absolute;
+  left: var(--sx, 50%);
+  bottom: calc(var(--burn) * 100%);
+  width: var(--sz, 2px);
+  height: var(--sz, 2px);
+  border-radius: 0.5px;
+  background: color-mix(in srgb, var(--text) 42%, var(--card) 58%);
+  opacity: 0;
+}
+.burn-stage.char.fire:not(.reduce) .burn-flecks i { animation: fleck 1.5s ease-out infinite; }
+.burn-flecks i:nth-child(1) { --sx: 18%; --sz: 2px; animation-delay: 0s; }
+.burn-flecks i:nth-child(2) { --sx: 34%; --sz: 1.5px; animation-delay: .35s; }
+.burn-flecks i:nth-child(3) { --sx: 51%; --sz: 2px; animation-delay: .7s; }
+.burn-flecks i:nth-child(4) { --sx: 67%; --sz: 1.5px; animation-delay: .18s; }
+.burn-flecks i:nth-child(5) { --sx: 83%; --sz: 2px; animation-delay: .52s; }
+@keyframes fleck {
+  0% { opacity: 0; transform: translate(-50%, 0); }
+  20% { opacity: .55; }
+  100% { opacity: 0; transform: translate(-50%, -28px); }
+}
+
+/* B · 化灰：字从下往上一行行淡去，纸再化成细灰扬起 */
+.burn-stage.ash.fire .burn-page {
+  position: relative;
+  height: 100%;
+  transform: translateY(calc(max(0, (var(--burn) - 0.50) / 0.50) * -16px));
+  opacity: calc(1 - max(0, (var(--burn) - 0.50) / 0.50) * 0.88);
+}
+.burn-stage.ash.fire .ash-line {
+  opacity: clamp(0, calc(1 - (var(--burn) - var(--ash-start, 0)) / 0.09), 1);
+}
+.burn-stage.ash.fire.grain .burn-page {
+  -webkit-mask-image:
+    linear-gradient(to top,
+      rgb(0 0 0 / calc(1 - min(1, max(0, (var(--burn) - 0.50) / 0.50) * 1.15))) 0%,
+      #000 calc(100% - max(0, (var(--burn) - 0.50) / 0.50) * 70%)),
+    url(/burn-grain.png?v=26);
+  mask-image:
+    linear-gradient(to top,
+      rgb(0 0 0 / calc(1 - min(1, max(0, (var(--burn) - 0.50) / 0.50) * 1.15))) 0%,
+      #000 calc(100% - max(0, (var(--burn) - 0.50) / 0.50) * 70%)),
+    url(/burn-grain.png?v=26);
+  -webkit-mask-size: 100% 100%, 130px 130px;
+  mask-size: 100% 100%, 130px 130px;
+  -webkit-mask-composite: source-in;
+  mask-composite: intersect;
+  -webkit-mask-mode: alpha, alpha;
+  mask-mode: alpha, alpha;
+  -webkit-mask-repeat: no-repeat, repeat;
+  mask-repeat: no-repeat, repeat;
+}
+/* --burn 还没到纸张阶段时，不要让噪点把纸打出洞 */
+.burn-stage.ash.fire:not(.reduce) .burn-page {
+  /* source-in with a fully opaque gradient at --burn < 0.55 keeps the paper intact */
+}
+
 .burn-stage.reduce.fire { animation: none; }
 .burn-stage.reduce.fire .burn-page {
   animation: burn-fade .45s ease forwards;
   -webkit-mask-image: none;
   mask-image: none;
+  transform: none;
   filter: none;
-}
-
-.burn-ember {
-  position: absolute;
-  left: 6%;
-  right: 6%;
-  height: 36px;
-  bottom: calc(var(--burn) * 100%);
-  transform: translateY(50%);
-  pointer-events: none;
-  background:
-    radial-gradient(ellipse at 50% 50%, rgba(255, 230, 180, .95) 0%, rgba(220, 80, 30, .7) 38%, rgba(80, 25, 10, .18) 72%, transparent 100%);
-  filter: blur(4px);
-  opacity: calc((1 - var(--burn) * var(--burn)) * .95);
-  z-index: 2;
-}
-.burn-char {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 22px;
-  bottom: calc(var(--burn) * 100% - 6px);
-  pointer-events: none;
-  background: linear-gradient(to top, transparent, rgba(50, 38, 32, .28) 45%, rgba(90, 70, 55, .16) 75%, transparent);
-  z-index: 1;
-  opacity: calc(1 - var(--burn));
-}
-.burn-sparks {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-  z-index: 3;
-}
-.burn-sparks i {
-  position: absolute;
-  left: var(--sx, 50%);
-  bottom: calc(var(--burn) * 100%);
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: #ffe4b3;
-  box-shadow: 0 0 6px 1px rgba(255, 180, 90, .7);
-  opacity: 0;
-}
-.burn-stage.fire:not(.reduce) .burn-sparks i { animation: spark .95s ease-out infinite; }
-.burn-sparks i:nth-child(1) { --sx: 16%; animation-delay: 0s; }
-.burn-sparks i:nth-child(2) { --sx: 32%; animation-delay: .18s; width: 2px; height: 2px; }
-.burn-sparks i:nth-child(3) { --sx: 47%; animation-delay: .4s; }
-.burn-sparks i:nth-child(4) { --sx: 58%; animation-delay: .12s; width: 2px; height: 2px; }
-.burn-sparks i:nth-child(5) { --sx: 73%; animation-delay: .28s; }
-.burn-sparks i:nth-child(6) { --sx: 86%; animation-delay: .5s; width: 2px; height: 2px; }
-@keyframes spark {
-  0% { opacity: 0; transform: translate(-50%, 0) scale(1); }
-  18% { opacity: .9; }
-  100% { opacity: 0; transform: translate(-50%, -32px) scale(.35); }
+  opacity: 1;
 }
 
 .burn-rest {
@@ -718,7 +758,6 @@ textarea.input { line-height: 1.6; resize: vertical; }
   pointer-events: none;
 }
 .burn-stage.rest .burn-page,
-.burn-stage.rest .burn-ember,
-.burn-stage.rest .burn-char,
-.burn-stage.rest .burn-sparks { opacity: 0; }
+.burn-stage.rest .burn-edge,
+.burn-stage.rest .burn-flecks { opacity: 0; }
 .burn-stage.rest .burn-rest { animation: fadein .7s ease forwards; }
