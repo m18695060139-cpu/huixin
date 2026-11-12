@@ -10,7 +10,7 @@
           <view class="st-body"><text class="st-t st-accent st-grow">清除示例数据</text></view>
         </view>
       </view>
-      <text class="st-foot">示例数据和网页版演示账号同一套：信、回信、待办、点子、习惯、周信、季信和年信。写进你自己的云数据库，并标上 demo。清除时只删这些。</text>
+      <text class="st-foot">示例数据是一套现成的信、回信、待办、点子、习惯、周信、季信和年信。写进你自己的云数据库，并标上 demo。清除时只删这些。</text>
     </view>
   </view>
   <toast id="toast" />

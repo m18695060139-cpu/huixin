@@ -19,8 +19,6 @@
       <text class="bullet">服务器上只保存密钥的摘要，不保存完整密钥；完整密钥只在生成时显示一次。设置里能看到它是什么时候生成、最近一次什么时候被使用。</text>
       <text class="bullet">点「复制」时，密钥会写进这台手机的剪贴板，只用来让你粘贴给自己选的工具。</text>
       <text class="bullet">随时可以在设置里「作废」或「重新生成」，旧密钥马上失效。「清空我的全部数据」也会一并作废密钥。</text>
-      <text class="h">和网页版</text>
-      <text class="bullet">网页版在另一处，数据不互通、不自动同步。</text>
     </view>
   </view>
 </view>

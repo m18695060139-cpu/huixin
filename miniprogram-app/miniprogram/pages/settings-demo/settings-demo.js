@@ -8,7 +8,7 @@ Page({
     if (!wx.cloud) { this.toast('云端还没连上'); return; }
     wx.showModal({
       title: '载入示例数据？',
-      content: '写入和网页版演示账号同一套信、回信、待办、点子、习惯、周信和季信。已有的内容会留下；同一天已有你自己的信则跳过。',
+      content: '写入一套示例的信、回信、待办、点子、习惯、周信和季信。已有的内容会留下；同一天已有你自己的信则跳过。',
       confirmText: '载入',
       success: async (res) => {
         if (!res.confirm) return;
