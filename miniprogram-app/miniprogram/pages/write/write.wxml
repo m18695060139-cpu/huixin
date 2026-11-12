@@ -76,11 +76,18 @@
         </view>
         <button wx:if="{{letter.showGo}}" class="btn full" hover-class="tap-on" style="margin-top:38.462rpx;" bindtap="goToday">去看今天要做的</button>
       </block>
+      <view wx:elif="{{sentBusy}}" class="card pad sealed">
+        <view class="waiting">正在拆信、整理待办和点子…</view>
+      </view>
+      <view wx:elif="{{sentFail}}" class="card pad sealed" style="display:flex;flex-direction:column;gap:23.077rpx;">
+        <text>信已经存好了，但回信暂时没写成。</text>
+        <button class="btn sm" hover-class="tap-on" style="align-self:flex-start;" bindtap="retryReply">再试一次</button>
+      </view>
       <view wx:else class="card pad sealed">
         <text class="muted">这封信还没有回信。</text>
         <button class="btn sm" hover-class="tap-on" style="align-self:flex-start;margin-top:23.077rpx;" bindtap="retryReply">让回信回一封</button>
       </view>
-      <view wx:if="{{!meta.sealed}}" style="padding:0 7.692rpx;">
+      <view wx:if="{{!meta.sealed && !sentBusy}}" style="padding:0 7.692rpx;">
         <button class="lk" hover-class="tap-on" bindtap="takeBack">修改这封信</button>
       </view>
     </block>

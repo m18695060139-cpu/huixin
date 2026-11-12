@@ -2,6 +2,7 @@ const behavior = require('../../behaviors/page');
 const state = require('../../utils/state');
 const model = require('../../utils/model');
 const { AI_ENABLED } = require('../../config');
+const { letterDay } = require('../../utils/date');
 
 Page({
   behaviors: [behavior],
@@ -43,7 +44,7 @@ Page({
     state.setReplying(this.data.date);
     this.paint();
     try {
-      const res = await wx.cloud.callFunction({ name: 'reply', data: { date: this.data.date } });
+      const res = await wx.cloud.callFunction({ name: 'reply', data: { date: this.data.date, today: letterDay(new Date()) }, timeout: 60000 });
       const r = (res && res.result) || {};
       if (!r.ok) {
         this.data.replyLoading = false;

@@ -26,10 +26,15 @@ function addDays(s, n) {
   return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate());
 }
 
-function cstToday() {
+function pad2(x) {
+  return (x < 10 ? '0' : '') + x;
+}
+
+// 和网页版、客户端一样：北京时间凌晨 4 点前仍算前一天。
+function letterDay() {
   const d = new Date(Date.now() + 8 * 3600e3);
-  const p = x => (x < 10 ? '0' : '') + x;
-  return d.getUTCFullYear() + '-' + p(d.getUTCMonth() + 1) + '-' + p(d.getUTCDate());
+  const s = d.getUTCFullYear() + '-' + pad2(d.getUTCMonth() + 1) + '-' + pad2(d.getUTCDate());
+  return d.getUTCHours() < 4 ? addDays(s, -1) : s;
 }
 
 function norm(s) {
@@ -134,7 +139,7 @@ exports.main = async (event) => {
     const openIdeas = ideas.filter(i => i.status === 'open');
     const noted = todos.filter(t => t.note || t.dropped_at).slice(0, 15);
     const yday = await findOne('letters', OPENID, { date: addDays(date, -1) });
-    const today = cstToday();
+    const today = isDate(event && event.today) ? event.today : letterDay();
     const questions = (Array.isArray(settings.questions) && settings.questions.length) ? settings.questions : DEFAULT_QUESTIONS;
     const ctx = {
       name: settings.name || '',

@@ -23,6 +23,7 @@ Page({
     meta: {},
     sentBusy: false,
     sentReady: false,
+    sentFail: false,
     prompts: ['今天哪一刻最有劲？', '有什么在回避？', '明天要做的事：', '今天想记住的一句话：'],
     placeholder: '今天过得怎么样？做了什么、想到什么、哪里卡住了，随便写。\n\n写完点「寄出」，回信会帮你整理好其余的一切。',
     aiOn: !!AI_ENABLED,
@@ -39,6 +40,7 @@ Page({
   onShow() {
     this._leaving = false;
     this._sheetClosing = false;
+    this._pageHidden = false;
     this.hideShare();
     this.initVoice();
     this.syncSheetMetrics();
@@ -49,12 +51,14 @@ Page({
     this.unsub = state.subscribe(() => this.paintAround());
   },
   onHide() {
+    this._pageHidden = true;
     if (this.unsub) this.unsub();
     clearTimeout(this._saveT);
     this.abortRec(true);
     this.invalidateTidy();
   },
   onUnload() {
+    this._pageHidden = true;
     if (this.unsub) this.unsub();
     clearTimeout(this._saveT);
     this.abortRec(true);
@@ -84,7 +88,9 @@ Page({
       saveState: text ? '已存' : '',
       warn: state.get().warn || '',
       sentShow: false,
+      sentBusy: this._replying === day,
       sentFail: false,
+      sentReady: false,
       meta: meta,
       letter: letter,
       rec: { on: false, cancel: false, clock: '0:00' },
@@ -183,14 +189,17 @@ Page({
     const sendGen = this._sendGen;
     clearTimeout(this._saveT);
     const tonight = this.data.meta.tonight;
-    const r = await actions.saveLetter(this.data.date, {
+    const date = this.data.date;
+    this._replying = date;
+    const r = await actions.saveLetter(date, {
       text: text,
       mood: this.data.mood,
       energy: this.data.energy || null,
     }, { sent: true });
     if (r && r.code === 'risky') {
       this._sending = false;
-      this.setData({ warn: r.message, editing: true });
+      this._replying = '';
+      this.setData({ warn: r.message, editing: true, sentBusy: false });
       this.setTab(1, false);
       return;
     }
@@ -202,6 +211,7 @@ Page({
       sentShow: !!tonight,
       sentBusy: !!AI_ENABLED,
       sentReady: false,
+      sentFail: false,
       sentTime: hm(new Date()),
       sentNo: meta.no,
       sentDate: this.data.date.replace(/-/g, '.'),
@@ -209,34 +219,60 @@ Page({
     });
     this.setTab(1, !tonight);
     if (tonight) this.paintSentChrome();
+    let ok = false;
     if (AI_ENABLED && wx.cloud) {
-      state.setReplying(this.data.date);
+      state.setReplying(date);
       try {
-        const res = await wx.cloud.callFunction({ name: 'reply', data: { date: this.data.date } });
+        const res = await this.callReply(date);
         const body = (res && res.result) || {};
-        if (body.ok && body.reply) {
-          state.upsertLetter(this.data.date, {
-            reply: body.reply,
-            replied_at: body.replied_at || '',
-            mood: body.reply.mood,
-            energy: body.reply.energy,
-          });
-          (body.todos || []).forEach(t => state.upsertTodo(Object.assign({ done: false, note: '', dropped_at: '' }, t)));
-          (body.ideas || []).forEach(i => state.upsertIdea(Object.assign({ status: 'open', dropped_at: '' }, i)));
+        ok = this.applyReplyBody(date, body);
+        if (this._replying === date) this._replying = '';
+        if (sendGen === this._sendGen && this.data.date === date) {
+          this.setData({ sentBusy: false, sentReady: ok, sentFail: !ok });
+          this.paintAround();
         }
-        if (sendGen === this._sendGen) this.setData({ sentBusy: false, sentReady: !!body.ok, sentFail: !body.ok });
       } catch (e) {
-        if (sendGen === this._sendGen) this.setData({ sentBusy: false, sentReady: false, sentFail: true });
+        if (this._replying === date) this._replying = '';
+        if (sendGen === this._sendGen && this.data.date === date) this.setData({ sentBusy: false, sentReady: false, sentFail: true });
       }
       state.setReplying('');
     } else {
       this.setData({ sentBusy: false, sentReady: true });
+      this._replying = '';
     }
-    if (!tonight) {
-      actions.markOpened(this.data.date);
-      wx.navigateTo({ url: '/pages/letter/letter?date=' + this.data.date });
-    }
+    // 补写（或设成马上送到）且人还在这一页：写好就拆开并打开回信。
+    // 人已经走开：不要标已拆，首页可以出信封。失败也不要跳走，留在本页再试。
+    if (!tonight) this.revealIfImmediate(date, ok);
     this._sending = false;
+  },
+  // 和网页版一样把「今天」按凌晨 4 点换日传给云函数；客户端超时提到 60 秒，给自己的 AI 15 秒加上混元回退留够时间。
+  callReply(date) {
+    return wx.cloud.callFunction({
+      name: 'reply',
+      data: { date: date, today: letterDay(new Date()) },
+      timeout: 60000,
+    });
+  },
+  applyReplyBody(date, body) {
+    if (!(body && body.ok && body.reply)) return false;
+    state.upsertLetter(date, {
+      reply: body.reply,
+      replied_at: body.replied_at || '',
+      mood: body.reply.mood,
+      energy: body.reply.energy,
+    });
+    (body.todos || []).forEach(t => state.upsertTodo(Object.assign({ done: false, note: '', dropped_at: '' }, t)));
+    (body.ideas || []).forEach(i => state.upsertIdea(Object.assign({ status: 'open', dropped_at: '' }, i)));
+    return true;
+  },
+  revealIfImmediate(date, ok) {
+    if (!ok) return;
+    const view = model.letterModel(state.get(), date, new Date());
+    if (!view || !view.hasReply || view.sealed) return;
+    if (this._pageHidden) return;
+    if (this.data.date !== date) return;
+    actions.markOpened(date);
+    wx.navigateTo({ url: '/pages/letter/letter?date=' + date });
   },
   cancelEdit() {
     this.abortRec(true);
@@ -248,22 +284,27 @@ Page({
   goToday() { wx.switchTab({ url: '/pages/today/today' }); },
   retryReply() {
     const date = this.data.date;
+    const tonight = this.data.meta && this.data.meta.tonight;
     this._sendGen = (this._sendGen || 0) + 1;
     const gen = this._sendGen;
+    this._replying = date;
     this.setData({ sentBusy: true, sentFail: false, sentReady: false });
     state.setReplying(date);
     const self = this;
-    wx.cloud.callFunction({ name: 'reply', data: { date: date } }).then(res => {
+    this.callReply(date).then(res => {
       const body = (res && res.result) || {};
-      if (body.ok && body.reply) {
-        state.upsertLetter(date, { reply: body.reply, replied_at: body.replied_at || '', mood: body.reply.mood, energy: body.reply.energy });
+      const ok = self.applyReplyBody(date, body);
+      if (self._replying === date) self._replying = '';
+      if (gen !== self._sendGen) return;
+      if (self.data.date === date) {
+        self.setData({ sentBusy: false, sentReady: ok, sentFail: !ok });
+        self.paintAround();
       }
-      if (gen !== self._sendGen) return;
-      self.setData({ sentBusy: false, sentReady: !!body.ok, sentFail: !body.ok });
-      self.paintAround();
+      if (!tonight) self.revealIfImmediate(date, ok);
     }).catch(() => {
+      if (self._replying === date) self._replying = '';
       if (gen !== self._sendGen) return;
-      self.setData({ sentBusy: false, sentFail: true, sentReady: false });
+      if (self.data.date === date) self.setData({ sentBusy: false, sentFail: true, sentReady: false });
     }).then(() => state.setReplying(''));
   },
   takeBack() {
@@ -284,6 +325,7 @@ Page({
     this._sendGen = (this._sendGen || 0) + 1;
     this.setData({ sentShow: false });
     this.restoreChrome();
+    this._pageHidden = true;
     wx.switchTab({ url: '/pages/today/today' });
   },
   closeWrite() {
@@ -292,6 +334,7 @@ Page({
     this.abortRec(true);
     this.invalidateTidy();
     this.flushDraft();
+    this._pageHidden = true;
     wx.switchTab({ url: '/pages/today/today' });
   },
   flushDraft() {

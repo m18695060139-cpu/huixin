@@ -14,7 +14,7 @@ App({
     this.readSystem();
     this.hideShare();
     if (wx.cloud && config.ENV_ID) {
-      wx.cloud.init({ env: config.ENV_ID, traceUser: false });
+      wx.cloud.init({ env: config.ENV_ID, traceUser: false, timeout: 60000 });
       this.globalData.cloudReady = true;
       wx.cloud.callFunction({ name: 'login', data: {} }).catch(() => {});
     }
