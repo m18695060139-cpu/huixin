@@ -83,6 +83,8 @@ async function api(req, env, ctx, url) {
       return json({ ok: true });
     }
     if (seg[2] === 'reply' && m === 'POST') return json(await replyTo(env, user, date, body.today));
+    // 焚毁：只删自己的这封信和回信；待办、点子默认留下，勾了才一起删。周信季信年信不改写。
+    if (seg[2] === 'burn' && m === 'POST') return burnLetter(env, U, date, body);
   }
 
   // ── 待办（id 由前端生成，PUT 即「有则改、无则建」，离线重发也不会重复） ──
@@ -270,6 +272,26 @@ async function bootstrap(env, user) {
     feedback: fb.results,
     stats: { letters: count ? count.n : 0, first: count ? count.first : null },
   };
+}
+
+// 焚毁一封信。只动这个用户、这一天的信；已经寄出的周信 / 季信 / 年信故意不改。
+async function burnLetter(env, U, date, body) {
+  const row = await env.DB.prepare('SELECT date FROM letters WHERE user_id = ? AND date = ?').bind(U, date).first();
+  if (!row) return err('找不到这封信', 404);
+  const items = !!body.items;
+  let todos = 0, ideas = 0;
+  const stmts = [
+    env.DB.prepare('DELETE FROM letters WHERE user_id = ? AND date = ?').bind(U, date),
+    env.DB.prepare('DELETE FROM feedback WHERE user_id = ? AND date = ?').bind(U, date),
+  ];
+  if (items) {
+    todos = ((await env.DB.prepare('SELECT COUNT(*) AS n FROM todos WHERE user_id = ? AND source_date = ?').bind(U, date).first()) || {}).n || 0;
+    ideas = ((await env.DB.prepare('SELECT COUNT(*) AS n FROM ideas WHERE user_id = ? AND source_date = ?').bind(U, date).first()) || {}).n || 0;
+    stmts.push(env.DB.prepare('DELETE FROM todos WHERE user_id = ? AND source_date = ?').bind(U, date));
+    stmts.push(env.DB.prepare('DELETE FROM ideas WHERE user_id = ? AND source_date = ?').bind(U, date));
+  }
+  await env.DB.batch(stmts);
+  return json({ ok: true, items, todos, ideas });
 }
 
 function letterOut(r) {

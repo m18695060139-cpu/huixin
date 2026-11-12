@@ -75,6 +75,7 @@
     tab: 'today', writeDate: null, editing: false, replying: false, replyErr: '',
     mb: 'all', sheets: [], quoteOffset: 0, olderLoaded: false, online: navigator.onLine,
     sent: null,                 // 刚寄出、正在看「已寄出」那一屏的信：{ date, at }
+    burn: null,                 // 焚毁：{ date, items, phase: 'confirm'|'fire'|'rest' }
   };
 
   function fromBoot(b) {
@@ -241,7 +242,7 @@
     applyTheme();
   }
   async function maybeRefresh() {
-    if (!S || Date.now() - lastRefresh < 60000 || V.editing || V.replying) return;
+    if (!S || Date.now() - lastRefresh < 60000 || V.editing || V.replying || V.burn) return;
     try { await refresh(); render(); } catch (e) { /* 离线就用缓存 */ }
   }
 
@@ -320,7 +321,7 @@
     V._env = u ? u.date : null;
     const html = V.tab === 'today' ? viewToday() : V.tab === 'write' ? viewWrite() : viewMailbox();
     const sent = V.sent && V.tab === 'write' ? viewSent() : '';
-    $('#app').innerHTML = html + tabbar() + sent + V.sheets.map(viewSheet).join('');
+    $('#app').innerHTML = html + tabbar() + sent + V.sheets.map(viewSheet).join('') + viewBurn();
     if (V._lastTab !== V.tab) window.scrollTo(0, 0); else window.scrollTo(0, keepScroll);
     V._lastTab = V.tab;
     afterRender();
@@ -884,13 +885,19 @@
 
   // ───────────── 二级页面 ─────────────
   function openSheet(s) { s.fresh = true; V.sheets.push(s); render(); }
-  function closeSheet() { V.sheets.pop(); V.droppedIdeas = undefined; if (!V.sheets.length) { V.openGroups = null; V.olderTodos = undefined; } render(); }
+  function closeSheet() {
+    if (V.burn && (V.burn.phase === 'fire' || V.burn.phase === 'rest')) return;
+    if (V.burn && V.burn.phase === 'confirm') { V.burn = null; render(); return; }
+    V.sheets.pop(); V.droppedIdeas = undefined; if (!V.sheets.length) { V.openGroups = null; V.olderTodos = undefined; } render();
+  }
   function viewSheet(s) {
     const titles = { reply: '', letter: '', digest: '', lists: '待办与点子', settings: '设置', todo: s.id ? '编辑待办' : '加一件事', drop: '放下这件事', idea: s.id ? '编辑点子' : '记一个点子' };
-    const anim = s.fresh ? ' enter' : '';
+    const burning = V.burn && (s.type === 'letter' || s.type === 'reply') && V.burn.date === s.date && V.burn.phase !== 'confirm';
+    const anim = s.fresh && !burning ? ' enter' : '';
     s.fresh = false;   // 只在刚打开时升起，之后刷新内容不再重播动画
-    return `<div class="sheet-dim" data-act="close" aria-hidden="true"></div><div class="sheet${anim}" role="dialog" aria-modal="true">
-      <div class="sheet-bar"><div><span class="sp"></span><span class="t">${titles[s.type] || ''}</span><button class="x" data-act="close" aria-label="关闭">${ICON.x}</button></div></div>
+    const bar = burning ? '' : `<div class="sheet-bar"><div><span class="sp"></span><span class="t">${titles[s.type] || ''}</span><button class="x" data-act="close" aria-label="关闭">${ICON.x}</button></div></div>`;
+    return `<div class="sheet-dim" data-act="close" aria-hidden="true"></div><div class="sheet${anim}${burning ? ' burning' : ''}" role="dialog" aria-modal="true">
+      ${bar}
       <div class="page">${sheetBody(s)}</div></div>`;
   }
   function sheetBody(s) {
@@ -900,15 +907,28 @@
       if (!l) return '<div class="card empty">找不到这封信。</div>';
       const yday = addDays(t, -1);
       const title = !l.reply || isSealed(l.date) ? cn(l.date) + '的信' : l.date === yday ? '昨晚的回信' : l.date === t ? '今天的回信' : cn(l.date) + '的回信';
-      let h = `<div class="head"><div class="head-l"><span class="eyebrow">Re: No.${letterNo(l.date)} · 星期${wd(l.date)}</span><h1 style="font-size:28px">${title}</h1></div></div>`;
+      const burning = V.burn && V.burn.date === s.date && V.burn.phase !== 'confirm';
+      const head = `<div class="head"><div class="head-l"><span class="eyebrow">Re: No.${letterNo(l.date)} · 星期${wd(l.date)}</span><h1 style="font-size:28px">${title}</h1></div></div>`;
+      let inner = '';
       if (!l.reply || isSealed(l.date)) {
-        h += `<div class="card paper mt"><p class="letter-text">${esc(l.text)}</p></div>`;
-        h += isSealed(l.date) ? `<p class="note">回信已经写好，封存到 ${cn(addDays(l.date, 1))} 早上 6:00。</p>` : `<p class="note">这封信还没有回信。</p>`;
+        inner += `<div class="card paper mt"><p class="letter-text">${esc(l.text)}</p></div>`;
+        if (!burning) inner += isSealed(l.date) ? `<p class="note">回信已经写好，封存到 ${cn(addDays(l.date, 1))} 早上 6:00。</p>` : `<p class="note">这封信还没有回信。</p>`;
       } else {
-        h += replyView(l, { mine: true, go: l.date >= yday && s.type === 'reply' });
+        inner += replyView(l, { mine: true, go: !burning && l.date >= yday && s.type === 'reply' });
       }
-      h += `<div style="padding:0 4px;margin-top:8px"><button class="lk" data-act="open-in-write" data-v="${l.date}">在写信里打开</button></div>`;
-      return h;
+      if (burning) {
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        return `<div class="burn-stage ${V.burn.phase}${reduce ? ' reduce' : ''}" id="burn-stage">
+          <div class="burn-page">${head}${inner}</div>
+          <div class="burn-ember" aria-hidden="true"></div>
+          <div class="burn-char" aria-hidden="true"></div>
+          <div class="burn-sparks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          <p class="burn-rest">已经放下了</p>
+        </div>`;
+      }
+      return head + inner
+        + `<div style="padding:0 4px;margin-top:8px"><button class="lk" data-act="open-in-write" data-v="${l.date}">在写信里打开</button></div>`
+        + `<div class="burn-entry"><button type="button" class="burn-link" data-act="burn-ask" data-v="${l.date}">焚毁这封信</button></div>`;
     }
     if (s.type === 'digest') {
       const d = S.digests.find(x => x.kind === s.kind && x.key === s.key);
@@ -1115,7 +1135,123 @@
   }
 
   // ───────────── 渲染后的绑定（输入框、表单） ─────────────
-  function afterRender() {
+
+  function viewBurn() {
+    if (!V.burn || V.burn.phase !== 'confirm') return '';
+    return `<div class="burn-dim" data-act="burn-keep" aria-hidden="true"></div>
+      <div class="burn-card" role="dialog" aria-modal="true" aria-labelledby="burn-msg">
+        <p class="burn-msg" id="burn-msg">焚毁后，这封信和它的回信都会消失，<br>找不回来。</p>
+        <label class="burn-check">
+          <input type="checkbox" data-act="burn-items"${V.burn.items ? ' checked' : ''}>
+          <span>同时删掉它整理出的待办和点子</span>
+        </label>
+        <div class="burn-actions">
+          <button class="btn" type="button" data-act="burn-keep" id="burn-keep">留着</button>
+          <button class="burn-hold" type="button" id="burn-hold" style="--hold:0" aria-label="按住一秒半焚毁这封信">
+            <i class="fill" aria-hidden="true"></i>
+            <span class="lab-idle">焚毁</span>
+            <span class="lab-on" aria-hidden="true">焚毁</span>
+          </button>
+        </div>
+        <p class="burn-hint">按住「焚毁」一秒半，松手即取消</p>
+      </div>`;
+  }
+
+  // 按住 1.5 秒才焚毁：短按、滑动、中途松手都没有效果
+  function bindBurnHold() {
+    const btn = $('#burn-hold');
+    if (!btn) return;
+    const HOLD_MS = 1500, MOVE = 10;
+    let raf = 0, start = 0, x0 = 0, y0 = 0, holding = false, pid = null;
+    const stop = () => {
+      if (raf) cancelAnimationFrame(raf);
+      raf = 0; holding = false;
+      if (pid != null) { try { btn.releasePointerCapture(pid); } catch (e) { /* ignore */ } pid = null; }
+      btn.style.setProperty('--hold', 0);
+      btn.classList.remove('holding');
+    };
+    const tick = now => {
+      const t = Math.min(1, (now - start) / HOLD_MS);
+      btn.style.setProperty('--hold', t);
+      if (t >= 1) {
+        if (raf) cancelAnimationFrame(raf);
+        raf = 0; holding = false;
+        if (pid != null) { try { btn.releasePointerCapture(pid); } catch (e) { /* ignore */ } pid = null; }
+        doBurn();
+        return;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    btn.addEventListener('pointerdown', e => {
+      if (e.button) return;
+      e.preventDefault();
+      e.stopPropagation();
+      try { btn.setPointerCapture(e.pointerId); } catch (err) { /* ignore */ }
+      pid = e.pointerId; holding = true; x0 = e.clientX; y0 = e.clientY;
+      start = performance.now();
+      btn.classList.add('holding');
+      btn.style.setProperty('--hold', 0);
+      raf = requestAnimationFrame(tick);
+    });
+    btn.addEventListener('pointermove', e => {
+      if (holding && Math.hypot(e.clientX - x0, e.clientY - y0) > MOVE) stop();
+    });
+    btn.addEventListener('pointerup', stop);
+    btn.addEventListener('pointercancel', stop);
+    btn.addEventListener('lostpointercapture', () => { if (holding) stop(); });
+    btn.addEventListener('contextmenu', e => e.preventDefault());
+    btn.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); });
+  }
+
+  function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+  async function doBurn() {
+    const b = V.burn;
+    if (!b || b.busy || b.phase !== 'confirm') return;
+    b.busy = true;
+    const date = b.date, items = !!b.items;
+    const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const animMs = reduce ? 450 : 1800;
+    const restMs = reduce ? 900 : 1500;
+    b.phase = 'fire';
+    render();
+    const t0 = performance.now();
+    try {
+      await api('POST', `/letters/${date}/burn`, { items });
+      await sleep(Math.max(0, animMs - (performance.now() - t0)));
+      if (!V.burn || V.burn !== b) return;
+      b.phase = 'rest';
+      render();
+      await sleep(restMs);
+      if (!V.burn || V.burn !== b) return;
+      applyBurnLocal(date, items);
+      V.burn = null;
+      V.sheets = V.sheets.filter(s => !((s.type === 'letter' || s.type === 'reply') && s.date === date));
+      toCache();
+      render();
+    } catch (e) {
+      if (V.burn === b) { b.phase = 'confirm'; b.busy = false; render(); }
+      toast(e.message || '没能焚毁，请再试一次');
+    }
+  }
+
+  function applyBurnLocal(date, items) {
+    delete S.letters[date];
+    if (items) {
+      S.todos = S.todos.filter(x => x.source_date !== date);
+      S.ideas = S.ideas.filter(x => x.source_date !== date);
+      if (Array.isArray(V.droppedIdeas)) V.droppedIdeas = V.droppedIdeas.filter(x => x.source_date !== date);
+    }
+    Object.keys(S.feedback).forEach(k => { if (k.startsWith(date + '|')) delete S.feedback[k]; });
+    const remain = Object.values(S.letters).filter(l => l.text && l.text.trim());
+    S.stats.letters = Math.max(0, (S.stats.letters || 1) - 1);
+    if (S.stats.first === date) S.stats.first = remain.map(l => l.date).sort()[0] || null;
+    outbox = outbox.filter(o => !String(o.path || '').startsWith('/letters/' + date));
+    store.set('hx_outbox', outbox);
+    store.del('hx_draft_' + date);
+  }
+
+    function afterRender() {
     const ed = $('#editor');
     if (ed) {
       const grow = () => { ed.style.height = 'auto'; ed.style.height = Math.max(ed.scrollHeight, window.innerHeight * 0.36) + 'px'; };
@@ -1192,6 +1328,8 @@
       const h = { id: uid('h'), name, sort: S.habits.length };
       S.habits.push(h); queue('PUT', '/habits/' + h.id, h); toCache(); render();
     });
+    bindBurnHold();
+    if (V.burn && V.burn.phase === 'confirm' && $('#burn-keep')) $('#burn-keep').focus();
   }
 
   // ───────────── 语音写信（浏览器支持才显示按钮） ─────────────
@@ -1493,6 +1631,18 @@
         if (!confirm('停用自己的 AI，改回免费模型？保存的 Key 会被删除。')) return;
         try { V.ai.data = await api('DELETE', '/ai-config'); toast('已改回免费模型'); } catch (e2) { toast(e2.message); }
         render(); break;
+      }
+      case 'burn-ask':
+        V.burn = { date: v, items: false, phase: 'confirm' };
+        render(); break;
+      case 'burn-keep':
+        if (V.burn && (V.burn.phase === 'fire' || V.burn.phase === 'rest')) return;
+        V.burn = null; render(); break;
+      case 'burn-items': {
+        if (!V.burn) return;
+        const box = el.matches('input[type="checkbox"]') ? el : el.querySelector('input');
+        V.burn.items = !!(box && box.checked);
+        break;
       }
       case 'close': closeSheet(); break;
       case 'theme':

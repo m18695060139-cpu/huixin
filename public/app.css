@@ -59,7 +59,7 @@ a { color: var(--ink); }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 /* 按下去有反馈，像 App 一样 */
 button, .tap { transition: transform .12s ease, opacity .12s ease; }
-button:active:not(:disabled), .tap:active { transform: scale(.97); opacity: .85; }
+button:active:not(:disabled):not(.burn-hold), .tap:active { transform: scale(.97); opacity: .85; }
 
 .page {
   max-width: 560px; margin: 0 auto;
@@ -419,11 +419,15 @@ textarea.input { line-height: 1.6; resize: vertical; }
   .login { padding-top: 16vh; }
   body:has(.login) { padding-left: 0; }
   #toast { left: calc(50% + 116px); bottom: 40px; }
+  .burn-dim { left: auto; width: 600px; }
+  .burn-card { left: auto; right: 36px; width: 528px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .sheet, .bob, .reply-letter, .pop, .fresh, .sent .env-wrap, .sent .pm, .spin, .mic.on { animation: none; }
+  .sheet, .bob, .reply-letter, .pop, .fresh, .sent .env-wrap, .sent .pm, .spin, .mic.on, .burn-card, .burn-dim, .burn-stage.fire { animation: none; }
   button:active:not(:disabled), .tap:active { transform: none; }
+  .burn-stage.fire .burn-page { animation: burn-fade .45s ease forwards; }
+  .burn-ember, .burn-char, .burn-sparks { display: none !important; }
 }
 
 /* 设置 · API 密钥：刚生成的完整密钥 */
@@ -433,3 +437,288 @@ textarea.input { line-height: 1.6; resize: vertical; }
 .keyhint { flex: 1; min-width: 0; font-size: 15px; line-height: 1.5; color: var(--text); }
 .keyrisk { padding: 12px 14px; border-top: .5px solid var(--sep); font-size: 15px; line-height: 1.6; color: var(--text); }
 .keyrisk + .row { border-top: .5px solid var(--sep); }
+
+
+/* ── 焚毁这封信 ── */
+@property --burn {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+@property --hold {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+.burn-entry {
+  margin-top: 64px;
+  padding: 4px 4px 20px;
+  text-align: center;
+}
+.burn-link {
+  border: none;
+  background: none;
+  color: var(--sub);
+  font-size: 13px;
+  font-weight: 400;
+  letter-spacing: .02em;
+  padding: 12px 16px;
+  opacity: .7;
+}
+.burn-link:active { opacity: 1; }
+
+.burn-dim {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 36;
+  background: rgba(0,0,0,.36);
+  animation: fadein .22s ease;
+}
+.burn-card {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: calc(var(--safe-bottom) + 18px);
+  z-index: 37;
+  max-width: 528px;
+  margin: 0 auto;
+  background: var(--card);
+  color: var(--text);
+  border-radius: var(--r);
+  padding: 26px 22px 18px;
+  box-shadow: var(--shadow);
+  animation: sheetin .28s cubic-bezier(.2,.8,.2,1);
+}
+.burn-msg {
+  margin: 0 0 6px;
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+}
+.burn-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 16px 0 22px;
+  padding: 12px 12px;
+  border-radius: var(--r-sm);
+  background: var(--tile);
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text);
+  cursor: pointer;
+}
+.burn-check input {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin: 1px 0 0;
+  flex: none;
+  border: 2px solid var(--ring);
+  border-radius: 6px;
+  background: var(--card);
+  display: grid;
+  place-items: center;
+}
+.burn-check input:checked {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.burn-check input:checked::after {
+  content: "";
+  width: 11px;
+  height: 6px;
+  border-left: 2px solid var(--on-ink);
+  border-bottom: 2px solid var(--on-ink);
+  transform: rotate(-45deg) translate(0, -1px);
+}
+.burn-actions {
+  display: flex;
+  gap: 10px;
+}
+.burn-actions .btn { flex: 1; }
+
+.burn-hold {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  height: 50px;
+  border: none;
+  border-radius: 25px;
+  padding: 0;
+  background: var(--tile);
+  color: var(--danger);
+  font-size: 16px;
+  font-weight: 600;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  cursor: pointer;
+}
+.burn-hold .fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: calc(var(--hold, 0) * 100%);
+  background: var(--danger);
+  pointer-events: none;
+}
+.burn-hold .fill::after {
+  content: "";
+  position: absolute;
+  right: -10px; top: 0; bottom: 0;
+  width: 20px;
+  background: linear-gradient(to right, transparent, rgba(255, 210, 140, .45));
+  opacity: calc(min(var(--hold, 0), 1 - var(--hold, 0)) * 4);
+  pointer-events: none;
+}
+.burn-hold .lab-idle,
+.burn-hold .lab-on {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.burn-hold .lab-idle { color: var(--danger); }
+.burn-hold .lab-on {
+  color: var(--on-ink);
+  clip-path: inset(0 calc((1 - var(--hold, 0)) * 100%) 0 0);
+}
+.burn-hint {
+  margin: 12px 0 0;
+  text-align: center;
+  font-size: 12px;
+  color: var(--sub);
+  line-height: 1.4;
+}
+
+.sheet.burning { overflow: hidden; }
+.sheet.burning .page {
+  padding-top: 0;
+  padding-bottom: 0;
+  min-height: 100%;
+}
+
+.burn-stage {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  --burn: 0;
+}
+.burn-stage.fire { animation: burn-go 1.8s ease-in forwards; }
+@keyframes burn-go {
+  from { --burn: 0; }
+  to { --burn: 1; }
+}
+@keyframes burn-fade { to { opacity: 0 } }
+@keyframes fadein { from { opacity: 0 } to { opacity: 1 } }
+
+.burn-stage.fire .burn-page {
+  height: 100%;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(
+    to top,
+    transparent 0%,
+    transparent calc(var(--burn) * 100% - 3%),
+    rgba(0,0,0,.4) calc(var(--burn) * 100%),
+    #000 calc(var(--burn) * 100% + 7%),
+    #000 100%
+  );
+  mask-image: linear-gradient(
+    to top,
+    transparent 0%,
+    transparent calc(var(--burn) * 100% - 3%),
+    rgba(0,0,0,.4) calc(var(--burn) * 100%),
+    #000 calc(var(--burn) * 100% + 7%),
+    #000 100%
+  );
+  filter: saturate(calc(1 - var(--burn) * .45)) brightness(calc(1 - var(--burn) * .08));
+}
+.burn-stage.reduce.fire { animation: none; }
+.burn-stage.reduce.fire .burn-page {
+  animation: burn-fade .45s ease forwards;
+  -webkit-mask-image: none;
+  mask-image: none;
+  filter: none;
+}
+
+.burn-ember {
+  position: absolute;
+  left: 6%;
+  right: 6%;
+  height: 36px;
+  bottom: calc(var(--burn) * 100%);
+  transform: translateY(50%);
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(255, 230, 180, .95) 0%, rgba(220, 80, 30, .7) 38%, rgba(80, 25, 10, .18) 72%, transparent 100%);
+  filter: blur(4px);
+  opacity: calc((1 - var(--burn) * var(--burn)) * .95);
+  z-index: 2;
+}
+.burn-char {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 22px;
+  bottom: calc(var(--burn) * 100% - 6px);
+  pointer-events: none;
+  background: linear-gradient(to top, transparent, rgba(50, 38, 32, .28) 45%, rgba(90, 70, 55, .16) 75%, transparent);
+  z-index: 1;
+  opacity: calc(1 - var(--burn));
+}
+.burn-sparks {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 3;
+}
+.burn-sparks i {
+  position: absolute;
+  left: var(--sx, 50%);
+  bottom: calc(var(--burn) * 100%);
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #ffe4b3;
+  box-shadow: 0 0 6px 1px rgba(255, 180, 90, .7);
+  opacity: 0;
+}
+.burn-stage.fire:not(.reduce) .burn-sparks i { animation: spark .95s ease-out infinite; }
+.burn-sparks i:nth-child(1) { --sx: 16%; animation-delay: 0s; }
+.burn-sparks i:nth-child(2) { --sx: 32%; animation-delay: .18s; width: 2px; height: 2px; }
+.burn-sparks i:nth-child(3) { --sx: 47%; animation-delay: .4s; }
+.burn-sparks i:nth-child(4) { --sx: 58%; animation-delay: .12s; width: 2px; height: 2px; }
+.burn-sparks i:nth-child(5) { --sx: 73%; animation-delay: .28s; }
+.burn-sparks i:nth-child(6) { --sx: 86%; animation-delay: .5s; width: 2px; height: 2px; }
+@keyframes spark {
+  0% { opacity: 0; transform: translate(-50%, 0) scale(1); }
+  18% { opacity: .9; }
+  100% { opacity: 0; transform: translate(-50%, -32px) scale(.35); }
+}
+
+.burn-rest {
+  margin: 0;
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-family: var(--letter-font);
+  font-size: 22px;
+  letter-spacing: .12em;
+  color: var(--sub);
+  opacity: 0;
+  pointer-events: none;
+}
+.burn-stage.rest .burn-page,
+.burn-stage.rest .burn-ember,
+.burn-stage.rest .burn-char,
+.burn-stage.rest .burn-sparks { opacity: 0; }
+.burn-stage.rest .burn-rest { animation: fadein .7s ease forwards; }
