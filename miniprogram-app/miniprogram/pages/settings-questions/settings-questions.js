@@ -26,17 +26,22 @@ Page({
       return;
     }
     const joined = qs.join('\n');
-    if (joined === ((state.get().settings || {}).questions || []).join('\n') && toastOnOk) {
-      this.toast('已保存。下一封信的提示会换成这些。');
+    if (joined === ((state.get().settings || {}).questions || []).join('\n')) {
+      this._orig = joined;
+      if (toastOnOk) this.toast('已保存。下一封信的提示会换成这些。');
       return;
     }
-    if (joined === ((state.get().settings || {}).questions || []).join('\n')) return;
-    actions.saveSettings({ questions: qs }).then(r => {
-      if (r && r.code === 'risky') this.toast(r.message);
-      else {
-        this._orig = joined;
-        if (toastOnOk) this.toast('已保存。下一封信的提示会换成这些。');
-      }
-    });
+    this._orig = joined;
+    if (toastOnOk) this.toast('已保存。下一封信的提示会换成这些。');
+    const persist = () => {
+      actions.saveSettings({ questions: qs }).then(r => {
+        if (r && r.code === 'risky') {
+          this._orig = ((state.get().settings || {}).questions || []).join('\n');
+          this.toast(r.message);
+        }
+      });
+    };
+    if (wx.nextTick) wx.nextTick(persist);
+    else persist();
   },
 });

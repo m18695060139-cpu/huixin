@@ -12,7 +12,18 @@ Page({
   },
   onDeliver(e) {
     const v = e.currentTarget.dataset.v === 'now' ? 'now' : 'morning';
+    if (v === this.data.deliver) return;
     this.setData({ deliver: v });
-    actions.saveSettings({ deliver: v });
+    const persist = () => {
+      actions.saveSettings({ deliver: v }).then(r => {
+        if (r && r.code === 'risky') {
+          const cur = (state.get().settings || {}).deliver === 'now' ? 'now' : 'morning';
+          this.setData({ deliver: cur });
+          this.toast(r.message);
+        }
+      });
+    };
+    if (wx.nextTick) wx.nextTick(persist);
+    else persist();
   },
 });

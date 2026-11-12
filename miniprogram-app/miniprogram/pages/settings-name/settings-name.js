@@ -25,10 +25,14 @@ Page({
     if (name === cur) return;
     this._saved = true;
     const self = this;
-    actions.saveSettings({ name: name }).then(r => {
-      self._saved = false;
-      if (r && r.code === 'risky') self.toast(r.message);
-      else self.toast('已保存');
-    }).catch(() => { self._saved = false; });
+    const persist = () => {
+      actions.saveSettings({ name: name }).then(r => {
+        self._saved = false;
+        if (r && r.code === 'risky') self.toast(r.message);
+        else self.toast('已保存');
+      }).catch(() => { self._saved = false; });
+    };
+    if (wx.nextTick) wx.nextTick(persist);
+    else persist();
   },
 });
