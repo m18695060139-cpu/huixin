@@ -36,6 +36,7 @@
             <text class="when">{{letter.reply.when}}{{letter.reply.engine ? ' · ' + letter.reply.engine : ''}}</text>
           </view>
         </view>
+        <text class="note" wx:if="{{letter.reply.ownError}}">你自己的 AI 这次没接通（{{letter.reply.ownError}}），这封先用免费模型写的。可以去「设置 → AI 回信」检查一下。</text>
 
         <block wx:if="{{letter.reply.todos.length || letter.reply.ideas.length}}">
           <view class="gh"><text class="h2">附件</text><text class="gh-s">从你的信里整理出来的</text></view>

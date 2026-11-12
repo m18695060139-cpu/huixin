@@ -6,6 +6,64 @@ const { AI_ENABLED } = require('../../config');
 
 // 只读 API 密钥：网页版设置里同一段话
 const KEY_RISK = '有了这串密钥，就能读到你全部的信、待办、点子和习惯。只交给你信任的 agent，别发给别人；担心泄露就点作废。接口只能读，不能改。';
+
+// 自己的 AI：服务商列表、说明和网页版 src/ai.js 同一套。默认未接入时用云开发免费的混元。
+const AI_PROVIDERS = {
+  deepseek: { name: 'DeepSeek', base: 'https://api.deepseek.com/v1', model: 'deepseek-chat' },
+  zhipu: { name: '智谱 GLM', base: 'https://open.bigmodel.cn/api/paas/v4', model: 'glm-4-flash' },
+  qwen: { name: '通义千问', base: 'https://dashscope.aliyuncs.com/compatible-mode/v1', model: 'qwen-plus' },
+  kimi: { name: 'Kimi', base: 'https://api.moonshot.cn/v1', model: 'moonshot-v1-8k' },
+  siliconflow: { name: '硅基流动', base: 'https://api.siliconflow.cn/v1', model: 'deepseek-ai/DeepSeek-V3' },
+  tokenhub: { name: 'TokenHub', base: 'https://tokenhub.tencentmaas.com/v1', model: 'deepseek/deepseek-flash' },
+  openrouter: { name: 'OpenRouter', base: 'https://openrouter.ai/api/v1', model: 'deepseek/deepseek-chat' },
+  custom: { name: '自定义', base: '', model: '' },
+};
+const AI_HELP = '接上之后，你的回信和周信都用你自己的 AI 写，花的是你自己的额度。Key 加密保存在服务器上，小程序里只显示后 4 位。DeepSeek、智谱、通义千问、Kimi、硅基流动等大多数服务商都能这样接入；模型名以服务商控制台为准。自己的 AI 出错时，会自动改用混元，不会漏掉回信。';
+const AI_IDS = Object.keys(AI_PROVIDERS);
+
+function providerList(P) {
+  const src = P || AI_PROVIDERS;
+  return AI_IDS.map(id => {
+    const p = src[id] || AI_PROVIDERS[id];
+    return { id: id, name: p.name, base: p.base || '', model: p.model || '' };
+  });
+}
+
+function aiView(d, form, extra) {
+  const P = (d && d.providers) || AI_PROVIDERS;
+  const list = providerList(P);
+  const configured = !!(d && d.configured);
+  const f = form || {};
+  const pid = f.provider || (configured ? d.provider : 'deepseek');
+  const pre = P[pid] || AI_PROVIDERS[pid] || AI_PROVIDERS.deepseek;
+  const idx = Math.max(0, AI_IDS.indexOf(pid));
+  const last4 = (d && d.last4) || '';
+  return Object.assign({
+    loading: false,
+    error: '',
+    configured: configured,
+    provider: configured ? d.provider : '',
+    providerName: configured ? ((P[d.provider] || P.custom || AI_PROVIDERS.custom).name) : '',
+    model: configured ? (d.model || '') : '',
+    last4: last4,
+    providers: list,
+    providerNames: list.map(x => x.name),
+    providerIndex: idx,
+    formProviderName: (P[pid] || pre).name,
+    form: {
+      provider: pid,
+      base_url: f.base_url != null ? f.base_url : (d && d.base_url) || pre.base || '',
+      model: f.model != null ? f.model : (d && d.model) || pre.model || '',
+      key: f.key || '',
+    },
+    keyPlaceholder: configured ? ('已保存（尾号 ' + last4 + '），不改就留空') : '粘贴服务商给你的 Key',
+    open: !!(extra && extra.open),
+    busy: (extra && extra.busy) || '',
+    msg: (extra && extra.msg) || '',
+    ok: !!(extra && extra.ok),
+    data: d || { configured: false, providers: P },
+  }, extra && extra.patch || {});
+}
 // 给 agent 的一整段说明：地址、请求头（带上密钥）、参数、示例、返回什么。一个按钮整段复制（和网页版同一段）
 const KEY_HIDDEN = '你的密钥（只在生成时显示过，忘了就重新生成）';
 function keyDoc(url, key) {
@@ -40,13 +98,15 @@ function keyView(r, fresh) {
 Page({
   behaviors: [behavior],
   data: { themes: [], habits: [], name: '', qText: '', habitName: '', themeId: 'auto', deliver: 'morning',
-    key: { loading: true }, keyRisk: KEY_RISK },
+    key: { loading: true }, keyRisk: KEY_RISK,
+    ai: { loading: true }, aiHelp: AI_HELP },
   onShow() {
     this.hideShare();
     this.syncChrome();
     this.paint(true);
     this.unsub = state.subscribe(() => this.paint(false));
     this.loadKey();
+    this.loadAI();
   },
   // 离开设置页就收起刚生成的完整密钥，和网页版关掉设置一样
   onHide() { if (this.unsub) this.unsub(); this.setData({ 'key.fresh': '', 'key.doc': '' }); },
@@ -192,7 +252,127 @@ Page({
       fail: () => this.toast('没复制上，可以长按上面那段自己复制'),
     });
   },
+  aiCall(action, body) {
+    return new Promise((resolve, reject) => {
+      if (!wx.cloud) { reject(new Error('云端还没连上')); return; }
+      wx.cloud.callFunction({
+        name: 'aiConfig',
+        data: Object.assign({ action: action }, body || {}),
+        success: (res) => {
+          const r = (res && res.result) || {};
+          if (action === 'test') { resolve(r); return; }
+          if (r.ok) resolve(r); else reject(new Error(r.message || '没办成，请稍后再试'));
+        },
+        fail: () => reject(new Error('云端还没连上。请先在开发者工具里上传并部署 aiConfig')),
+      });
+    });
+  },
+  loadAI() {
+    // 正在填表就不要打断；和网页版一样，还没接入时默认展开表单
+    if (this._aiEditing) return;
+    if (!this.data.ai || !this.data.ai.data) this.setData({ ai: { loading: true } });
+    this.aiCall('status').then(r => {
+      this._aiForm = null;
+      this._aiKey = '';
+      this.setData({ ai: aiView(r, null, { open: !r.configured }) });
+    }).catch(e => {
+      // 云函数还没部署时，仍展示默认混元和表单，把原因写在表单里
+      this.setData({ ai: aiView({ configured: false, providers: AI_PROVIDERS }, null, { open: true, msg: e.message, ok: false }) });
+    });
+  },
+  onAiToggle() {
+    const a = this.data.ai || {};
+    if (a.loading || a.error) return;
+    const open = !a.open;
+    if (open) {
+      this._aiKey = '';
+      this._aiForm = Object.assign({}, a.form, { key: '' });
+      this._aiEditing = true;
+    } else {
+      this._aiEditing = false;
+    }
+    this.setData({ ai: aiView(a.data, this._aiForm || a.form, { open: open, msg: '' }) });
+  },
+  onAiProvider(e) {
+    const i = Number(e.detail.value);
+    const a = this.data.ai || {};
+    const p = (a.providers || [])[i];
+    if (!p) return;
+    const form = Object.assign({}, this._aiForm || a.form, { provider: p.id, key: (this._aiKey != null ? this._aiKey : (a.form && a.form.key) || '') });
+    if (p.id !== 'custom') {
+      form.base_url = p.base;
+      form.model = p.model;
+    }
+    this._aiForm = form;
+    this._aiEditing = true;
+    this.setData({ ai: aiView(a.data, form, { open: true, msg: '', busy: a.busy }) });
+  },
+  onAiField(e) {
+    const k = e.currentTarget.dataset.k;
+    const v = e.detail.value;
+    if (!this._aiForm) this._aiForm = Object.assign({}, (this.data.ai && this.data.ai.form) || {});
+    this._aiForm[k] = v;
+    if (k === 'key') this._aiKey = v;
+    this._aiEditing = true;
+    // 不 setData，避免安卓输入法错位
+    if (this.data.ai && this.data.ai.form) this.data.ai.form[k] = v;
+  },
+  aiFormNow() {
+    const a = this.data.ai || {};
+    const form = Object.assign({}, this._aiForm || a.form || {});
+    if (this._aiKey != null && this._aiKey !== undefined) form.key = this._aiKey;
+    return form;
+  },
+  onAiTest() {
+    const a = this.data.ai || {};
+    if (a.busy) return;
+    const form = this.aiFormNow();
+    this.setData({ 'ai.busy': 'test', 'ai.msg': '' });
+    this.aiCall('test', form).then(r => {
+      const ok = !!r.ok;
+      const msg = ok
+        ? ('接通了，用时 ' + (r.ms / 1000).toFixed(1) + ' 秒，它回复：「' + (r.reply || '') + '」')
+        : ('没接通：' + (r.error || r.message || '请稍后再试'));
+      this.setData({ ai: aiView(a.data, form, { open: true, busy: '', msg: msg, ok: ok }) });
+    }).catch(e => {
+      this.setData({ ai: aiView(a.data, form, { open: true, busy: '', msg: e.message, ok: false }) });
+    });
+  },
+  onAiSave() {
+    const a = this.data.ai || {};
+    if (a.busy) return;
+    const form = this.aiFormNow();
+    this.setData({ 'ai.busy': 'save', 'ai.msg': '' });
+    this.aiCall('save', form).then(r => {
+      this._aiKey = '';
+      this._aiForm = null;
+      this._aiEditing = false;
+      this.setData({ ai: aiView(r, { provider: r.provider, base_url: r.base_url, model: r.model, key: '' }, { open: false, msg: '', ok: true }) });
+      this.toast('已保存，之后的回信用你自己的 AI 写');
+    }).catch(e => {
+      this.setData({ ai: aiView(a.data, form, { open: true, busy: '', msg: e.message, ok: false }) });
+    });
+  },
+  onAiOff() {
+    wx.showModal({
+      title: '停用自己的 AI，改回免费模型？',
+      content: '保存的 Key 会被删除。',
+      confirmText: '停用',
+      confirmColor: '#C0352B',
+      success: (res) => {
+        if (!res.confirm) return;
+        this.aiCall('off').then(r => {
+          this._aiKey = '';
+          this._aiForm = null;
+          this._aiEditing = false;
+          this.setData({ ai: aiView(r, null, { open: false }) });
+          this.toast('已改回免费模型');
+        }).catch(e => this.toast(e.message));
+      },
+    });
+  },
   goPrivacy() { wx.navigateTo({ url: '/pages/privacy/privacy' }); },
+
   onSeed() {
     if (!wx.cloud) { this.toast('云端还没连上'); return; }
     wx.showModal({

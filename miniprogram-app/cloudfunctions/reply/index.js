@@ -1,8 +1,9 @@
-// 寄出或拆开时，用云开发里的混元写回信。提示词只在这个函数里。
-// 周信、季信、年信在 cloudfunctions/digest。
+// 寄出或拆开时写回信。优先用用户自己接的 OpenAI 兼容接口，调不通再改用混元。
+// 提示词只在这个函数里。周信、季信、年信在 cloudfunctions/digest。
 const cloud = require('wx-server-sdk');
 const { guard } = require('./sec');
 const { HUNYUAN_MODEL, HUNYUAN_FALLBACK, DEFAULT_QUESTIONS, buildMessages, normalizeReply } = require('./prompt');
+const { askWithUserAI } = require('./userai');
 
 cloud.init({
   env: 'huixin-d1g2tdmkz68dc5a5d',
@@ -100,6 +101,7 @@ async function askHunyuan(messages) {
 
 function friendly(e) {
   const msg = String(e && (e.message || e.errMsg) || e || '');
+  if (/你自己的 AI 没接通/.test(msg)) return msg + ' 你写的信还在。';
   if (/quota|额度|token|429|exhaust|欠费/i.test(msg)) return '今天的免费额度用完了，明天再拆一次。你写的信还在。';
   return '回信这次没写成，稍后再试。你写的信还在。';
 }
@@ -146,7 +148,7 @@ exports.main = async (event) => {
       notes: noted.map(t => t.text + (t.dropped_at ? '【放下了】' : '【还在做】') + (t.note ? '：' + String(t.note).slice(0, 120) : '')),
       yesterday: yday && yday.reply && yday.reply.summary ? yday.reply.summary : '',
     };
-    const asked = await askHunyuan(buildMessages(ctx));
+    const asked = await askWithUserAI(db, OPENID, buildMessages(ctx), askHunyuan, { maxTokens: 4000, temperature: 0.5, timeoutMs: 35000 });
     const made = normalizeReply(asked.text);
     const parts = [made.summary].concat(made.tasks.map(t => t.text), made.ideas.map(t => t.text), [
       made.lenses.health, made.lenses.energy, made.lenses.career, made.lenses.relation,
@@ -201,8 +203,9 @@ exports.main = async (event) => {
       questions: questions,
       todos: madeTodos.map(t => ({ id: t.id, text: t.text, due: t.due || '' })),
       ideas: madeIdeas.map(t => ({ id: t.id, text: t.text })),
-      engine: '混元 ' + asked.model,
+      engine: asked.engine || '',
     };
+    if (asked.ownError) reply.ownError = asked.ownError;
     const patch = {
       reply: reply,
       replied_at: repliedAt,

@@ -1,17 +1,49 @@
 {
   "说明": "在云开发控制台把下面每个集合的权限设为「仅创建者可读写」。自定义安全规则与该预设等价，可整段粘贴。云函数使用管理员权限，代码里已按 OPENID 过滤，不会靠这条规则挡云函数。",
   "预设": "仅创建者可读写",
-  "collections": ["letters", "todos", "ideas", "habits", "habit_logs", "settings", "digests"],
+  "collections": [
+    "letters",
+    "todos",
+    "ideas",
+    "habits",
+    "habit_logs",
+    "settings",
+    "digests"
+  ],
   "rule": {
     "read": "doc._openid == auth.openid",
     "write": "doc._openid == auth.openid"
   },
   "建议索引": {
-    "letters": ["date"],
-    "todos": ["created"],
-    "ideas": ["created"],
-    "habits": ["sort"],
-    "habit_logs": ["date"],
-    "digests": ["kind", "key"]
+    "letters": [
+      "date"
+    ],
+    "todos": [
+      "created"
+    ],
+    "ideas": [
+      "created"
+    ],
+    "habits": [
+      "sort"
+    ],
+    "habit_logs": [
+      "date"
+    ],
+    "digests": [
+      "kind",
+      "key"
+    ]
+  },
+  "只读集合": {
+    "说明": "下面这些集合只能由云函数读写，控制台里把权限设为「所有用户不可读写」。不要设成仅创建者可读写，否则客户端能把加密后的 Key 读走。",
+    "collections": [
+      "api_keys",
+      "ai_config"
+    ],
+    "rule": {
+      "read": false,
+      "write": false
+    }
   }
 }

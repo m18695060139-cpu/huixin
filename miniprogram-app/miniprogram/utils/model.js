@@ -613,6 +613,7 @@ function replyBlock(S, l, t) {
     todos: todos,
     ideas: ideas,
     engine: r.engine || '',
+    ownError: r.ownError || '',
     fb: r.fb || 0,
   };
 }

@@ -1,10 +1,10 @@
-// 清空当前微信用户在这些集合里的全部记录（含只读 API 密钥，清空后旧密钥也一并作废）。云函数有管理员权限，所以必须自己按 OPENID 过滤。
+// 清空当前微信用户在这些集合里的全部记录（含只读 API 密钥和自己的 AI Key，清空后一并作废）。云函数有管理员权限，所以必须自己按 OPENID 过滤。
 const cloud = require('wx-server-sdk');
 
 cloud.init({ env: 'huixin-d1g2tdmkz68dc5a5d' });
 const db = cloud.database();
 
-const COLLECTIONS = ['letters', 'todos', 'ideas', 'habits', 'habit_logs', 'settings', 'api_keys'];
+const COLLECTIONS = ['letters', 'todos', 'ideas', 'habits', 'habit_logs', 'settings', 'api_keys', 'ai_config'];
 
 async function clearColl(name, openid) {
   const coll = db.collection(name);

@@ -58,3 +58,15 @@
 .st-key-foot { display: flex; align-items: center; gap: 23.077rpx; }
 .st-copy { flex: none; height: 69.231rpx; line-height: 69.231rpx; padding: 0 30.769rpx; border-radius: 34.615rpx; background-color: var(--ink); color: var(--on-ink); font-size: 26.923rpx; font-weight: 600; }
 .st-risk { line-height: 1.6; }
+
+/* AI 回信：表单叠在分组列表里 */
+.st-em { font-weight: 600; }
+.st-lab { display: block; font-size: 23.077rpx; color: var(--sub); }
+.st-col { flex-direction: column; align-items: stretch; gap: 11.538rpx; padding-top: 19.231rpx; padding-bottom: 19.231rpx; }
+.st-pick { flex: 1; min-width: 0; text-align: right; font-size: 30.769rpx; color: var(--ink); }
+.st-btns { display: flex; gap: 19.231rpx; padding-top: 19.231rpx; padding-bottom: 19.231rpx; }
+.st-btn { flex: none; height: 69.231rpx; line-height: 69.231rpx; padding: 0 30.769rpx; border-radius: 34.615rpx; font-size: 26.923rpx; font-weight: 600; }
+.theme-mono .st-btn { border-radius: 7.692rpx; }
+.st-btn-ink { background-color: var(--ink); color: var(--on-ink); }
+.st-btn-ghost { background-color: transparent; color: var(--ink); border: 0.962rpx solid var(--ink); box-sizing: border-box; }
+.st-btn-off { opacity: .45; pointer-events: none; }

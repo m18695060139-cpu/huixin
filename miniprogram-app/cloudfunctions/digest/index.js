@@ -2,6 +2,7 @@
 // 提示词与网页版 src/ai.js 的 DIGEST_SYSTEM 一致。也可以由小程序手动让它现在写。
 const cloud = require('wx-server-sdk');
 const { guard } = require('./sec');
+const { askWithUserAI } = require('./userai');
 
 cloud.init({ env: 'huixin-d1g2tdmkz68dc5a5d', timeout: 60000 });
 const db = cloud.database();
@@ -158,16 +159,18 @@ async function makeDigest(openid, kind, key) {
     const qs = await listWhere('digests', { _openid: openid, kind: 'quarter', key: _.gte(key + '-').and(_.lt(key + '.')) });
     if (qs.length) lines.push('【这一年的季信】\n' + qs.map(q => q.key + '：' + ((q.content && q.content.letter) || '')).join('\n'));
   }
-  const asked = await ask([
+  const messages = [
     { role: 'system', content: DIGEST_SYSTEM[kind] },
     { role: 'user', content: lines.join('\n\n') },
-  ]);
+  ];
+  const asked = await askWithUserAI(db, openid, messages, ask, { maxTokens: kind === 'week' ? 3000 : 4500, temperature: 0.6, timeoutMs: 35000 });
   const content = extractJSON(asked.text);
   const sec = await guard(cloud.getWXContext().OPENID || openid, [content.letter, content.title, content.energy_note, content.next].concat(content.forgotten || [], content.themes || []));
   if (!sec.ok) throw new Error('内容没能保存');
   const energies = letters.filter(l => l.energy);
   const avg = energies.length ? Math.round(energies.reduce((s, l) => s + Number(l.energy), 0) / energies.length * 10) / 10 : null;
-  content.engine = '混元 ' + asked.model;
+  content.engine = asked.engine || '';
+  if (asked.ownError) content.ownError = asked.ownError;
   content.stats = { letters: letters.length, days: days, energyAvg: avg, todosDone: done.length };
   content.range = [start, end];
   const now = new Date().toISOString();
@@ -226,6 +229,7 @@ exports.main = async (event) => {
   } catch (e) {
     console.error(e);
     const msg = String(e && e.message || '');
+    if (/你自己的 AI 没接通/.test(msg)) return { ok: false, message: msg };
     return { ok: false, message: /quota|额度|429/.test(msg) ? '今天的免费额度用完了，明天再试。' : '这封总结信没写成，稍后再试。' };
   }
 };

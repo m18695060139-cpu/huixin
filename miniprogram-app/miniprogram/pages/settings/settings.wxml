@@ -47,17 +47,72 @@
       </view>
     </view>
 
-    <!-- AI 回信 -->
+    <!-- AI 回信：选项和文案跟网页版同一套，默认是云开发免费的混元 -->
     <view class="st-sec" wx:if="{{aiOn}}">
       <text class="st-head">AI 回信</text>
       <view class="st-group">
-        <view class="st-row">
-          <view class="st-body">
-            <text class="st-t st-grow">正在用微信云开发的混元 hy3</text>
-          </view>
+        <view class="st-row" wx:if="{{ai.loading || ai.error}}">
+          <view class="st-body"><text class="st-empty">{{ai.loading ? '读取中…' : ai.error}}</text></view>
         </view>
+        <block wx:else>
+          <view class="st-row">
+            <view class="st-body">
+              <view class="st-main" wx:if="{{ai.configured}}">
+                <text class="st-t">正在用你自己的 <text class="st-em">{{ai.providerName}}</text> · {{ai.model}} · Key 尾号 {{ai.last4}}</text>
+              </view>
+              <view class="st-main" wx:else>
+                <text class="st-t">正在用 <text class="st-em">微信云开发的混元</text>：不用花钱，但每天有额度上限。</text>
+              </view>
+            </view>
+          </view>
+          <view class="st-row" wx:if="{{ai.configured}}" hover-class="st-hover" bindtap="onAiOff">
+            <view class="st-body"><text class="st-t st-danger st-grow">停用，改回免费模型</text></view>
+          </view>
+          <view class="st-row" hover-class="st-hover" bindtap="onAiToggle">
+            <view class="st-body"><text class="st-t st-accent st-grow">{{ai.open ? '收起' : (ai.configured ? '修改 ›' : '接入自己的 AI ›')}}</text></view>
+          </view>
+          <block wx:if="{{ai.open}}">
+            <view class="st-row">
+              <view class="st-body">
+                <text class="st-t">服务商</text>
+                <picker mode="selector" range="{{ai.providerNames}}" value="{{ai.providerIndex}}" bindchange="onAiProvider">
+                  <view class="st-pick">{{ai.formProviderName}} ›</view>
+                </picker>
+              </view>
+            </view>
+            <view class="st-row">
+              <view class="st-body st-col">
+                <text class="st-lab">接口地址</text>
+                <input class="st-in st-left" value="{{ai.form.base_url}}" placeholder="https://…/v1" placeholder-class="ph" data-k="base_url" bindinput="onAiField" maxlength="200" adjust-position="{{true}}" cursor-spacing="120" disable-default-padding="{{true}}" confirm-type="done" />
+              </view>
+            </view>
+            <view class="st-row">
+              <view class="st-body st-col">
+                <text class="st-lab">模型名</text>
+                <input class="st-in st-left" value="{{ai.form.model}}" placeholder="比如 deepseek-chat" placeholder-class="ph" data-k="model" bindinput="onAiField" maxlength="120" adjust-position="{{true}}" cursor-spacing="120" disable-default-padding="{{true}}" confirm-type="done" />
+              </view>
+            </view>
+            <view class="st-row">
+              <view class="st-body st-col">
+                <text class="st-lab">API Key</text>
+                <input class="st-in st-left" value="{{ai.form.key}}" password="{{true}}" placeholder="{{ai.keyPlaceholder}}" placeholder-class="ph" data-k="key" bindinput="onAiField" maxlength="200" adjust-position="{{true}}" cursor-spacing="120" disable-default-padding="{{true}}" confirm-type="done" />
+              </view>
+            </view>
+            <view class="st-row">
+              <view class="st-body st-btns">
+                <view class="st-btn st-btn-ghost {{ai.busy ? 'st-btn-off' : ''}}" hover-class="st-act-on" bindtap="onAiTest">{{ai.busy === 'test' ? '测试中…' : '测试一下'}}</view>
+                <view class="st-btn st-btn-ink {{ai.busy ? 'st-btn-off' : ''}}" hover-class="st-act-on" bindtap="onAiSave">{{ai.busy === 'save' ? '保存中…' : '保存'}}</view>
+              </view>
+            </view>
+            <view class="st-row" wx:if="{{ai.msg}}">
+              <view class="st-body"><text class="st-t st-grow {{ai.ok ? '' : 'st-danger'}}">{{ai.msg}}</text></view>
+            </view>
+            <view class="st-row">
+              <view class="st-body"><text class="st-t st-grow st-risk">{{aiHelp}}</text></view>
+            </view>
+          </block>
+        </block>
       </view>
-      <text class="st-foot">回信、周信、季信和年信都由它来写。个人主体只能在体验版里用，不需要自己的 API Key。</text>
     </view>
 
     <!-- 外观 -->
