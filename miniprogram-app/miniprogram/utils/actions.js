@@ -294,13 +294,6 @@ async function saveSettings(patch) {
   return r;
 }
 
-async function importJson(obj) {
-  if (!cloud.cloudOn()) return { ok: false, code: 'local', message: '还没连上云开发，先不能导入' };
-  const r = await cloud.call('importFromWeb', { data: obj });
-  if (r && r.ok === false) return r;
-  await state.refresh();
-  return r || { ok: true };
-}
 
 async function wipe() {
   if (cloud.cloudOn()) {
@@ -317,5 +310,5 @@ module.exports = {
   saveTodo, toggleTodo, dropTodo, deleteTodo,
   saveIdea, setIdeaStatus, ideaToTodo,
   saveHabit, archiveHabit, toggleHabit,
-  saveSettings, importJson, wipe,
+  saveSettings, wipe,
 };

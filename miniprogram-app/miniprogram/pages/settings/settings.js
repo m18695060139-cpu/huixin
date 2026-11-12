@@ -192,38 +192,6 @@ Page({
     });
   },
   goPrivacy() { wx.navigateTo({ url: '/pages/privacy/privacy' }); },
-  onImport() {
-    wx.chooseMessageFile({
-      count: 1,
-      type: 'file',
-      extension: ['json'],
-      success: (res) => {
-        const file = res.tempFiles && res.tempFiles[0];
-        if (!file) return;
-        wx.getFileSystemManager().readFile({
-          filePath: file.path,
-          encoding: 'utf8',
-          success: async (r) => {
-            let obj;
-            try { obj = JSON.parse(r.data); }
-            catch (e) { this.toast('这个文件不是 JSON'); return; }
-            wx.showLoading({ title: '导入中', mask: true });
-            const result = await actions.importJson(obj);
-            wx.hideLoading();
-            if (!result || result.ok === false) {
-              this.toast((result && result.message) || '没有导入');
-              return;
-            }
-            const n = result.imported || {};
-            const skip = (result.skipped || []).length;
-            this.toast('信 ' + (n.letters || 0) + ' 封' + (skip ? '，跳过 ' + skip + ' 条' : '已导入'));
-            this.paint(true);
-          },
-          fail: () => this.toast('没有读到文件'),
-        });
-      },
-    });
-  },
   onSeed() {
     if (!wx.cloud) { this.toast('云端还没连上'); return; }
     wx.showModal({
