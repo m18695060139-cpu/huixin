@@ -84,6 +84,7 @@ function bjTime(iso) {
   const d = new Date(t + 8 * 3600e3).toISOString();
   return Number(d.slice(5, 7)) + '月' + Number(d.slice(8, 10)) + '日 ' + d.slice(11, 16);
 }
+
 function keyView(r, fresh) {
   return {
     doc: r.exists ? keyDoc(r.url || '', fresh) : '',
@@ -95,11 +96,105 @@ function keyView(r, fresh) {
   };
 }
 
+// 设置页打开时先用上次的状态立刻画出来，再在后台刷新。
+// 只缓存服务商、模型、是否已接入、Key 尾号；永远不存 Key 本身。
+const AI_CACHE = 'hx_mp_ai_status';
+const KEY_CACHE = 'hx_mp_api_status';
+const STATUS_FRESH_MS = 60000;
+
+function readStore(name) {
+  try {
+    const v = wx.getStorageSync(name);
+    if (v && typeof v === 'object') return v;
+  } catch (e) { /* 忽略 */ }
+  return null;
+}
+function writeStore(name, v) {
+  try { wx.setStorageSync(name, v); } catch (e) { /* 空间不够就下次再读云端 */ }
+}
+function clearStore(name) {
+  try { wx.removeStorageSync(name); } catch (e) { /* 忽略 */ }
+}
+function clearStatusCaches() {
+  clearStore(AI_CACHE);
+  clearStore(KEY_CACHE);
+  if (typeof pageDefaults !== 'undefined' && pageDefaults) {
+    pageDefaults.ai = { loading: true };
+    pageDefaults.key = { loading: true };
+  }
+}
+
+function aiStatusSafe(r, fetchedAt) {
+  if (!r || typeof r !== 'object') return null;
+  return {
+    configured: !!r.configured,
+    provider: r.provider || '',
+    model: r.model || '',
+    last4: r.last4 || '',
+    base_url: r.base_url || '',
+    updated_at: r.updated_at || '',
+    fetchedAt: fetchedAt != null ? fetchedAt : (Number(r.fetchedAt) || 0),
+  };
+}
+function writeAICache(r) {
+  const s = aiStatusSafe(r, Date.now());
+  if (s) {
+    writeStore(AI_CACHE, s);
+    // 同步默认 data，下次打开设置页第一帧就不是「读取中…」
+    if (pageDefaults) pageDefaults.ai = aiView(s, null, { open: !s.configured });
+  }
+  return s;
+}
+function readAICache() { return aiStatusSafe(readStore(AI_CACHE)); }
+function isFresh(c) {
+  return !!(c && c.fetchedAt && (Date.now() - c.fetchedAt) < STATUS_FRESH_MS);
+}
+
+function keyStatusSafe(r, fetchedAt) {
+  if (!r || typeof r !== 'object') return null;
+  return {
+    exists: !!r.exists,
+    hint: r.hint || '',
+    created_at: r.created_at || '',
+    last_used_at: r.last_used_at || '',
+    url: r.url || '',
+    fetchedAt: fetchedAt != null ? fetchedAt : (Number(r.fetchedAt) || 0),
+  };
+}
+function writeKeyCache(r) {
+  const s = keyStatusSafe(r, Date.now());
+  if (s) {
+    writeStore(KEY_CACHE, s);
+    if (pageDefaults) pageDefaults.key = keyView(s, '');
+  }
+  return s;
+}
+function readKeyCache() { return keyStatusSafe(readStore(KEY_CACHE)); }
+
+const pageDefaults = {
+  themes: [], habits: [], name: '', qText: '', habitName: '', themeId: 'auto', deliver: 'morning',
+  key: { loading: true }, keyRisk: KEY_RISK,
+  ai: { loading: true }, aiHelp: AI_HELP,
+};
+(function hydrateDefaults() {
+  const ai = readAICache();
+  const key = readKeyCache();
+  if (ai) pageDefaults.ai = aiView(ai, null, { open: !ai.configured });
+  if (key) pageDefaults.key = keyView(key, '');
+})();
+
 Page({
   behaviors: [behavior],
-  data: { themes: [], habits: [], name: '', qText: '', habitName: '', themeId: 'auto', deliver: 'morning',
-    key: { loading: true }, keyRisk: KEY_RISK,
-    ai: { loading: true }, aiHelp: AI_HELP },
+  data: pageDefaults,
+  onLoad() {
+    // 同步画缓存，赶在第一帧之前；避免脚本只初始化一次 data 时仍闪「读取中…」
+    const patch = {};
+    const ai = readAICache();
+    const key = readKeyCache();
+    if (ai) patch.ai = aiView(ai, null, { open: !ai.configured });
+    if (key) patch.key = keyView(key, '');
+    if (Object.keys(patch).length) this.setData(patch);
+  },
   onShow() {
     this.hideShare();
     this.syncChrome();
@@ -204,16 +299,26 @@ Page({
     });
   },
   loadKey() {
-    if (!(this.data.key && this.data.key.fresh)) this.setData({ key: { loading: true } });
+    const cached = readKeyCache();
+    // 有缓存就先画出来，不再露出「读取中…」
+    if (cached && this.data.key && (this.data.key.loading || this.data.key.error)) {
+      this.setData({ key: keyView(cached, this.data.key.fresh || '') });
+    }
+    if (isFresh(cached)) return;
     this.keyCall('status').then(r => {
+      writeKeyCache(r);
       const fresh = this.data.key && this.data.key.fresh;
       this.setData({ key: keyView(r, fresh) });
-    }).catch(e => this.setData({ key: { error: e.message } }));
+    }).catch(e => {
+      if (cached) return;
+      this.setData({ key: { error: e.message } });
+    });
   },
   makeKey() {
     if (this.data.key.busy) return;
     this.setData({ 'key.busy': true });
     this.keyCall('create').then(r => {
+      writeKeyCache(r);
       this.setData({ key: keyView(r, r.key) });
       this.toast('已生成，只显示这一次');
     }).catch(e => { this.setData({ 'key.busy': false }); this.toast(e.message); });
@@ -237,6 +342,7 @@ Page({
         if (!res.confirm) return;
         this.setData({ 'key.busy': true });
         this.keyCall('revoke').then(r => {
+          writeKeyCache(r);
           this.setData({ key: keyView(r, '') });
           this.toast('已作废');
         }).catch(e => { this.setData({ 'key.busy': false }); this.toast(e.message); });
@@ -268,14 +374,26 @@ Page({
     });
   },
   loadAI() {
-    // 正在填表就不要打断；和网页版一样，还没接入时默认展开表单
+    if (!AI_ENABLED) return;
+    // 正在填表就不要打断
     if (this._aiEditing) return;
-    if (!this.data.ai || !this.data.ai.data) this.setData({ ai: { loading: true } });
+    const cached = readAICache();
+    if (cached && this.data.ai && this.data.ai.loading) {
+      this.setData({ ai: aiView(cached, null, { open: !cached.configured }) });
+    }
+    if (isFresh(cached)) return;
     this.aiCall('status').then(r => {
+      writeAICache(r);
+      if (this._aiEditing) return;
       this._aiForm = null;
       this._aiKey = '';
-      this.setData({ ai: aiView(r, null, { open: !r.configured }) });
+      // 后台刷新时保持用户已经展开或收起的状态；第一次才按「未接入则展开」
+      const had = this.data.ai && this.data.ai.data && !this.data.ai.loading;
+      const open = had ? !!this.data.ai.open : !r.configured;
+      this.setData({ ai: aiView(r, null, { open: open }) });
     }).catch(e => {
+      if (this._aiEditing) return;
+      if (cached) return;
       // 云函数还没部署时，仍展示默认混元和表单，把原因写在表单里
       this.setData({ ai: aiView({ configured: false, providers: AI_PROVIDERS }, null, { open: true, msg: e.message, ok: false }) });
     });
@@ -333,6 +451,8 @@ Page({
       const msg = ok
         ? ('接通了，用时 ' + (r.ms / 1000).toFixed(1) + ' 秒，它回复：「' + (r.reply || '') + '」')
         : ('没接通：' + (r.error || r.message || '请稍后再试'));
+      // 测试不改配置，用当前状态刷新缓存时间；不要把测试返回值写进去（里面没有 status）
+      if (a.data) writeAICache(a.data);
       this.setData({ ai: aiView(a.data, form, { open: true, busy: '', msg: msg, ok: ok }) });
     }).catch(e => {
       this.setData({ ai: aiView(a.data, form, { open: true, busy: '', msg: e.message, ok: false }) });
@@ -347,6 +467,7 @@ Page({
       this._aiKey = '';
       this._aiForm = null;
       this._aiEditing = false;
+      writeAICache(r);
       this.setData({ ai: aiView(r, { provider: r.provider, base_url: r.base_url, model: r.model, key: '' }, { open: false, msg: '', ok: true }) });
       this.toast('已保存，之后的回信用你自己的 AI 写');
     }).catch(e => {
@@ -365,6 +486,7 @@ Page({
           this._aiKey = '';
           this._aiForm = null;
           this._aiEditing = false;
+          writeAICache(r);
           this.setData({ ai: aiView(r, null, { open: false }) });
           this.toast('已改回免费模型');
         }).catch(e => this.toast(e.message));
@@ -438,6 +560,7 @@ Page({
           success: async (res2) => {
             if (!res2.confirm) return;
             wx.showLoading({ title: '清空中', mask: true });
+            clearStatusCaches();
             const r = await actions.wipe();
             wx.hideLoading();
             if (r && r.ok === false) { this.toast(r.message || '没清空'); return; }
