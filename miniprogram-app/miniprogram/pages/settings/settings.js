@@ -99,12 +99,13 @@ Page({
       else this.toast('已保存。下一封信的提示会换成这些。');
     });
   },
-  onHabitName(e) { this.setData({ habitName: e.detail.value }); },
+  onHabitName(e) { this._habitName = e.detail.value; },
   onAddHabit() {
-    const name = (this.data.habitName || '').trim();
+    const name = (this._habitName != null ? this._habitName : this.data.habitName || '').trim();
     if (!name) return;
     actions.saveHabit({ name: name }).then(r => {
       if (r && r.code === 'risky') { this.toast(r.message); return; }
+      this._habitName = '';
       this.setData({ habitName: '' });
       this.toast('已添加');
       this.paint(false);

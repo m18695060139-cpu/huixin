@@ -121,7 +121,8 @@ Page({
   },
   async onSend() {
     const text = this._text || '';
-    if (!text.trim()) return;
+    if (!text.trim() || this._sending) return;
+    this._sending = true;
     clearTimeout(this._saveT);
     const tonight = this.data.meta.tonight;
     const r = await actions.saveLetter(this.data.date, {
@@ -130,6 +131,7 @@ Page({
       energy: this.data.energy || null,
     }, { sent: true });
     if (r && r.code === 'risky') {
+      this._sending = false;
       this.setData({ warn: r.message, editing: true });
       this.setTab(1, false);
       return;
@@ -175,8 +177,13 @@ Page({
       actions.markOpened(this.data.date);
       wx.navigateTo({ url: '/pages/letter/letter?date=' + this.data.date });
     }
+    this._sending = false;
   },
-  cancelEdit() { this.loadDay(this.data.date, false); },
+  cancelEdit() {
+    clearTimeout(this._saveT);
+    actions.clearDraft(this.data.date);
+    this.loadDay(this.data.date, false);
+  },
   goToday() { wx.switchTab({ url: '/pages/today/today' }); },
   retryReply() {
     const date = this.data.date;
