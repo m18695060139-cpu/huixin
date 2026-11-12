@@ -67,7 +67,7 @@ function postJson(url, key, body, timeoutMs) {
   });
 }
 
-// cfg = { baseUrl, model, key }。timeoutMs 默认 35 秒，给混元回退留时间（云函数最长 60 秒）。
+// cfg = { baseUrl, model, key }。timeoutMs 默认 15 秒，给混元回退留时间（云函数最长 60 秒）。
 async function callOpenAI(cfg, messages, maxTokens, temperature, timeoutMs) {
   const body = {
     model: cfg.model,
@@ -77,7 +77,7 @@ async function callOpenAI(cfg, messages, maxTokens, temperature, timeoutMs) {
     stream: false,
   };
   if (/tokenhub/i.test(cfg.baseUrl)) body.thinking = { type: 'disabled' };
-  const ms = timeoutMs || 35000;
+  const ms = timeoutMs || 15000;
   let res;
   try {
     res = await postJson(chatUrl(cfg.baseUrl), cfg.key, body, ms);

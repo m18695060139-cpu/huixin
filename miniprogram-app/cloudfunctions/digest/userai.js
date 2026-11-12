@@ -39,7 +39,7 @@ async function askWithUserAI(db, openid, messages, hunyuanFn, opts) {
   const opt = opts || {};
   const maxTokens = opt.maxTokens || 4000;
   const temperature = opt.temperature == null ? 0.6 : opt.temperature;
-  const timeoutMs = opt.timeoutMs || 35000;
+  const timeoutMs = opt.timeoutMs || 15000;
   const userAI = await loadUserAI(db, openid);
   let ownError;
   if (userAI) {

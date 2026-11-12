@@ -148,7 +148,7 @@ exports.main = async (event) => {
       notes: noted.map(t => t.text + (t.dropped_at ? '【放下了】' : '【还在做】') + (t.note ? '：' + String(t.note).slice(0, 120) : '')),
       yesterday: yday && yday.reply && yday.reply.summary ? yday.reply.summary : '',
     };
-    const asked = await askWithUserAI(db, OPENID, buildMessages(ctx), askHunyuan, { maxTokens: 4000, temperature: 0.5, timeoutMs: 35000 });
+    const asked = await askWithUserAI(db, OPENID, buildMessages(ctx), askHunyuan, { maxTokens: 4000, temperature: 0.5, timeoutMs: 15000 });
     const made = normalizeReply(asked.text);
     const parts = [made.summary].concat(made.tasks.map(t => t.text), made.ideas.map(t => t.text), [
       made.lenses.health, made.lenses.energy, made.lenses.career, made.lenses.relation,

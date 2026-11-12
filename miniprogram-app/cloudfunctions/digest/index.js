@@ -163,7 +163,7 @@ async function makeDigest(openid, kind, key) {
     { role: 'system', content: DIGEST_SYSTEM[kind] },
     { role: 'user', content: lines.join('\n\n') },
   ];
-  const asked = await askWithUserAI(db, openid, messages, ask, { maxTokens: kind === 'week' ? 3000 : 4500, temperature: 0.6, timeoutMs: 35000 });
+  const asked = await askWithUserAI(db, openid, messages, ask, { maxTokens: kind === 'week' ? 3000 : 4500, temperature: 0.6, timeoutMs: 15000 });
   const content = extractJSON(asked.text);
   const sec = await guard(cloud.getWXContext().OPENID || openid, [content.letter, content.title, content.energy_note, content.next].concat(content.forgotten || [], content.themes || []));
   if (!sec.ok) throw new Error('内容没能保存');
