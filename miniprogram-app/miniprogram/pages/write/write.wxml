@@ -3,7 +3,7 @@
   <view class="sheet-track {{sheetResetClass}}"
     change:reset="{{sheet.onReset}}"
     reset="{{sheetTok}}"
-    data-on="{{editing && !sentShow && !ed.show && !rec.on}}"
+    data-on="{{editing && !sentShow && !ed.show}}"
     data-attop="{{sheetAtTop}}"
     data-h="{{winHeight}}"
     data-w="{{winWidth}}"
@@ -14,9 +14,11 @@
     bindtouchcancel="{{sheet.touchEnd}}">
   <view class="top-shield" wx:if="{{!sentShow}}" style="height: {{statusBar}}px;"></view>
   <view class="page {{editing ? 'bare' : 'tab-pad'}}">
-    <view class="wbar stick-top" wx:if="{{!sentShow}}" style="padding-top: {{statusBar + 12}}px;">
-      <view wx:if="{{editing}}" class="round-btn" bindtap="closeWrite" aria-label="关闭"><view class="i i-x"></view></view>
-      <view wx:else class="round-btn ghost"></view>
+    <view class="wbar stick-top {{editing ? 'with-grabber' : ''}}" wx:if="{{!sentShow}}" style="padding-top: {{statusBar + (editing ? 22 : 12)}}px;">
+      <view wx:if="{{editing}}" class="sheet-grabber" style="top: {{statusBar + 8}}px;" aria-hidden="true">
+        <view class="sheet-grabber-bar"></view>
+      </view>
+      <view class="round-btn ghost" aria-hidden="true"></view>
       <view class="daynav">
         <view class="nav-btn" bindtap="onPrev" aria-label="前一天"><view class="i i-left"></view></view>
         <view class="lab">

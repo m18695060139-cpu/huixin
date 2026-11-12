@@ -8,6 +8,7 @@ var moving = false;
 var ignored = false;
 var closing = false;
 var mode = '';
+var EDGE = 32;
 
 function num(v, d) {
   var n = parseFloat(v);
@@ -60,7 +61,7 @@ function inZone(ds) {
   var h = num(ds.h, 667);
   if (startY >= (h - 140)) return false;
   if (startY <= head) return true;
-  if (startX <= 24) return true;
+  if (startX <= EDGE) return true;
   if (isOn(ds.attop)) return true;
   return false;
 }
@@ -83,7 +84,7 @@ function touchMove(e, ins) {
       mode = 'down';
       moving = true;
       ins.callMethod('onSheetDragStart');
-    } else if (dx > 0 && startX <= 24 && dx >= Math.abs(dy)) {
+    } else if (dx > 0 && startX <= EDGE && dx >= Math.abs(dy)) {
       mode = 'right';
       moving = true;
       ins.callMethod('onSheetDragStart');

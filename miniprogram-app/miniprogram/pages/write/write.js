@@ -44,6 +44,7 @@ Page({
     this.hideShare();
     this.initVoice();
     this.syncSheetMetrics();
+    this.bindKeyboard();
     const target = state.takeWriteTarget();
     const day = (target && target.date) || this.data.date || letterDay(new Date());
     const editing = target ? !!target.editing : this.data.editing;
@@ -52,17 +53,22 @@ Page({
   },
   onHide() {
     this._pageHidden = true;
+    this.unbindKeyboard();
     if (this.unsub) this.unsub();
-    clearTimeout(this._saveT);
     this.abortRec(true);
     this.invalidateTidy();
+    // 安卓系统返回会走这里（tab 页没有页面栈），跟下滑关闭同一条存草稿路径。
+    if (this.data.editing) this.flushDraft();
+    else clearTimeout(this._saveT);
   },
   onUnload() {
     this._pageHidden = true;
+    this.unbindKeyboard();
     if (this.unsub) this.unsub();
-    clearTimeout(this._saveT);
     this.abortRec(true);
     this.invalidateTidy();
+    if (this.data.editing) this.flushDraft();
+    else clearTimeout(this._saveT);
   },
   tabShouldShow() { return !this.data.editing && !this.data.sentShow && !this.data.ed.show; },
   loadDay(day, editing) {
@@ -367,7 +373,7 @@ Page({
     } catch (e) { win = {}; }
     const h = win.windowHeight || 667;
     const w = win.windowWidth || 390;
-    const head = (this.data.statusBar || 20) + 60;
+    const head = (this.data.statusBar || 20) + (this.data.editing ? 72 : 60);
     this.setData({
       winHeight: h,
       winWidth: w,
@@ -384,6 +390,21 @@ Page({
   onPageScroll(e) {
     const at = !e.scrollTop || e.scrollTop <= 0;
     if (at !== this.data.sheetAtTop) this.setData({ sheetAtTop: at });
+  },
+  bindKeyboard() {
+    this.unbindKeyboard();
+    const self = this;
+    this._onKb = function (res) {
+      self._kbHeight = (res && res.height) || 0;
+      self.syncSheetMetrics();
+    };
+    if (wx.onKeyboardHeightChange) wx.onKeyboardHeightChange(this._onKb);
+  },
+  unbindKeyboard() {
+    if (this._onKb && wx.offKeyboardHeightChange) {
+      try { wx.offKeyboardHeightChange(this._onKb); } catch (e) { /* 旧基础库 */ }
+    }
+    this._onKb = null;
   },
   onSheetDragStart() {
     if (wx.hideKeyboard) wx.hideKeyboard();
