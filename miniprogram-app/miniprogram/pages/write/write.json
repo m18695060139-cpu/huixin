@@ -1,4 +1,5 @@
 {
+  "disableSwipeBack": false,
   "usingComponents": {
     "toast": "/components/toast/toast",
     "editor": "/components/editor/editor"

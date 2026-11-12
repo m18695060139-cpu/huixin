@@ -5,6 +5,7 @@ const model = require('../../utils/model');
 const { letterDay, addDays, hm } = require('../../utils/date');
 const { AI_ENABLED, VOICE_ENABLED } = require('../../config');
 const voice = require('../../utils/voice');
+const nav = require('../../utils/nav');
 
 Page({
   behaviors: [behavior],
@@ -31,44 +32,67 @@ Page({
     rec: { on: false, cancel: false, clock: '0:00' },
     tidy: { show: false, preview: false, busy: false, result: '', canAll: false, used: false },
   },
-  onLoad() { this.initVoice(); },
+  onLoad(query) {
+    this._qDate = (query && query.date) || '';
+    this._qEdit = !query || query.edit !== '0';
+    this._needLoad = true;
+    this.initVoice();
+  },
   onShow() {
     this._leaving = false;
     this._pageHidden = false;
     this.hideShare();
     this.initVoice();
     const target = state.takeWriteTarget();
-    const day = (target && target.date) || this.data.date || letterDay(new Date());
-    const editing = target ? !!target.editing : this.data.editing;
-    this.loadDay(day, editing);
+    if (this._needLoad || target) {
+      const day = (target && target.date) || this._qDate || this.data.date || letterDay(new Date());
+      const editing = target ? !!target.editing : this._qEdit;
+      this._needLoad = false;
+      this.loadDay(day, editing);
+    } else {
+      this.paintAround();
+    }
+    if (this.unsub) this.unsub();
     this.unsub = state.subscribe(() => this.paintAround());
   },
   onHide() {
     this._pageHidden = true;
     if (this.unsub) this.unsub();
+    this.unsub = null;
     this.abortRec(true);
     this.invalidateTidy();
-    // 安卓系统返回会走这里（tab 页没有页面栈），跟关闭按钮同一条存草稿路径。
+    // 右滑返回、安卓返回都会先走这里，再走 onUnload。跟关闭按钮同一条存草稿路径。
     if (this.data.editing) this.flushDraft();
     else clearTimeout(this._saveT);
   },
   onUnload() {
     this._pageHidden = true;
     if (this.unsub) this.unsub();
+    this.unsub = null;
     this.abortRec(true);
     this.invalidateTidy();
     if (this.data.editing) this.flushDraft();
     else clearTimeout(this._saveT);
   },
-  tabShouldShow() { return !this.data.editing && !this.data.sentShow && !this.data.ed.show; },
+  tabShouldShow() { return false; },
   loadDay(day, editing) {
     const meta = model.writeMeta(state.get(), day, new Date());
     const draft = actions.readDraft(day);
     const saved = meta.text || '';
-    const text = draft && draft.text != null ? draft.text : saved;
+    const draftText = draft && draft.text != null ? draft.text : null;
+    // 空草稿不能盖掉已经存过的正文。关掉空信时曾经把 text:'' 写进草稿，再打开就变成一封空信。
+    const text = (draftText != null && (String(draftText).trim() || !String(saved).trim())) ? draftText : saved;
+    if (draftText != null && !String(draftText).trim() && String(saved).trim()) {
+      actions.clearDraft(day);
+    }
+    if (meta.sent && !String(text || '').trim()) {
+      // 本地正文被空保存盖掉时，向云端再拉一次，把已寄出的信找回来。
+      this._awaitRestore = day;
+      state.refresh();
+    }
     const mood = meta.mood || '';
     const energy = meta.energy || 0;
-    const dirty = draft && draft.text != null && draft.text !== saved;
+    const dirty = String(text || '') !== String(saved || '') && !!String(text || '').trim();
     const showEditor = !!editing || !meta.sent || !!dirty;
     const letter = model.letterModel(state.get(), day, new Date());
     this._text = text;
@@ -95,18 +119,28 @@ Page({
     });
     this._dictated = null;
     this._tidyBackup = null;
-    this.setTab(1, !showEditor);
+    this.setTab(1, false);
   },
   paintAround() {
     const day = this.data.date;
     if (!day) return;
     const meta = model.writeMeta(state.get(), day, new Date());
-    this.setData({
+    const patch = {
       meta: meta,
       letter: model.letterModel(state.get(), day, new Date()),
       warn: this.data.warn || state.get().warn || '',
       online: state.get().online,
-    });
+    };
+    // 云端把被盖掉的正文拉回来后，写进输入框（没在打字时才改，避免打断输入）。
+    if (this._awaitRestore === day && meta.text && !(this._text || '').trim() && !this.data.focused) {
+      this._awaitRestore = '';
+      this._text = meta.text;
+      patch.text = meta.text;
+      patch.empty = !meta.text;
+      patch.canSend = !!String(meta.text).trim();
+      patch.saveState = '已存';
+    }
+    this.setData(patch);
   },
   onFocus() {
     // 聚焦就藏起自定义提示字。iOS 拼音组合时不会触发 bindinput，
@@ -213,7 +247,7 @@ Page({
       sentDate: this.data.date.replace(/-/g, '.'),
       meta: meta,
     });
-    this.setTab(1, !tonight);
+    this.setTab(1, false);
     if (tonight) this.paintSentChrome();
     let ok = false;
     if (AI_ENABLED && wx.cloud) {
@@ -285,7 +319,8 @@ Page({
     if (this._pageHidden) return;
     if (this.data.date !== date) return;
     actions.markOpened(date);
-    wx.navigateTo({ url: '/pages/letter/letter?date=' + date });
+    // 替换写信页，返回时回到打开写信之前的页面，不会再落到已寄出的编辑页。
+    wx.redirectTo({ url: '/pages/letter/letter?date=' + date });
   },
   cancelEdit() {
     this.abortRec(true);
@@ -339,7 +374,7 @@ Page({
     this.setData({ sentShow: false });
     this.restoreChrome();
     this._pageHidden = true;
-    wx.switchTab({ url: '/pages/today/today' });
+    nav.closeWritePage();
   },
   closeWrite() {
     if (this._leaving) return;
@@ -348,15 +383,25 @@ Page({
     this.invalidateTidy();
     this.flushDraft();
     this._pageHidden = true;
-    wx.switchTab({ url: '/pages/today/today' });
+    nav.closeWritePage();
   },
   flushDraft() {
     clearTimeout(this._saveT);
     const date = this.data.date;
+    if (!date) return;
     const text = this._text;
-    if (!date || text == null) return;
-    actions.writeDraft(date, { text: text, mood: this.data.mood, energy: this.data.energy });
-    this.autosave(date, text);
+    const trimmed = String(text == null ? '' : text).trim();
+    const prev = (state.get().letters || {})[date] || {};
+    const hadText = String(prev.text || '').trim();
+    const sent = !!prev.sent_at;
+    if (!trimmed) {
+      actions.clearDraft(date);
+      // 已寄出的信：空保存不能把正文盖掉。未寄出且原本也是空的：不必记一封空信。
+      if (sent || !hadText) return;
+    } else {
+      actions.writeDraft(date, { text: text, mood: this.data.mood, energy: this.data.energy });
+    }
+    this.autosave(date, text == null ? '' : text);
   },
   invalidateTidy() {
     this._tidyGen = (this._tidyGen || 0) + 1;

@@ -1,9 +1,8 @@
 <view class="screen theme-{{theme}} {{rec.on ? 'rec-lock' : ''}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
   <view class="top-shield" wx:if="{{!sentShow}}" style="height: {{statusBar}}px;"></view>
-  <view class="page {{editing ? 'bare' : 'tab-pad'}}">
+  <view class="page bare">
     <view class="wbar stick-top" wx:if="{{!sentShow}}" style="padding-top: {{statusBar + 12}}px;">
-      <view wx:if="{{editing}}" class="round-btn" bindtap="closeWrite" aria-label="关闭"><view class="i i-x"></view></view>
-      <view wx:else class="round-btn ghost"></view>
+      <view class="round-btn" bindtap="closeWrite" aria-label="关闭"><view class="i i-x"></view></view>
       <view class="daynav">
         <view class="nav-btn" bindtap="onPrev" aria-label="前一天"><view class="i i-left"></view></view>
         <view class="lab">

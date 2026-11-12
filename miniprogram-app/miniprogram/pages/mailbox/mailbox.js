@@ -3,6 +3,7 @@ const state = require('../../utils/state');
 const actions = require('../../utils/actions');
 const model = require('../../utils/model');
 const chrome = require('../../utils/chrome');
+const nav = require('../../utils/nav');
 
 Page({
   behaviors: [behavior],
@@ -51,8 +52,7 @@ Page({
     else this.openDay(e);
   },
   goWrite(e) {
-    state.setWriteTarget(e.currentTarget.dataset.date, true);
-    wx.switchTab({ url: '/pages/write/write' });
+    nav.openWrite(e.currentTarget.dataset.date, { editing: true });
   },
   openDigest(e) {
     const kind = e.currentTarget.dataset.kind;

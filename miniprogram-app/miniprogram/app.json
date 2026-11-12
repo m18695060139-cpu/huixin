@@ -36,10 +36,6 @@
         "text": "今天"
       },
       {
-        "pagePath": "pages/write/write",
-        "text": "写信"
-      },
-      {
         "pagePath": "pages/mailbox/mailbox",
         "text": "信箱"
       }

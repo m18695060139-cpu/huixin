@@ -14,7 +14,13 @@ function hasText(S, d) {
 
 function hasSent(S, d) {
   const l = letterOf(S, d);
-  return !!(hasText(S, d) && l.sent_at);
+  // 正文被空保存盖掉时，仍按已寄出处理，信才能继续打开。
+  return !!(l && l.sent_at);
+}
+
+function isPresent(S, d) {
+  const l = letterOf(S, d);
+  return !!(l && (hasText(S, d) || l.sent_at || (l.reply && l.reply.summary)));
 }
 
 function deliverNow(S) {
@@ -178,7 +184,7 @@ function heroBlock(S, now, replying) {
     };
   }
   const busy = !!(replying && replying.date === ld && date.sendsTonight(ld, now));
-  if (hasText(S, ld) && (isSealed(S, ld, now) || busy)) {
+  if (hasSent(S, ld) && (isSealed(S, ld, now) || busy)) {
     return {
       type: 'sealed',
       date: ld,
@@ -187,7 +193,7 @@ function heroBlock(S, now, replying) {
     };
   }
   const skip = S.skip || {};
-  if (!night && h < 12 && !hasText(S, ld) && !hasText(S, yday) && totalLetters(S) > 0 && !skip[yday]) {
+  if (!night && h < 12 && !isPresent(S, ld) && !isPresent(S, yday) && totalLetters(S) > 0 && !skip[yday]) {
     return {
       type: 'backfill',
       date: yday,
@@ -196,7 +202,7 @@ function heroBlock(S, now, replying) {
       sub: '现在补上也来得及。补写的信寄出后，回信马上送到，拆出来的事直接放进今天。',
     };
   }
-  if (!hasText(S, ld) && night) return writeHero(S, ld, '今晚');
+  if (!isPresent(S, ld) && night) return writeHero(S, ld, '今晚');
   const last = [ld, yday].filter(d => hasSent(S, d) && S.letters[d].opened && !isSealed(S, d, now))[0];
   if (last) {
     const l = S.letters[last];
@@ -407,7 +413,7 @@ function stateCard(S, t, now, theme) {
 function dayRow(S, d, now) {
   const num = Number(d.slice(8));
   const w = '周' + date.wd(d);
-  if (!hasText(S, d)) return { kind: 'gap', date: d, num: num, wd: w };
+  if (!isPresent(S, d)) return { kind: 'gap', date: d, num: num, wd: w };
   const l = S.letters[d];
   const sealed = isSealed(S, d, now);
   let line;
@@ -454,7 +460,7 @@ function mailboxModel(S, now, ui) {
   now = now || new Date();
   const t = date.today(now);
   const theme = ui.theme || 'ink';
-  const dates = Object.keys(S.letters || {}).filter(d => hasText(S, d)).sort();
+  const dates = Object.keys(S.letters || {}).filter(d => isPresent(S, d)).sort();
   const first = dates[0] || '';
   const days = first ? date.diffDays(t, first) + 1 : 0;
   const month = Number(t.slice(5, 7));
@@ -465,7 +471,7 @@ function mailboxModel(S, now, ui) {
   if (dates.length) {
     const oldest = dates[0];
     const ld = date.letterDay(now);
-    const start = hasText(S, ld) ? ld : date.addDays(ld, -1);
+    const start = isPresent(S, ld) ? ld : date.addDays(ld, -1);
     let guard = 0;
     let last = start;
     for (let d = start; d >= oldest && guard < limit; d = date.addDays(d, -1), guard++) {
@@ -530,7 +536,7 @@ function kindHead(tab, t) {
 function letterModel(S, day, now) {
   now = now || new Date();
   const l = letterOf(S, day);
-  if (!l || !hasText(S, day)) return { missing: true, date: day };
+  if (!l || !isPresent(S, day)) return { missing: true, date: day };
   const t = date.today(now);
   const yday = date.addDays(t, -1);
   const sealed = isSealed(S, day, now);

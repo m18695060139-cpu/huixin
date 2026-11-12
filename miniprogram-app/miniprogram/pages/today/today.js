@@ -2,6 +2,7 @@ const behavior = require('../../behaviors/page');
 const state = require('../../utils/state');
 const actions = require('../../utils/actions');
 const model = require('../../utils/model');
+const nav = require('../../utils/nav');
 
 Page({
   behaviors: [behavior],
@@ -33,8 +34,7 @@ Page({
     this.paint();
   },
   goWrite(e) {
-    state.setWriteTarget(e.currentTarget.dataset.date, true);
-    wx.switchTab({ url: '/pages/write/write' });
+    nav.openWrite(e.currentTarget.dataset.date, { editing: true });
   },
   skipBackfill(e) {
     state.skipBackfill(e.currentTarget.dataset.date);

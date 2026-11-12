@@ -3,6 +3,7 @@ const state = require('../../utils/state');
 const model = require('../../utils/model');
 const { AI_ENABLED } = require('../../config');
 const { letterDay } = require('../../utils/date');
+const nav = require('../../utils/nav');
 
 Page({
   behaviors: [behavior],
@@ -97,7 +98,6 @@ Page({
   back() { wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/today/today' }) }); },
   goToday() { wx.switchTab({ url: '/pages/today/today' }); },
   takeBack() {
-    state.setWriteTarget(this.data.date, true);
-    wx.switchTab({ url: '/pages/write/write' });
+    nav.openWrite(this.data.date, { editing: true });
   },
 });

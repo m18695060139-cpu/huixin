@@ -61,6 +61,12 @@ async function saveLetter(date, fields, opts) {
     next.sent_at = new Date().toISOString();
     next.opened = false;
   }
+  // 跟云函数一样：已寄出的信不要被一次空的保存盖掉正文。
+  const incomingEmpty = !String(next.text || '').trim();
+  const hadText = String(prev.text || '').trim();
+  if (incomingEmpty && hadText && (prev.sent_at || opts.sent)) {
+    next.text = prev.text;
+  }
   state.upsertLetter(date, next);
   const letter = state.get().letters[date];
   const payload = {
