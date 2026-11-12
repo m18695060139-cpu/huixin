@@ -1,12 +1,6 @@
 <view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
-  <view class="subpage-bar sheet-bar" style="padding-top: {{statusBar}}px;">
-    <view>
-      <button class="st-back" hover-class="tap-on" bindtap="back" aria-label="返回"><view class="i i-left"></view><text class="st-back-t">设置</text></button>
-      <text class="t">AI 回信</text>
-      <view class="sp"></view>
-    </view>
-  </view>
-  <view class="page st-page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 80px);">
+  <st-nav title="AI 回信" back="设置" bind:back="back"></st-nav>
+  <view class="page st-page" style="padding-top: {{navBar}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 80px);">
 
     <view class="st-sec">
       <view class="st-group">
@@ -16,7 +10,7 @@
         <view class="st-row" wx:elif="{{ai.configured}}">
           <view class="st-body">
             <view class="st-main">
-              <text class="st-t st-grow">正在用你自己的 <text class="st-em">{{ai.providerName}}</text></text>
+              <text class="st-t st-grow st-wrap">正在用你自己的 <text class="st-em">{{ai.providerName}}</text></text>
               <text class="st-sub">{{ai.model}} · Key 尾号 {{ai.last4}}</text>
             </view>
           </view>
@@ -24,7 +18,7 @@
         <view class="st-row" wx:else>
           <view class="st-body">
             <view class="st-main">
-              <text class="st-t st-grow">正在用 <text class="st-em">微信云开发的混元</text></text>
+              <text class="st-t st-grow st-wrap">正在用 <text class="st-em">微信云开发的混元</text></text>
               <text class="st-sub">不用花钱，但每天有额度上限。</text>
             </view>
           </view>
@@ -37,14 +31,16 @@
       <view class="st-group">
         <view class="st-row" wx:for="{{ai.providers}}" wx:key="id" hover-class="st-hover" data-id="{{item.id}}" bindtap="onProvider">
           <view class="st-body">
-            <text class="st-t st-grow">{{item.name}}</text>
+            <text class="st-t st-grow st-wrap">{{item.name}}</text>
+            <text class="st-pending" wx:if="{{item.pending}}">将使用</text>
             <view class="i i-check st-tick" wx:if="{{item.on}}"></view>
           </view>
         </view>
       </view>
+      <text class="st-foot">{{aiHelp}}</text>
     </view>
 
-    <view class="st-sec" wx:if="{{!ai.loading}}">
+    <view class="st-sec" wx:if="{{!ai.loading && ai.showForm}}">
       <view class="st-group">
         <view class="st-row">
           <view class="st-body st-col">
@@ -65,10 +61,9 @@
           </view>
         </view>
       </view>
-      <text class="st-foot">{{aiHelp}}</text>
     </view>
 
-    <view class="st-sec" wx:if="{{!ai.loading}}">
+    <view class="st-sec" wx:if="{{!ai.loading && ai.showForm}}">
       <view class="st-group">
         <view class="st-row {{ai.busy ? 'st-busy' : ''}}" hover-class="st-hover" bindtap="onTest">
           <view class="st-body"><text class="st-t st-accent st-grow">{{ai.busy === 'test' ? '测试中…' : '测试一下'}}</text></view>

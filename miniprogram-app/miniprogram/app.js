@@ -36,6 +36,9 @@ App({
       const box = chrome.measure();
       this.globalData.statusBar = box.statusBar;
       this.globalData.safeBottom = box.safeBottom;
+      this.globalData.statusBarHeight = box.statusBarHeight;
+      this.globalData.navHeight = box.navHeight;
+      this.globalData.navBar = box.navBar;
       this.globalData.systemDark = chrome.appTheme() === 'dark';
     } catch (e) { /* 用默认安全区 */ }
   },

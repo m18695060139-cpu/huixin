@@ -1,0 +1,12 @@
+<view class="st-nav" style="padding-top: {{pad}}px;">
+  <view class="st-nav-row" style="height: {{inner}}px;">
+    <button wx:if="{{back}}" class="st-back" hover-class="tap-on" bindtap="onBack" aria-label="返回">
+      <view class="i i-left"></view>
+      <text class="st-back-t">{{back}}</text>
+    </button>
+    <text class="t">{{title}}</text>
+    <button wx:if="{{close}}" class="x st-nav-close" hover-class="tap-on" bindtap="onClose" aria-label="关闭">
+      <view class="i i-x"></view>
+    </button>
+  </view>
+</view>

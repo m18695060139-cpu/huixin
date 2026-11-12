@@ -40,10 +40,23 @@ function aiView(d, form, extra) {
   const list = providerList(P);
   const configured = !!(d && d.configured);
   const f = form || {};
-  const pid = f.provider || (configured ? d.provider : 'deepseek');
+  const inUseId = configured ? (d.provider || 'custom') : 'hunyuan';
+  const selectedId = f.provider || inUseId;
+  const showForm = selectedId !== 'hunyuan';
+  const pid = showForm ? selectedId : (configured ? (d.provider || 'custom') : 'deepseek');
   const pre = P[pid] || AI_PROVIDERS[pid] || AI_PROVIDERS.deepseek;
   const idx = Math.max(0, AI_IDS.indexOf(pid));
   const last4 = (d && d.last4) || '';
+  const hunyuan = {
+    id: 'hunyuan',
+    name: '微信云开发的混元（免费，默认）',
+    on: inUseId === 'hunyuan',
+    pending: false,
+  };
+  const providers = [hunyuan].concat(list.map(x => Object.assign({}, x, {
+    on: inUseId === x.id,
+    pending: selectedId === x.id && inUseId !== x.id,
+  })));
   return Object.assign({
     loading: false,
     error: '',
@@ -52,17 +65,18 @@ function aiView(d, form, extra) {
     providerName: configured ? ((P[d.provider] || P.custom || AI_PROVIDERS.custom).name) : '',
     model: configured ? (d.model || '') : '',
     last4: last4,
-    providers: list.map(x => Object.assign({}, x, { on: x.id === pid })),
+    providers: providers,
+    showForm: showForm,
     providerNames: list.map(x => x.name),
     providerIndex: idx,
     formProviderName: (P[pid] || pre).name,
     form: {
-      provider: pid,
-      base_url: f.base_url != null ? f.base_url : (d && d.base_url) || pre.base || '',
-      model: f.model != null ? f.model : (d && d.model) || pre.model || '',
+      provider: showForm ? selectedId : (configured ? (d.provider || '') : ''),
+      base_url: f.base_url != null ? f.base_url : (showForm ? ((d && configured && d.provider === selectedId && d.base_url) || pre.base || '') : ''),
+      model: f.model != null ? f.model : (showForm ? ((d && configured && d.provider === selectedId && d.model) || pre.model || '') : ''),
       key: f.key || '',
     },
-    keyPlaceholder: configured ? ('已保存（尾号 ' + last4 + '），不改就留空') : '粘贴服务商给你的 Key',
+    keyPlaceholder: (configured && selectedId === inUseId) ? ('已保存（尾号 ' + last4 + '），不改就留空') : '粘贴服务商给你的 Key',
     open: !!(extra && extra.open),
     busy: (extra && extra.busy) || '',
     msg: (extra && extra.msg) || '',

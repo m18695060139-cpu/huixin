@@ -37,10 +37,24 @@ Page({
   onProvider(e) {
     const id = e.currentTarget.dataset.id;
     const a = this.data.ai || {};
+    if (id === 'hunyuan') {
+      if (a.configured) this.onOff();
+      else if (a.showForm) {
+        this._aiForm = null;
+        this._aiKey = '';
+        this._aiEditing = false;
+        this.setData({ ai: ss.aiView(a.data, { provider: 'hunyuan' }, { msg: '', busy: '' }) });
+      }
+      return;
+    }
     const p = (a.providers || []).filter(x => x.id === id)[0];
     if (!p) return;
     const form = Object.assign({}, this._aiForm || a.form, { provider: p.id, key: (this._aiKey != null ? this._aiKey : (a.form && a.form.key) || '') });
-    if (p.id !== 'custom') {
+    if (p.on) {
+      const d = a.data || {};
+      form.base_url = d.base_url || p.base || '';
+      form.model = d.model || p.model || '';
+    } else if (p.id !== 'custom') {
       form.base_url = p.base;
       form.model = p.model;
     }

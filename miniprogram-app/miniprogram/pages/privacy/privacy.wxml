@@ -1,12 +1,6 @@
 <view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
-  <view class="subpage-bar sheet-bar" style="padding-top: {{statusBar}}px;">
-    <view>
-      <button class="st-back" hover-class="tap-on" bindtap="back" aria-label="返回"><view class="i i-left"></view><text class="st-back-t">设置</text></button>
-      <text class="t">隐私说明</text>
-      <view class="sp"></view>
-    </view>
-  </view>
-  <view class="page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
+  <st-nav title="隐私说明" back="设置" bind:back="back"></st-nav>
+  <view class="page" style="padding-top: {{navBar}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
     <view class="card pad privacy-body">
       <text class="h">这是给你自己用的记录本</text>
       <text class="bullet">回信小记不提供分享、广场或别人可见的页面。右上角菜单里的转发已关闭。</text>

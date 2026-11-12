@@ -1,12 +1,6 @@
 <view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
-  <view class="subpage-bar sheet-bar" style="padding-top: {{statusBar}}px;">
-    <view>
-      <button class="st-back" hover-class="tap-on" bindtap="back" aria-label="返回"><view class="i i-left"></view><text class="st-back-t">设置</text></button>
-      <text class="t">回信问题</text>
-      <view class="sp"></view>
-    </view>
-  </view>
-  <view class="page st-page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 80px);">
+  <st-nav title="回信问题" back="设置" bind:back="back"></st-nav>
+  <view class="page st-page" style="padding-top: {{navBar}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 80px);">
     <view class="st-sec">
       <text class="st-head">回信写信时会想着的问题（一行一个）</text>
       <view class="st-group">

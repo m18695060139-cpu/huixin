@@ -16,10 +16,14 @@ module.exports = Behavior({
       const app = getApp();
       const theme = app.resolvedTheme();
       const sys = app.globalData || {};
+      const box = chrome.measure();
       this.setData({
         theme: theme,
-        statusBar: sys.statusBar || this.data.statusBar || 20,
-        safeBottom: sys.safeBottom || this.data.safeBottom || 0,
+        statusBar: sys.statusBar || box.statusBar || this.data.statusBar || 20,
+        safeBottom: sys.safeBottom || box.safeBottom || this.data.safeBottom || 0,
+        statusBarHeight: box.statusBarHeight,
+        navHeight: box.navHeight,
+        navBar: box.navBar,
         online: state.get().online,
       });
       app.paintChrome(theme);
