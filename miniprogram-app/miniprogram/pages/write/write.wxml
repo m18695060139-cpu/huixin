@@ -1,7 +1,20 @@
-<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
-  <view class="top-shield" style="height: {{statusBar}}px;"></view>
+<wxs module="sheet" src="./sheet.wxs"></wxs>
+<view class="screen theme-{{theme}} {{rec.on ? 'rec-lock' : ''}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <view class="sheet-track {{sheetResetClass}}"
+    change:reset="{{sheet.onReset}}"
+    reset="{{sheetTok}}"
+    data-on="{{editing && !sentShow && !ed.show && !rec.on}}"
+    data-attop="{{sheetAtTop}}"
+    data-h="{{winHeight}}"
+    data-w="{{winWidth}}"
+    data-head="{{sheetHead}}"
+    bindtouchstart="{{sheet.touchStart}}"
+    bindtouchmove="{{sheet.touchMove}}"
+    bindtouchend="{{sheet.touchEnd}}"
+    bindtouchcancel="{{sheet.touchEnd}}">
+  <view class="top-shield" wx:if="{{!sentShow}}" style="height: {{statusBar}}px;"></view>
   <view class="page {{editing ? 'bare' : 'tab-pad'}}">
-    <view class="wbar stick-top" style="padding-top: {{statusBar + 12}}px;">
+    <view class="wbar stick-top" wx:if="{{!sentShow}}" style="padding-top: {{statusBar + 12}}px;">
       <view wx:if="{{editing}}" class="round-btn" bindtap="closeWrite" aria-label="关闭"><view class="i i-x"></view></view>
       <view wx:else class="round-btn ghost"></view>
       <view class="daynav">
@@ -95,7 +108,7 @@
         </view>
       </view>
       <view class="send-row">
-        <button class="mic {{rec.on ? 'on' : ''}}" hover-class="{{rec.on ? '' : 'tap-on'}}" catchtouchstart="onMicStart" catchtouchend="onMicEnd" catchtouchcancel="onMicEnd" catchtouchmove="onMicMove" aria-label="按住说话">
+        <button class="mic {{rec.on ? 'on' : ''}}" hover-class="{{rec.on ? '' : 'tap-on'}}" bindtouchstart="onMicStart" bindtouchend="onMicEnd" bindtouchcancel="onMicEnd" bindtouchmove="onMicMove" aria-label="按住说话">
           <view class="i i-mic"></view>
         </button>
         <button wx:if="{{editing && meta.hasReply}}" class="btn ghost" hover-class="tap-on" bindtap="cancelEdit">取消</button>
@@ -115,9 +128,11 @@
   <view class="sent" wx:if="{{sentShow}}">
     <view class="env-wrap">
       <view class="env-big">
-        <view class="env-big-arm l"></view>
-        <view class="env-big-arm r"></view>
-        <view class="env-stamp">回</view>
+        <view class="env-big-flap"></view>
+        <view class="env-big-edge l"></view>
+        <view class="env-big-edge r"></view>
+        <view class="env-big-seal"></view>
+        <view class="env-big-seal-t"><view class="env-big-seal-base"></view><text class="env-big-seal-ch">回</text></view>
         <view class="pm-stamp pm">
           <text class="pm-date">{{sentDate}}</text>
           <text>No.{{sentNo}}</text>
@@ -141,4 +156,5 @@
 
   <toast id="toast" bind:act="onToastAct" />
   <editor show="{{ed.show}}" mode="{{ed.mode}}" item="{{ed.item}}" token="{{ed.token}}" theme="{{theme}}" bind:close="closeEditor" bind:submit="onEditorSubmit" />
+  </view>
 </view>

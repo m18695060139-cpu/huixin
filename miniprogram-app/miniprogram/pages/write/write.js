@@ -27,12 +27,21 @@ Page({
     placeholder: '今天过得怎么样？做了什么、想到什么、哪里卡住了，随便写。\n\n写完点「寄出」，回信会帮你整理好其余的一切。',
     aiOn: !!AI_ENABLED,
     rec: { on: false, cancel: false, clock: '0:00' },
-    tidy: { show: false, preview: false, busy: false, result: '', canAll: false },
+    tidy: { show: false, preview: false, busy: false, result: '', canAll: false, used: false },
+    winHeight: 667,
+    winWidth: 390,
+    sheetHead: 90,
+    sheetAtTop: true,
+    sheetTok: 0,
+    sheetResetClass: 'reset',
   },
   onLoad() { this.initVoice(); },
   onShow() {
+    this._leaving = false;
+    this._sheetClosing = false;
     this.hideShare();
     this.initVoice();
+    this.syncSheetMetrics();
     const target = state.takeWriteTarget();
     const day = (target && target.date) || this.data.date || letterDay(new Date());
     const editing = target ? !!target.editing : this.data.editing;
@@ -43,11 +52,13 @@ Page({
     if (this.unsub) this.unsub();
     clearTimeout(this._saveT);
     this.abortRec(true);
+    this.invalidateTidy();
   },
   onUnload() {
     if (this.unsub) this.unsub();
     clearTimeout(this._saveT);
     this.abortRec(true);
+    this.invalidateTidy();
   },
   tabShouldShow() { return !this.data.editing && !this.data.sentShow && !this.data.ed.show; },
   loadDay(day, editing) {
@@ -77,7 +88,7 @@ Page({
       meta: meta,
       letter: letter,
       rec: { on: false, cancel: false, clock: '0:00' },
-      tidy: { show: false, preview: false, busy: false, result: '', canAll: false },
+      tidy: { show: false, preview: false, busy: false, result: '', canAll: false, used: false },
       aiOn: !!AI_ENABLED,
     });
     this._dictated = null;
@@ -113,6 +124,21 @@ Page({
     const patch = { canSend: !!String(this._text).trim(), saveState: '保存中', warn: '' };
     const empty = !this._text;
     if (empty !== this.data.empty) patch.empty = empty;
+    const tidy = this.data.tidy;
+    if (tidy && tidy.show && (tidy.used || tidy.preview || tidy.busy || this._tidyUsed)) {
+      // 用过整理后再改字，「撤销」会盖掉刚打的字；整理还在飞时回来的结果也对不上。
+      this.invalidateTidy();
+      this._tidyUsed = false;
+      this._tidyBackup = null;
+      patch.tidy = {
+        show: !!AI_ENABLED && !!(this._dictated),
+        preview: false,
+        busy: false,
+        result: '',
+        canAll: !!(tidy.canAll || (this._text || '').trim()),
+        used: false,
+      };
+    }
     this.setData(patch);
     state.clearWarn();
     actions.writeDraft(date, { text: this._text, mood: this.data.mood, energy: this.data.energy });
@@ -151,6 +177,10 @@ Page({
     const text = this._text || '';
     if (!text.trim() || this._sending) return;
     this._sending = true;
+    this.abortRec(true);
+    this.invalidateTidy();
+    this._sendGen = (this._sendGen || 0) + 1;
+    const sendGen = this._sendGen;
     clearTimeout(this._saveT);
     const tonight = this.data.meta.tonight;
     const r = await actions.saveLetter(this.data.date, {
@@ -178,6 +208,7 @@ Page({
       meta: meta,
     });
     this.setTab(1, !tonight);
+    if (tonight) this.paintSentChrome();
     if (AI_ENABLED && wx.cloud) {
       state.setReplying(this.data.date);
       try {
@@ -193,9 +224,9 @@ Page({
           (body.todos || []).forEach(t => state.upsertTodo(Object.assign({ done: false, note: '', dropped_at: '' }, t)));
           (body.ideas || []).forEach(i => state.upsertIdea(Object.assign({ status: 'open', dropped_at: '' }, i)));
         }
-        this.setData({ sentBusy: false, sentReady: !!body.ok, sentFail: !body.ok });
+        if (sendGen === this._sendGen) this.setData({ sentBusy: false, sentReady: !!body.ok, sentFail: !body.ok });
       } catch (e) {
-        this.setData({ sentBusy: false, sentReady: false, sentFail: true });
+        if (sendGen === this._sendGen) this.setData({ sentBusy: false, sentReady: false, sentFail: true });
       }
       state.setReplying('');
     } else {
@@ -208,6 +239,8 @@ Page({
     this._sending = false;
   },
   cancelEdit() {
+    this.abortRec(true);
+    this.invalidateTidy();
     clearTimeout(this._saveT);
     actions.clearDraft(this.data.date);
     this.loadDay(this.data.date, false);
@@ -215,31 +248,111 @@ Page({
   goToday() { wx.switchTab({ url: '/pages/today/today' }); },
   retryReply() {
     const date = this.data.date;
+    this._sendGen = (this._sendGen || 0) + 1;
+    const gen = this._sendGen;
     this.setData({ sentBusy: true, sentFail: false, sentReady: false });
     state.setReplying(date);
+    const self = this;
     wx.cloud.callFunction({ name: 'reply', data: { date: date } }).then(res => {
       const body = (res && res.result) || {};
       if (body.ok && body.reply) {
         state.upsertLetter(date, { reply: body.reply, replied_at: body.replied_at || '', mood: body.reply.mood, energy: body.reply.energy });
       }
-      this.setData({ sentBusy: false, sentReady: !!body.ok, sentFail: !body.ok });
-      this.paintAround();
-    }).catch(() => this.setData({ sentBusy: false, sentFail: true, sentReady: false }))
-      .then(() => state.setReplying(''));
+      if (gen !== self._sendGen) return;
+      self.setData({ sentBusy: false, sentReady: !!body.ok, sentFail: !body.ok });
+      self.paintAround();
+    }).catch(() => {
+      if (gen !== self._sendGen) return;
+      self.setData({ sentBusy: false, sentFail: true, sentReady: false });
+    }).then(() => state.setReplying(''));
   },
   takeBack() {
+    if (this._taking) return;
+    this._taking = true;
+    this._sendGen = (this._sendGen || 0) + 1;
     state.setReplying('');
     const text = this._text || this.data.meta.text || '';
     this._text = text;
     this.setData({ sentShow: false, editing: true, text: text, empty: !text, canSend: !!text.trim() });
     this.setTab(1, false);
+    this.restoreChrome();
+    this._taking = false;
   },
   sentClose() {
+    if (this._leaving) return;
+    this._leaving = true;
+    this._sendGen = (this._sendGen || 0) + 1;
     this.setData({ sentShow: false });
+    this.restoreChrome();
     wx.switchTab({ url: '/pages/today/today' });
   },
   closeWrite() {
+    if (this._leaving) return;
+    this._leaving = true;
+    this.abortRec(true);
+    this.invalidateTidy();
+    this.flushDraft();
     wx.switchTab({ url: '/pages/today/today' });
+  },
+  flushDraft() {
+    clearTimeout(this._saveT);
+    const date = this.data.date;
+    const text = this._text;
+    if (!date || text == null) return;
+    actions.writeDraft(date, { text: text, mood: this.data.mood, energy: this.data.energy });
+    this.autosave(date, text);
+  },
+  invalidateTidy() {
+    this._tidyGen = (this._tidyGen || 0) + 1;
+  },
+  paintSentChrome() {
+    try {
+      wx.setNavigationBarColor({ frontColor: '#ffffff', backgroundColor: '#000000' });
+      wx.setBackgroundColor({ backgroundColor: '#000000', backgroundColorTop: '#000000', backgroundColorBottom: '#000000' });
+    } catch (e) { /* 自定义导航下个别基础库会拒绝，遮罩本身已铺满 */ }
+  },
+  restoreChrome() {
+    try {
+      const app = getApp();
+      if (app && app.paintChrome) app.paintChrome(app.resolvedTheme ? app.resolvedTheme() : this.data.theme);
+    } catch (e) { /* 主题底色仍由 class 决定 */ }
+  },
+  syncSheetMetrics() {
+    let win = {};
+    try {
+      win = (wx.getWindowInfo && wx.getWindowInfo()) || (wx.getSystemInfoSync && wx.getSystemInfoSync()) || {};
+    } catch (e) { win = {}; }
+    const h = win.windowHeight || 667;
+    const w = win.windowWidth || 390;
+    const head = (this.data.statusBar || 20) + 60;
+    this.setData({
+      winHeight: h,
+      winWidth: w,
+      sheetHead: head,
+      sheetAtTop: true,
+      sheetTok: Date.now(),
+      sheetResetClass: 'reset',
+    });
+    const self = this;
+    const clear = function () { self.setData({ sheetResetClass: '' }); };
+    if (wx.nextTick) wx.nextTick(clear);
+    else setTimeout(clear, 40);
+  },
+  onPageScroll(e) {
+    const at = !e.scrollTop || e.scrollTop <= 0;
+    if (at !== this.data.sheetAtTop) this.setData({ sheetAtTop: at });
+  },
+  onSheetDragStart() {
+    if (wx.hideKeyboard) wx.hideKeyboard();
+  },
+  onSheetDismiss() {
+    if (this._sheetClosing) return;
+    this._sheetClosing = true;
+    const self = this;
+    setTimeout(function () {
+      self._sheetClosing = false;
+      self.closeWrite();
+    }, 260);
   },
   onHabit(e) {
     actions.toggleHabit(e.currentTarget.dataset.id, this.data.date);
@@ -314,25 +427,43 @@ Page({
   onMicStart(e) {
     const t = e.touches && e.touches[0];
     this._micHolding = true;
+    this._micMoved = false;
+    this._micStartX = t ? t.clientX : 0;
     this._micStartY = t ? t.clientY : 0;
     this._recCancel = false;
+    clearTimeout(this._micArmT);
     const self = this;
-    this.ensureMic(() => {
-      if (!self._micHolding) return;
-      self.startRec();
-    });
+    // 短按或滑过麦克风不算录音，避免滚页面时误触。
+    this._micArmT = setTimeout(() => {
+      if (!self._micHolding || self._micMoved) return;
+      self.ensureMic(() => {
+        if (!self._micHolding || self._micMoved) return;
+        self.startRec();
+      });
+    }, 160);
   },
   onMicMove(e) {
-    if (!this._micHolding) return;
     const t = e.touches && e.touches[0];
     if (!t) return;
+    const dx = t.clientX - (this._micStartX || 0);
+    const dy = t.clientY - (this._micStartY || 0);
+    if (!(this.data.rec && this.data.rec.on)) {
+      if (Math.abs(dx) > 12 || Math.abs(dy) > 12) {
+        this._micMoved = true;
+        this._micHolding = false;
+        clearTimeout(this._micArmT);
+      }
+      return;
+    }
+    if (!this._micHolding) return;
     const cancel = (this._micStartY - t.clientY) > 72;
     if (cancel !== this._recCancel) {
       this._recCancel = cancel;
-      if (this.data.rec.on) this.setData({ 'rec.cancel': cancel });
+      this.setData({ 'rec.cancel': cancel });
     }
   },
   onMicEnd() {
+    clearTimeout(this._micArmT);
     this._micHolding = false;
     if (this.data.rec && this.data.rec.on) this.stopRec();
   },
@@ -360,7 +491,9 @@ Page({
   },
   abortRec(silent) {
     this._micHolding = false;
+    this._micMoved = true;
     this._recCancel = true;
+    clearTimeout(this._micArmT);
     clearInterval(this._recTick);
     if (this._mgr && this.data.rec && this.data.rec.on) {
       try { this._mgr.stop(); } catch (e) { /* 忽略 */ }
@@ -456,9 +589,12 @@ Page({
     if (!String(src).trim()) { this.toast('没有要整理的文字'); return; }
     if (!wx.cloud) { this.toast('云端还没连上'); return; }
     this._tidyRange = { start: start, end: end, src: src, all: !!all, before: cur };
+    this._tidyGen = (this._tidyGen || 0) + 1;
+    const gen = this._tidyGen;
     this.setData({ 'tidy.busy': true, 'tidy.preview': false, 'tidy.result': '' });
     const self = this;
     wx.cloud.callFunction({ name: 'tidy', data: { text: src } }).then(res => {
+      if (gen !== self._tidyGen) return;
       const body = (res && res.result) || {};
       if (!body.ok || !body.text) {
         self.setData({ 'tidy.busy': false });
@@ -472,9 +608,11 @@ Page({
           busy: false,
           result: body.text,
           canAll: self.data.tidy.canAll,
+          used: false,
         },
       });
     }).catch(() => {
+      if (gen !== self._tidyGen) return;
       self.setData({ 'tidy.busy': false });
       self.toast('网络不好，整理没写成。请再试一次。');
     });

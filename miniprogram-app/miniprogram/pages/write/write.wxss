@@ -83,3 +83,20 @@ button.mic.on { background-color: var(--ink); color: var(--on-ink); }
 .tidy-acts { display: flex; justify-content: center; gap: 15.385rpx; flex-wrap: wrap; }
 .tidy-acts .chip { height: 69.231rpx; padding: 0 30.769rpx; border-radius: 34.615rpx; background: var(--card); font-size: 26.923rpx; display: flex; align-items: center; }
 .theme-mono .voice-card, .theme-mono .tidy-result { border-radius: 7.692rpx; }
+
+
+/* 下滑关闭：整页跟着手指走，固定底栏也在 track 里所以一起动。 */
+.sheet-track {
+  position: relative;
+  width: 100%;
+  min-height: 100%;
+  will-change: transform;
+}
+.sheet-track.reset {
+  transform: translate3d(0, 0, 0) !important;
+  transition: none !important;
+}
+.screen.rec-lock {
+  overflow: hidden;
+  height: 100%;
+}

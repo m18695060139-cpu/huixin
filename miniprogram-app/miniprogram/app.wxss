@@ -226,13 +226,14 @@ h2 { margin: 0; font-size: 38.462rpx; font-weight: 700; }
 
 /* ── 寄出（夜色，固定深色） ── */
 .sent {
-  position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 30; background: #000000; color: #FFFFFF; overflow-y: auto;
-  padding: calc(var(--safe-top) + 138.462rpx) 30.769rpx calc(var(--safe-bottom) + 46.154rpx);
+  position: fixed; top: 0; right: 0; bottom: 0; left: 0; z-index: 80; background: #000000; color: #FFFFFF; overflow-y: auto;
+  padding: calc(var(--safe-top) + 46.154rpx) 30.769rpx calc(var(--safe-bottom) + 46.154rpx);
   display: flex; flex-direction: column; align-items: center;
+  box-sizing: border-box;
 }
 .sent > view, .sent > text, .sent > button, .sent > image { width: 100%; max-width: 807.692rpx; }
 .sent .env-wrap { display: flex; justify-content: center; animation: drift .8s cubic-bezier(.2,.8,.2,1) both; }
-.sent .pm { transform-origin: 453.846rpx 123.077rpx; animation: stamp .8s .5s ease-out both; }
+.sent .pm { transform-origin: 50% 50%; animation: stamp .8s .5s ease-out both; }
 .sent h1 { margin-top: 69.231rpx; font-size: 53.846rpx; text-align: center; }
 .sent .lead { margin: 15.385rpx 0 0; font-size: 28.846rpx; color: #98989D; text-align: center; }
 .steps { margin-top: 53.846rpx; background: #1C1C1E; border-radius: 42.308rpx; overflow: hidden; }
@@ -249,6 +250,21 @@ h2 { margin: 0; font-size: 38.462rpx; font-weight: 700; }
 .sent-btns .btn { flex: 1; height: 100rpx; border-radius: 50rpx; }
 .sent-btns .btn.dark { background: #2C2C2E; color: #FFFFFF; }
 .sent-btns .btn.light { background: #FFFFFF; color: #000000; }
+
+/* 矮屏：信封略缩小，按钮贴底，整页可滚，不挤掉晚安。 */
+@media (max-height: 700px) {
+  .sent { padding-top: calc(var(--safe-top) + 23.077rpx); padding-bottom: calc(var(--safe-bottom) + 23.077rpx); }
+  .sent .h1 { margin-top: 34.615rpx; font-size: 46.154rpx; }
+  .sent .lead { margin-top: 7.692rpx; }
+  .steps { margin-top: 30.769rpx; }
+  .sent-btns { padding-top: 26.923rpx; }
+  .env-big { transform: scale(0.88); transform-origin: top center; margin-bottom: -38rpx; }
+}
+@media (max-height: 580px) {
+  .env-big { transform: scale(0.76); margin-bottom: -80rpx; }
+  .steps .row { min-height: 88rpx; }
+}
+
 @keyframes drift { from { transform: translateY(57.692rpx) scale(.9); opacity: 0 } to { transform: none; opacity: 1 } }
 @keyframes stamp { 0%,40% { transform: scale(1.7); opacity: 0 } 70% { transform: scale(.94); opacity: 1 } 100% { transform: scale(1); opacity: 1 } }
 @keyframes spin { to { transform: rotate(360deg) } }
@@ -499,24 +515,37 @@ button::after { display: none; border: none; }
 .env-seal-base { width: 0; height: 150rpx; flex: none; }
 .env-seal-ch { flex: 1; text-align: center; font-size: 28.846rpx; font-weight: 700; line-height: 1; color: var(--on-ink); }
 .env-big {
-  width: 576.923rpx; height: 365.385rpx; border-radius: 30.769rpx; background: #FFFFFF; position: relative; overflow: hidden; margin: 0 auto;
+  width: 576.923rpx; height: 369.231rpx; border-radius: 40.385rpx; background: #F7F1E7; position: relative; overflow: hidden; margin: 0 auto; flex: none;
+  box-shadow: 0 15.385rpx 46.154rpx rgba(0,0,0,.28);
 }
 .env-big-flap {
-  position: absolute; left: 0; top: 0; width: 0; height: 0;
-  border-left: 288.462rpx solid transparent; border-right: 288.462rpx solid transparent; border-top: 211.538rpx solid #FFE3DE;
+  position: absolute; left: 17.307rpx; top: 17.307rpx; width: 0; height: 0;
+  border-left: 271.154rpx solid transparent; border-right: 271.154rpx solid transparent; border-top: 196.154rpx solid #F3D4C8;
 }
+.env-big-edge {
+  position: absolute; top: 112.5rpx; width: 334.673rpx; height: 5.769rpx; background: #E5D9CF;
+}
+.env-big-edge.l { left: -14.452rpx; transform: rotate(35.88deg); }
+.env-big-edge.r { left: 256.702rpx; transform: rotate(-35.88deg); }
+.env-big-seal {
+  position: absolute; left: 242.307rpx; top: 161.538rpx; width: 92.307rpx; height: 92.307rpx; border-radius: 46.154rpx;
+  background: #D0402B; z-index: 2;
+}
+.env-big-seal-t { position: absolute; left: 0; top: 0; width: 576.923rpx; display: flex; align-items: baseline; z-index: 3; pointer-events: none; }
+.env-big-seal-base { width: 0; height: 225rpx; flex: none; }
+.env-big-seal-ch { flex: 1; text-align: center; font-size: 43.269rpx; font-weight: 700; line-height: 1; color: #FFFFFF; }
 .env-big-line {
   position: absolute; left: 30.769rpx; right: 30.769rpx; top: 0; height: 211.538rpx;
-  border-bottom: 3.846rpx solid #E5E5EA; transform: rotate(0deg);
+  border-bottom: 3.846rpx solid #E5D9CF; transform: rotate(0deg);
 }
 .env-stamp {
   position: absolute; right: 34.615rpx; top: 34.615rpx; width: 88.462rpx; height: 103.846rpx; border-radius: 11.538rpx; background: #FFE3DE;
   color: #D0402B; font-size: 38.462rpx; font-weight: 700; display: flex; align-items: center; justify-content: center;
 }
 .pm-stamp {
-  position: absolute; left: 400rpx; top: 69.231rpx; width: 107.692rpx; height: 107.692rpx; border-radius: 53.846rpx;
+  position: absolute; right: 30.769rpx; left: auto; top: 24rpx; width: 107.692rpx; height: 107.692rpx; border-radius: 53.846rpx;
   border: 3.846rpx solid #D0402B; color: #D0402B; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  font-size: 19.231rpx; line-height: 1.25; background: transparent;
+  font-size: 19.231rpx; line-height: 1.25; background: transparent; z-index: 2; box-sizing: border-box;
 }
 .pm-stamp .pm-date { font-size: 15.385rpx; opacity: .85; }
 .pm-stamp text:last-child { font-size: 23.077rpx; font-weight: 700; }
