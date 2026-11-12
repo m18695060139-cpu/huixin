@@ -6,5 +6,5 @@ Page({
     this.hideShare();
     this.syncChrome();
   },
-  back() { wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/today/today' }) }); },
+  back() { wx.navigateBack({ fail: () => wx.navigateTo({ url: '/pages/settings/settings' }) }); },
 });

@@ -1,0 +1,35 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <view class="subpage-bar sheet-bar" style="padding-top: {{statusBar}}px;">
+    <view>
+      <button class="st-back" hover-class="tap-on" bindtap="back" aria-label="返回"><view class="i i-left"></view><text class="st-back-t">设置</text></button>
+      <text class="t">回信送达</text>
+      <view class="sp"></view>
+    </view>
+  </view>
+  <view class="page st-page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
+    <view class="st-sec">
+      <text class="st-head">回信什么时候送到</text>
+      <view class="st-group">
+        <view class="st-row" hover-class="st-hover" data-v="morning" bindtap="onDeliver">
+          <view class="st-body">
+            <view class="st-main">
+              <text class="st-t st-grow">明早 6:00 拆信</text>
+              <text class="st-sub">今晚寄出的信，回信封存到第二天早上；补写的信马上送到</text>
+            </view>
+            <view class="i i-check st-tick" wx:if="{{deliver !== 'now'}}"></view>
+          </view>
+        </view>
+        <view class="st-row" hover-class="st-hover" data-v="now" bindtap="onDeliver">
+          <view class="st-body">
+            <view class="st-main">
+              <text class="st-t st-grow">寄出后马上</text>
+              <text class="st-sub">写完就能看到回信</text>
+            </view>
+            <view class="i i-check st-tick" wx:if="{{deliver === 'now'}}"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+  <toast id="toast" />
+</view>

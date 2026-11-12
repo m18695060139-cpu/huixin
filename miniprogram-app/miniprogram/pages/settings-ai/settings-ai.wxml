@@ -1,0 +1,93 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <view class="subpage-bar sheet-bar" style="padding-top: {{statusBar}}px;">
+    <view>
+      <button class="st-back" hover-class="tap-on" bindtap="back" aria-label="返回"><view class="i i-left"></view><text class="st-back-t">设置</text></button>
+      <text class="t">AI 回信</text>
+      <view class="sp"></view>
+    </view>
+  </view>
+  <view class="page st-page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 80px);">
+
+    <view class="st-sec">
+      <view class="st-group">
+        <view class="st-row" wx:if="{{ai.loading}}">
+          <view class="st-body"><text class="st-empty">读取中…</text></view>
+        </view>
+        <view class="st-row" wx:elif="{{ai.configured}}">
+          <view class="st-body">
+            <view class="st-main">
+              <text class="st-t st-grow">正在用你自己的 <text class="st-em">{{ai.providerName}}</text></text>
+              <text class="st-sub">{{ai.model}} · Key 尾号 {{ai.last4}}</text>
+            </view>
+          </view>
+        </view>
+        <view class="st-row" wx:else>
+          <view class="st-body">
+            <view class="st-main">
+              <text class="st-t st-grow">正在用 <text class="st-em">微信云开发的混元</text></text>
+              <text class="st-sub">不用花钱，但每天有额度上限。</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="st-sec" wx:if="{{!ai.loading}}">
+      <text class="st-head">服务商</text>
+      <view class="st-group">
+        <view class="st-row" wx:for="{{ai.providers}}" wx:key="id" hover-class="st-hover" data-id="{{item.id}}" bindtap="onProvider">
+          <view class="st-body">
+            <text class="st-t st-grow">{{item.name}}</text>
+            <view class="i i-check st-tick" wx:if="{{item.on}}"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="st-sec" wx:if="{{!ai.loading}}">
+      <view class="st-group">
+        <view class="st-row">
+          <view class="st-body st-col">
+            <text class="st-lab">接口地址</text>
+            <input class="st-in st-left" value="{{ai.form.base_url}}" placeholder="https://…/v1" placeholder-class="ph" data-k="base_url" bindinput="onField" maxlength="200" adjust-position="{{true}}" cursor-spacing="160" disable-default-padding="{{true}}" confirm-type="done" />
+          </view>
+        </view>
+        <view class="st-row">
+          <view class="st-body st-col">
+            <text class="st-lab">模型名</text>
+            <input class="st-in st-left" value="{{ai.form.model}}" placeholder="比如 deepseek-chat" placeholder-class="ph" data-k="model" bindinput="onField" maxlength="120" adjust-position="{{true}}" cursor-spacing="160" disable-default-padding="{{true}}" confirm-type="done" />
+          </view>
+        </view>
+        <view class="st-row">
+          <view class="st-body st-col">
+            <text class="st-lab">API Key</text>
+            <input class="st-in st-left" value="{{ai.form.key}}" password="{{true}}" placeholder="{{ai.keyPlaceholder}}" placeholder-class="ph" data-k="key" bindinput="onField" maxlength="200" adjust-position="{{true}}" cursor-spacing="160" disable-default-padding="{{true}}" confirm-type="done" />
+          </view>
+        </view>
+      </view>
+      <text class="st-foot">{{aiHelp}}</text>
+    </view>
+
+    <view class="st-sec" wx:if="{{!ai.loading}}">
+      <view class="st-group">
+        <view class="st-row {{ai.busy ? 'st-busy' : ''}}" hover-class="st-hover" bindtap="onTest">
+          <view class="st-body"><text class="st-t st-accent st-grow">{{ai.busy === 'test' ? '测试中…' : '测试一下'}}</text></view>
+        </view>
+        <view class="st-row {{ai.busy ? 'st-busy' : ''}}" hover-class="st-hover" bindtap="onSave">
+          <view class="st-body"><text class="st-t st-accent st-grow">{{ai.busy === 'save' ? '保存中…' : '保存'}}</text></view>
+        </view>
+      </view>
+      <text class="st-foot {{ai.ok ? '' : 'st-danger'}}" wx:if="{{ai.msg}}">{{ai.msg}}</text>
+    </view>
+
+    <view class="st-sec" wx:if="{{ai.configured && !ai.loading}}">
+      <view class="st-group">
+        <view class="st-row" hover-class="st-hover" bindtap="onOff">
+          <view class="st-body"><text class="st-t st-danger st-grow">停用，改回免费模型</text></view>
+        </view>
+      </view>
+    </view>
+
+  </view>
+  <toast id="toast" />
+</view>

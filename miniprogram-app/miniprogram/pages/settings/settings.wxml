@@ -3,226 +3,81 @@
     <view>
       <view class="sp"></view>
       <text class="t">设置</text>
-      <button class="x" hover-class="tap-on" bindtap="back" aria-label="关闭"><view class="i i-x"></view></button>
+      <button class="x" hover-class="tap-on" bindtap="closeSettings" aria-label="关闭"><view class="i i-x"></view></button>
     </view>
   </view>
   <view class="page st-page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
     <view class="offline" wx:if="{{!online}}">云端还没连上 · 先存在这台手机</view>
 
-    <!-- 称呼 -->
     <view class="st-sec">
       <view class="st-group">
-        <view class="st-row">
+        <view class="st-row" hover-class="st-hover" bindtap="goName">
           <view class="st-body">
             <text class="st-t">称呼</text>
-            <input class="st-in" value="{{name}}" bindblur="onName" maxlength="20" placeholder="比如：非云" placeholder-class="ph" />
+            <text class="st-value">{{nameValue}}</text>
+            <view class="i i-chev st-chev"></view>
           </view>
         </view>
-      </view>
-      <text class="st-foot">回信怎么称呼你</text>
-    </view>
-
-    <!-- 送达时间 -->
-    <view class="st-sec">
-      <text class="st-head">回信什么时候送到</text>
-      <view class="st-group">
-        <view class="st-row" hover-class="st-hover" data-v="morning" bindtap="onDeliver">
+        <view class="st-row" hover-class="st-hover" bindtap="goDeliver">
           <view class="st-body">
-            <view class="st-main">
-              <text class="st-t">明早 6:00 拆信</text>
-              <text class="st-sub">今晚寄出的信，回信封存到第二天早上；补写的信马上送到</text>
-            </view>
-            <view class="i i-check st-tick" wx:if="{{deliver !== 'now'}}"></view>
-          </view>
-        </view>
-        <view class="st-row" hover-class="st-hover" data-v="now" bindtap="onDeliver">
-          <view class="st-body">
-            <view class="st-main">
-              <text class="st-t">寄出后马上</text>
-              <text class="st-sub">写完就能看到回信</text>
-            </view>
-            <view class="i i-check st-tick" wx:if="{{deliver === 'now'}}"></view>
+            <text class="st-t">回信送达</text>
+            <text class="st-value">{{deliverValue}}</text>
+            <view class="i i-chev st-chev"></view>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- AI 回信：选项和文案跟网页版同一套，默认是云开发免费的混元 -->
     <view class="st-sec" wx:if="{{aiOn}}">
-      <text class="st-head">AI 回信</text>
       <view class="st-group">
-        <view class="st-row" wx:if="{{ai.loading || ai.error}}">
-          <view class="st-body"><text class="st-empty">{{ai.loading ? '读取中…' : ai.error}}</text></view>
-        </view>
-        <block wx:else>
-          <view class="st-row">
-            <view class="st-body">
-              <view class="st-main" wx:if="{{ai.configured}}">
-                <text class="st-t">正在用你自己的 <text class="st-em">{{ai.providerName}}</text> · {{ai.model}} · Key 尾号 {{ai.last4}}</text>
-              </view>
-              <view class="st-main" wx:else>
-                <text class="st-t">正在用 <text class="st-em">微信云开发的混元</text>：不用花钱，但每天有额度上限。</text>
-              </view>
-            </view>
-          </view>
-          <view class="st-row" wx:if="{{ai.configured}}" hover-class="st-hover" bindtap="onAiOff">
-            <view class="st-body"><text class="st-t st-danger st-grow">停用，改回免费模型</text></view>
-          </view>
-          <view class="st-row" hover-class="st-hover" bindtap="onAiToggle">
-            <view class="st-body"><text class="st-t st-accent st-grow">{{ai.open ? '收起' : (ai.configured ? '修改 ›' : '接入自己的 AI ›')}}</text></view>
-          </view>
-          <block wx:if="{{ai.open}}">
-            <view class="st-row">
-              <view class="st-body">
-                <text class="st-t">服务商</text>
-                <picker mode="selector" range="{{ai.providerNames}}" value="{{ai.providerIndex}}" bindchange="onAiProvider">
-                  <view class="st-pick">{{ai.formProviderName}} ›</view>
-                </picker>
-              </view>
-            </view>
-            <view class="st-row">
-              <view class="st-body st-col">
-                <text class="st-lab">接口地址</text>
-                <input class="st-in st-left" value="{{ai.form.base_url}}" placeholder="https://…/v1" placeholder-class="ph" data-k="base_url" bindinput="onAiField" maxlength="200" adjust-position="{{true}}" cursor-spacing="120" disable-default-padding="{{true}}" confirm-type="done" />
-              </view>
-            </view>
-            <view class="st-row">
-              <view class="st-body st-col">
-                <text class="st-lab">模型名</text>
-                <input class="st-in st-left" value="{{ai.form.model}}" placeholder="比如 deepseek-chat" placeholder-class="ph" data-k="model" bindinput="onAiField" maxlength="120" adjust-position="{{true}}" cursor-spacing="120" disable-default-padding="{{true}}" confirm-type="done" />
-              </view>
-            </view>
-            <view class="st-row">
-              <view class="st-body st-col">
-                <text class="st-lab">API Key</text>
-                <input class="st-in st-left" value="{{ai.form.key}}" password="{{true}}" placeholder="{{ai.keyPlaceholder}}" placeholder-class="ph" data-k="key" bindinput="onAiField" maxlength="200" adjust-position="{{true}}" cursor-spacing="120" disable-default-padding="{{true}}" confirm-type="done" />
-              </view>
-            </view>
-            <view class="st-row">
-              <view class="st-body st-btns">
-                <view class="st-btn st-btn-ghost {{ai.busy ? 'st-btn-off' : ''}}" hover-class="st-act-on" bindtap="onAiTest">{{ai.busy === 'test' ? '测试中…' : '测试一下'}}</view>
-                <view class="st-btn st-btn-ink {{ai.busy ? 'st-btn-off' : ''}}" hover-class="st-act-on" bindtap="onAiSave">{{ai.busy === 'save' ? '保存中…' : '保存'}}</view>
-              </view>
-            </view>
-            <view class="st-row" wx:if="{{ai.msg}}">
-              <view class="st-body"><text class="st-t st-grow {{ai.ok ? '' : 'st-danger'}}">{{ai.msg}}</text></view>
-            </view>
-            <view class="st-row">
-              <view class="st-body"><text class="st-t st-grow st-risk">{{aiHelp}}</text></view>
-            </view>
-          </block>
-        </block>
-      </view>
-    </view>
-
-    <!-- 外观 -->
-    <view class="st-sec">
-      <text class="st-head">外观</text>
-      <view class="st-group st-themes">
-        <view wx:for="{{themes}}" wx:key="id" class="st-theme {{item.on ? 'on' : ''}}" hover-class="tap-on" data-id="{{item.id}}" bindtap="onTheme" aria-role="button" aria-label="{{item.name}}">
-          <view class="st-ring">
-            <view class="st-sw" style="background: {{item.auto ? 'linear-gradient(90deg,#F2F2F7 50%,#000 50%)' : item.sw[0]}};">
-              <view class="st-bar" style="background: {{item.sw[2]}}; width: 60%;"></view>
-              <view class="st-bar" style="background: {{item.sw[1]}}; width: 85%;"></view>
-            </view>
-          </view>
-          <text class="st-tn">{{item.name}}</text>
-        </view>
-      </view>
-    </view>
-
-    <!-- 习惯 -->
-    <view class="st-sec">
-      <text class="st-head">写信时顺手打卡的习惯</text>
-      <view class="st-group">
-        <view wx:if="{{!habits.length}}" class="st-row">
-          <view class="st-body"><text class="st-empty">还没有习惯</text></view>
-        </view>
-        <view class="st-row" wx:for="{{habits}}" wx:key="id">
+        <view class="st-row" hover-class="st-hover" bindtap="goAI">
           <view class="st-body">
-            <input class="st-in st-left" value="{{item.name}}" data-id="{{item.id}}" bindblur="onRename" maxlength="30" />
-            <view class="st-act st-danger" hover-class="st-act-on" data-id="{{item.id}}" bindtap="onDelHabit">删除</view>
+            <text class="st-t">AI 回信</text>
+            <text class="st-value">{{aiValue}}</text>
+            <view class="i i-chev st-chev"></view>
           </view>
         </view>
-        <view class="st-row">
+      </view>
+    </view>
+
+    <view class="st-sec">
+      <view class="st-group">
+        <view class="st-row" hover-class="st-hover" bindtap="goAppearance">
           <view class="st-body">
-            <input class="st-in st-left" value="{{habitName}}" bindinput="onHabitName" bindconfirm="onAddHabit" maxlength="30" placeholder="新习惯，比如：运动 30 分钟" placeholder-class="ph" />
-            <view class="st-act st-accent" hover-class="st-act-on" bindtap="onAddHabit">添加</view>
+            <text class="st-t">外观</text>
+            <text class="st-value">{{themeValue}}</text>
+            <view class="i i-chev st-chev"></view>
+          </view>
+        </view>
+        <view class="st-row" hover-class="st-hover" bindtap="goHabits">
+          <view class="st-body">
+            <text class="st-t">习惯</text>
+            <text class="st-value">{{habitValue}}</text>
+            <view class="i i-chev st-chev"></view>
+          </view>
+        </view>
+        <view class="st-row" hover-class="st-hover" bindtap="goQuestions">
+          <view class="st-body">
+            <text class="st-t">回信问题</text>
+            <text class="st-value">{{questionValue}}</text>
+            <view class="i i-chev st-chev"></view>
           </view>
         </view>
       </view>
     </view>
 
-    <!-- 问题 -->
     <view class="st-sec">
-      <text class="st-head">回信写信时会想着的问题（一行一个）</text>
       <view class="st-group">
-        <view class="st-row">
-          <view class="st-body st-area-body">
-            <textarea class="st-area" value="{{qText}}" bindinput="onQ" maxlength="1200" auto-height="true" placeholder-class="ph" />
+        <view class="st-row" hover-class="st-hover" bindtap="goAPI">
+          <view class="st-body">
+            <text class="st-t">API 密钥</text>
+            <text class="st-value">{{keyValue}}</text>
+            <view class="i i-chev st-chev"></view>
           </view>
-        </view>
-        <view class="st-row" hover-class="st-hover" bindtap="onSaveQ">
-          <view class="st-body"><text class="st-t st-accent st-grow">保存问题</text></view>
         </view>
       </view>
     </view>
 
-    <!-- API 密钥（只读接口） -->
-    <view class="st-sec">
-      <text class="st-head">API 密钥</text>
-      <view class="st-group">
-        <view class="st-row" wx:if="{{key.loading || key.error}}">
-          <view class="st-body"><text class="st-empty">{{key.loading ? '读取中…' : key.error}}</text></view>
-        </view>
-        <block wx:elif="{{!key.exists}}">
-          <view class="st-row">
-            <view class="st-body">
-              <view class="st-main">
-                <text class="st-t">还没有密钥</text>
-                <text class="st-sub">生成后，你信任的 agent 或工具可以用它读取你的数据</text>
-              </view>
-            </view>
-          </view>
-          <view class="st-row">
-            <view class="st-body"><text class="st-t st-grow st-risk">{{keyRisk}}</text></view>
-          </view>
-          <view class="st-row" hover-class="st-hover" bindtap="onKeyNew">
-            <view class="st-body"><text class="st-t st-accent st-grow">{{key.busy ? '生成中…' : '生成密钥'}}</text></view>
-          </view>
-        </block>
-        <block wx:else>
-          <view class="st-row">
-            <view class="st-body">
-              <view class="st-main">
-                <text class="st-t">密钥 {{key.hint}}…</text>
-                <text class="st-sub">{{key.createdText}} 生成 · {{key.usedText}}</text>
-              </view>
-            </view>
-          </view>
-          <view class="st-row">
-            <view class="st-body"><text class="st-t st-grow st-risk">{{keyRisk}}</text></view>
-          </view>
-          <view class="st-row">
-            <view class="st-body st-key-body">
-              <text class="st-key" user-select="true">{{key.doc}}</text>
-              <view class="st-key-foot">
-                <view class="st-copy" hover-class="st-act-on" bindtap="onKeyCopy">{{key.fresh ? '复制' : '复制用法'}}</view>
-                <text class="st-t st-grow st-risk">{{key.fresh ? '只显示这一次，先复制好。' : '把密钥那行换成你保存的密钥。'}}</text>
-              </view>
-            </view>
-          </view>
-          <view class="st-row" hover-class="st-hover" bindtap="onKeyRegen">
-            <view class="st-body"><text class="st-t st-accent st-grow">{{key.busy ? '生成中…' : '重新生成'}}</text></view>
-          </view>
-          <view class="st-row" hover-class="st-hover" bindtap="onKeyRevoke">
-            <view class="st-body"><text class="st-t st-danger st-grow">作废</text></view>
-          </view>
-        </block>
-      </view>
-    </view>
-
-    <!-- 账号 -->
     <view class="st-sec">
       <text class="st-head">账号</text>
       <view class="st-group">
@@ -230,9 +85,9 @@
           <view class="st-body">
             <view class="st-ok"><view class="i i-check"></view></view>
             <view class="st-main">
-              <text class="st-t">已用微信登录</text>
-              <text class="st-sub">打开就自动登录了，内容只给你自己看</text>
+              <text class="st-t st-grow">已用微信登录</text>
             </view>
+            <text class="st-value">已登录</text>
           </view>
         </view>
         <view class="st-row" hover-class="st-hover" bindtap="goPrivacy">
@@ -242,27 +97,26 @@
           </view>
         </view>
       </view>
+      <text class="st-foot">打开就自动登录了，内容只给你自己看</text>
     </view>
 
-    <!-- 示例数据 -->
     <view class="st-sec">
-      <text class="st-head">示例数据</text>
       <view class="st-group">
-        <view class="st-row" hover-class="st-hover" bindtap="onSeed">
-          <view class="st-body"><text class="st-t st-accent st-grow">载入示例数据</text></view>
-        </view>
-        <view class="st-row" hover-class="st-hover" bindtap="onClearDemo">
-          <view class="st-body"><text class="st-t st-accent st-grow">清除示例数据</text></view>
+        <view class="st-row" hover-class="st-hover" bindtap="goDemo">
+          <view class="st-body">
+            <text class="st-t st-grow">示例数据</text>
+            <view class="i i-chev st-chev"></view>
+          </view>
         </view>
       </view>
-      <text class="st-foot">示例数据和网页版演示账号同一套：信、回信、待办、点子、习惯、周信、季信和年信。写进你自己的云数据库，并标上 demo。清除时只删这些。</text>
     </view>
 
-    <!-- 危险操作 -->
     <view class="st-sec">
       <view class="st-group">
         <view class="st-row" hover-class="st-hover" bindtap="onWipe">
-          <view class="st-body st-center"><text class="st-t st-danger">清空我的全部数据</text></view>
+          <view class="st-body">
+            <text class="st-t st-danger st-grow">清空我的全部数据</text>
+          </view>
         </view>
       </view>
     </view>

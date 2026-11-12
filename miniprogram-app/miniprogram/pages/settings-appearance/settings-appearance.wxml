@@ -1,0 +1,26 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <view class="subpage-bar sheet-bar" style="padding-top: {{statusBar}}px;">
+    <view>
+      <button class="st-back" hover-class="tap-on" bindtap="back" aria-label="返回"><view class="i i-left"></view><text class="st-back-t">设置</text></button>
+      <text class="t">外观</text>
+      <view class="sp"></view>
+    </view>
+  </view>
+  <view class="page st-page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
+    <view class="st-sec">
+      <text class="st-head">外观</text>
+      <view class="st-group st-themes">
+        <view wx:for="{{themes}}" wx:key="id" class="st-theme {{item.on ? 'on' : ''}}" hover-class="tap-on" data-id="{{item.id}}" bindtap="onTheme" aria-role="button" aria-label="{{item.name}}">
+          <view class="st-ring">
+            <view class="st-sw" style="background: {{item.auto ? 'linear-gradient(90deg,#F2F2F7 50%,#000 50%)' : item.sw[0]}};">
+              <view class="st-bar" style="background: {{item.sw[2]}}; width: 60%;"></view>
+              <view class="st-bar" style="background: {{item.sw[1]}}; width: 85%;"></view>
+            </view>
+          </view>
+          <text class="st-tn">{{item.name}}</text>
+        </view>
+      </view>
+    </view>
+  </view>
+  <toast id="toast" />
+</view>

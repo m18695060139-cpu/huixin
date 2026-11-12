@@ -1,0 +1,32 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <view class="subpage-bar sheet-bar" style="padding-top: {{statusBar}}px;">
+    <view>
+      <button class="st-back" hover-class="tap-on" bindtap="back" aria-label="返回"><view class="i i-left"></view><text class="st-back-t">设置</text></button>
+      <text class="t">习惯</text>
+      <view class="sp"></view>
+    </view>
+  </view>
+  <view class="page st-page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 80px);">
+    <view class="st-sec">
+      <text class="st-head">写信时顺手打卡的习惯</text>
+      <view class="st-group">
+        <view wx:if="{{!habits.length}}" class="st-row">
+          <view class="st-body"><text class="st-empty">还没有习惯</text></view>
+        </view>
+        <view class="st-row" wx:for="{{habits}}" wx:key="id">
+          <view class="st-body">
+            <input class="st-in st-left" value="{{item.name}}" data-id="{{item.id}}" bindblur="onRename" maxlength="30" adjust-position="{{true}}" cursor-spacing="120" disable-default-padding="{{true}}" confirm-type="done" />
+            <view class="st-act st-danger" hover-class="st-act-on" data-id="{{item.id}}" bindtap="onDel">删除</view>
+          </view>
+        </view>
+        <view class="st-row">
+          <view class="st-body">
+            <input class="st-in st-left" value="{{habitName}}" bindinput="onHabitName" bindconfirm="onAdd" maxlength="30" placeholder="新习惯，比如：运动 30 分钟" placeholder-class="ph" adjust-position="{{true}}" cursor-spacing="120" disable-default-padding="{{true}}" confirm-type="done" />
+            <view class="st-act st-accent" hover-class="st-act-on" bindtap="onAdd">添加</view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+  <toast id="toast" />
+</view>
