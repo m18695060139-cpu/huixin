@@ -49,5 +49,16 @@
   "sitemapLocation": "sitemap.json",
   "usingComponents": {
     "st-nav": "/components/st-nav/st-nav"
+  },
+  "plugins": {
+    "WechatSI": {
+      "version": "0.3.6",
+      "provider": "wx069ba97219f66d99"
+    }
+  },
+  "permission": {
+    "scope.record": {
+      "desc": "用于写信时把你说的话转成文字"
+    }
   }
 }

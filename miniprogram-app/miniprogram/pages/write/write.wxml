@@ -75,11 +75,40 @@
 
   <view wx:if="{{editing}}" class="send-bar">
     <view class="send-inner">
+      <view class="tidy-dock" wx:if="{{aiOn && tidy.show}}">
+        <text class="tidy-st" wx:if="{{tidy.busy}}">整理中…</text>
+        <block wx:elif="{{tidy.used}}">
+          <view class="tidy-acts">
+            <view class="chip" hover-class="tap-on" bindtap="onTidyUndo">撤销</view>
+          </view>
+        </block>
+        <block wx:elif="{{tidy.preview}}">
+          <text class="tidy-result" user-select="true">{{tidy.result}}</text>
+          <view class="tidy-acts">
+            <view class="chip on" hover-class="tap-on" bindtap="onTidyUse">用这个</view>
+            <view class="chip" hover-class="tap-on" bindtap="onTidyUndo">撤销</view>
+          </view>
+        </block>
+        <view wx:else class="tidy-acts">
+          <view class="chip" hover-class="tap-on" bindtap="onTidySeg">整理一下</view>
+          <view class="chip" wx:if="{{tidy.canAll}}" hover-class="tap-on" bindtap="onTidyAll">整理整封信</view>
+        </view>
+      </view>
       <view class="send-row">
+        <button class="mic {{rec.on ? 'on' : ''}}" hover-class="{{rec.on ? '' : 'tap-on'}}" catchtouchstart="onMicStart" catchtouchend="onMicEnd" catchtouchcancel="onMicEnd" catchtouchmove="onMicMove" aria-label="按住说话">
+          <view class="i i-mic"></view>
+        </button>
         <button wx:if="{{editing && meta.hasReply}}" class="btn ghost" hover-class="tap-on" bindtap="cancelEdit">取消</button>
         <button class="btn" hover-class="tap-on" bindtap="onSend" disabled="{{!canSend}}"><view class="i i-send"></view>{{meta.sendLabel || '寄出'}}</button>
       </view>
       <text class="send-note">{{meta.note}}</text>
+    </view>
+  </view>
+
+  <view class="voice-mask" wx:if="{{rec.on}}">
+    <view class="voice-card {{rec.cancel ? 'cancel' : ''}}">
+      <text class="voice-timer">{{rec.clock}}</text>
+      <text class="voice-hint">{{rec.cancel ? '松开取消' : '松开结束 · 上滑取消'}}</text>
     </view>
   </view>
 
