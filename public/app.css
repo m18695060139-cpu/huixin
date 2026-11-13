@@ -347,7 +347,7 @@ textarea.input { line-height: 1.6; resize: vertical; }
 
 /* ── 登录 ── */
 .login { max-width: 400px; margin: 0 auto; min-height: 100vh; padding: calc(var(--safe-top) + 16vh) 24px 40px; display: flex; flex-direction: column; }
-.login .logo { width: 72px; height: 72px; border-radius: 18px; background: var(--ink); color: var(--on-ink); display: grid; place-items: center; font-size: 26px; font-weight: 700; letter-spacing: -1px; }
+.login .logo { width: 72px; height: 72px; border-radius: 18px; background: var(--ink); color: var(--on-ink); display: grid; place-items: center; font-size: 32px; font-weight: 700; letter-spacing: 0; }
 .login h1 { margin-top: 18px; }
 .login p { color: var(--sub); margin: 8px 0 26px; }
 .login .btn { margin-top: 24px; }
@@ -398,7 +398,7 @@ textarea.input { line-height: 1.6; resize: vertical; }
   }
   .tabbar.hide-m { display: flex; }
   .tabbar .brand { display: flex; align-items: baseline; gap: 10px; padding: 0 12px; }
-  .tabbar .brand b { font-size: 26px; font-weight: 700; color: var(--ink); letter-spacing: -1px; }
+  .tabbar .brand b { font-size: 26px; font-weight: 700; color: var(--ink); letter-spacing: 0; }
   .tabbar .brand span { font-size: 17px; font-weight: 600; }
   .tabbar nav { flex: none; height: auto; flex-direction: column; align-items: stretch; gap: 4px; }
   .tabbar nav button, .tabbar .side-set {

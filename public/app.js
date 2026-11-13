@@ -280,7 +280,7 @@
     const reg = mode === 'register';
     $('#app').innerHTML = `
       <form class="login" id="login-form" autocomplete="on">
-        <div class="logo">Re:</div>
+        <div class="logo">回</div>
         <h1>回信</h1>
         <p>每晚写一封信给明早的自己，回信替你整理好一切。</p>
         <input class="input" name="username" autocomplete="username" placeholder="账号" aria-label="账号" required>
@@ -334,7 +334,7 @@
     const dot = V.tab !== 'today' && unopenedLetter(today()) ? '<i class="badge-dot" aria-hidden="true"></i>' : '';
     const b = (id, label, icon, cls = '', extra = '') =>
       `<button class="${cls}" data-act="tab" data-v="${id}" ${V.tab === id ? 'aria-current="page"' : ''} aria-label="${label}">${icon}<span>${label}</span>${extra}</button>`;
-    return `<div class="tabbar${V._composing ? ' hide-m' : ''}"><div class="brand" aria-hidden="true"><b>Re:</b><span>回信</span></div>
+    return `<div class="tabbar${V._composing ? ' hide-m' : ''}"><div class="brand" aria-hidden="true"><b>回信</b></div>
       <nav aria-label="主导航">${b('today', '今天', ICON.today, '', dot)}${b('write', '写信', ICON.pen, 'write')}${b('mailbox', '信箱', ICON.box)}</nav>
       <button class="side-set" data-act="settings">${ICON.gear}<span>设置</span></button></div>`;
   }
@@ -693,7 +693,7 @@
     const whenTxt = r.imported ? '从 Life OS 搬过来的旧信'
       : sealedOnce ? `${cn(addDays(l.date, 1))} 6:00 送到` : when ? `${cn(localDate(when))} ${hm(when)} 收到` : '';
     h += `<article class="card reply-letter">${paras || '<p class="muted">（这封回信没有正文）</p>'}
-      <div class="reply-sign"><b>Re: 回信</b><span>${esc(whenTxt)}${r.engine ? ' · ' + esc(r.engine) : ''}</span></div></article>`;
+      <div class="reply-sign"><b>回信</b><span>${esc(whenTxt)}${r.engine ? ' · ' + esc(r.engine) : ''}</span></div></article>`;
 
     const tds = r.todos || [], ids = r.ideas || [];
     if (tds.length || ids.length) {
@@ -934,7 +934,7 @@
       const yday = addDays(t, -1);
       const title = !l.reply || isSealed(l.date) ? cn(l.date) + '的信' : l.date === yday ? '昨晚的回信' : l.date === t ? '今天的回信' : cn(l.date) + '的回信';
       const burning = V.burn && V.burn.date === s.date && V.burn.phase !== 'confirm';
-      const head = `<div class="head"><div class="head-l"><span class="eyebrow">Re: No.${letterNo(l.date)} · 星期${wd(l.date)}</span><h1 style="font-size:28px">${title}</h1></div></div>`;
+      const head = `<div class="head"><div class="head-l"><span class="eyebrow">No.${letterNo(l.date)} · 星期${wd(l.date)}</span><h1 style="font-size:28px">${title}</h1></div></div>`;
       let inner = '';
       if (!l.reply || isSealed(l.date)) {
         inner += `<div class="card paper mt"><p class="letter-text">${esc(l.text)}</p></div>`;
@@ -1443,7 +1443,7 @@
         + stRow({ act: 'logout', title: '退出登录', grow: true }),
         '账号'
       )
-      + `<p class="st-tag">回信 Re: · 今晚写给明早的自己</p>`;
+      + `<p class="st-tag">回信 · 今晚写给明早的自己</p>`;
   }
 
   function settingsSub(page) {
