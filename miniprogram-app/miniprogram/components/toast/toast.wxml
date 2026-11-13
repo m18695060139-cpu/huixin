@@ -1,0 +1,4 @@
+<view class="toast {{show ? 'show' : ''}} {{act ? 'has-act' : ''}}" aria-role="status">
+  <text>{{msg}}</text>
+  <button wx:if="{{act}}" class="toast-act" bindtap="onAct">{{act.label}}</button>
+</view>

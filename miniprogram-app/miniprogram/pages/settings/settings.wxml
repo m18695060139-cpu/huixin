@@ -1,0 +1,121 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <st-nav title="设置" close="{{true}}" bind:close="closeSettings"></st-nav>
+  <view class="page st-page" style="padding-top: {{navBar}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
+    <view class="offline" wx:if="{{!online}}">云端还没连上 · 先存在这台手机</view>
+
+    <view class="st-sec">
+      <view class="st-group">
+        <view class="st-row" hover-class="st-hover" bindtap="goName">
+          <view class="st-body">
+            <text class="st-t">称呼</text>
+            <text class="st-value">{{nameValue}}</text>
+            <view class="i i-chev st-chev"></view>
+          </view>
+        </view>
+        <view class="st-row" hover-class="st-hover" bindtap="goDeliver">
+          <view class="st-body">
+            <text class="st-t">回信送达</text>
+            <text class="st-value">{{deliverValue}}</text>
+            <view class="i i-chev st-chev"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="st-sec" wx:if="{{aiOn}}">
+      <view class="st-group">
+        <view class="st-row" hover-class="st-hover" bindtap="goAI">
+          <view class="st-body">
+            <text class="st-t">AI 回信</text>
+            <text class="st-value">{{aiValue}}</text>
+            <view class="i i-chev st-chev"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="st-sec">
+      <view class="st-group">
+        <view class="st-row" hover-class="st-hover" bindtap="goAppearance">
+          <view class="st-body">
+            <text class="st-t">外观</text>
+            <text class="st-value">{{themeValue}}</text>
+            <view class="i i-chev st-chev"></view>
+          </view>
+        </view>
+        <view class="st-row" hover-class="st-hover" bindtap="goHabits">
+          <view class="st-body">
+            <text class="st-t">习惯</text>
+            <text class="st-value">{{habitValue}}</text>
+            <view class="i i-chev st-chev"></view>
+          </view>
+        </view>
+        <view class="st-row" hover-class="st-hover" bindtap="goQuestions">
+          <view class="st-body">
+            <text class="st-t">回信问题</text>
+            <text class="st-value">{{questionValue}}</text>
+            <view class="i i-chev st-chev"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="st-sec">
+      <view class="st-group">
+        <view class="st-row" hover-class="st-hover" bindtap="goAPI">
+          <view class="st-body">
+            <text class="st-t">API 密钥</text>
+            <text class="st-value">{{keyValue}}</text>
+            <view class="i i-chev st-chev"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="st-sec">
+      <text class="st-head">账号</text>
+      <view class="st-group">
+        <view class="st-row">
+          <view class="st-body">
+            <view class="st-ok"><view class="i i-check"></view></view>
+            <view class="st-main">
+              <text class="st-t st-grow">已用微信登录</text>
+            </view>
+            <text class="st-value">已登录</text>
+          </view>
+        </view>
+        <view class="st-row" hover-class="st-hover" bindtap="goPrivacy">
+          <view class="st-body">
+            <text class="st-t st-grow">用户隐私保护指引</text>
+            <view class="i i-chev st-chev"></view>
+          </view>
+        </view>
+      </view>
+      <text class="st-foot">打开就自动登录了，内容只给你自己看</text>
+    </view>
+
+    <view class="st-sec">
+      <view class="st-group">
+        <view class="st-row" hover-class="st-hover" bindtap="goDemo">
+          <view class="st-body">
+            <text class="st-t st-grow">示例数据</text>
+            <view class="i i-chev st-chev"></view>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <view class="st-sec">
+      <view class="st-group">
+        <view class="st-row" hover-class="st-hover" bindtap="onWipe">
+          <view class="st-body">
+            <text class="st-t st-danger st-grow">清空我的全部数据</text>
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <text class="st-tag">回信 Re: · 今晚写给明早的自己</text>
+  </view>
+  <toast id="toast" />
+</view>

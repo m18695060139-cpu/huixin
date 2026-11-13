@@ -1,0 +1,17 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <st-nav title="示例数据" back="设置" bind:back="back"></st-nav>
+  <view class="page st-page" style="padding-top: {{navBar}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
+    <view class="st-sec">
+      <view class="st-group">
+        <view class="st-row" hover-class="st-hover" bindtap="onSeed">
+          <view class="st-body"><text class="st-t st-accent st-grow">载入示例数据</text></view>
+        </view>
+        <view class="st-row" hover-class="st-hover" bindtap="onClear">
+          <view class="st-body"><text class="st-t st-accent st-grow">清除示例数据</text></view>
+        </view>
+      </view>
+      <text class="st-foot">示例数据是一套现成的信、回信、待办、点子、习惯、周信、季信和年信。写进你自己的云数据库，并标上 demo。清除时只删这些。</text>
+    </view>
+  </view>
+  <toast id="toast" />
+</view>

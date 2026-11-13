@@ -1,0 +1,13 @@
+{
+  "name": "huixin-miniprogram",
+  "private": true,
+  "version": "0.1.0",
+  "description": "回信小记（微信小程序）。与仓库根目录的网页版相互独立。",
+  "type": "commonjs",
+  "scripts": {
+    "upload": "node scripts/upload.js"
+  },
+  "dependencies": {
+    "miniprogram-ci": "^2.1.26"
+  }
+}

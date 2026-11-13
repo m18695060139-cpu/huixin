@@ -1,0 +1,142 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <view class="subpage-bar sheet-bar" style="padding-top: {{statusBar}}px;">
+    <view>
+      <button class="x" hover-class="tap-on" bindtap="back" aria-label="关闭"><view class="i i-x"></view></button>
+      <text class="t"></text>
+      <view class="sp"></view>
+    </view>
+  </view>
+  <view class="page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
+    <view wx:if="{{letter.missing}}" class="card empty">找不到这封信。</view>
+    <block wx:else>
+      <view class="head">
+        <view class="head-l">
+          <text class="eyebrow">{{letter.eyebrow}}</text>
+          <text class="h1 sm">{{letter.title}}</text>
+        </view>
+      </view>
+
+      <block wx:if="{{letter.hasReply}}">
+        <view class="card mine mt">
+          <view class="row" bindtap="toggleMine">
+            <view class="ic gray"><view class="i i-pen" style="width:30.769rpx;height:30.769rpx;"></view></view>
+            <view class="row-main">
+              <text class="row-t" style="font-size:28.846rpx;font-weight:600;">你写的信</text>
+              <text class="sub one-line">{{letter.reply.mine}}</text>
+            </view>
+            <text class="chev">{{letter.mineOpen ? '⌄' : '›'}}</text>
+          </view>
+          <text wx:if="{{letter.mineOpen}}" class="letter-text mine-body">{{letter.text}}</text>
+        </view>
+
+        <view class="card reply-letter">
+          <text wx:for="{{letter.reply.paras}}" wx:key="*this" class="reply-p">{{item}}</text>
+          <view class="reply-sign">
+            <text class="sign-b">Re: 回信</text>
+            <text class="when">{{letter.reply.when}}{{letter.reply.engine ? ' · ' + letter.reply.engine : ''}}</text>
+          </view>
+        </view>
+        <text class="note" wx:if="{{letter.reply.ownError}}">你自己的 AI 这次没接通（{{letter.reply.ownError}}），这封先用免费模型写的。可以去「设置 → AI 回信」检查一下。</text>
+
+        <block wx:if="{{letter.reply.todos.length || letter.reply.ideas.length}}">
+          <view class="gh"><text class="h2">附件</text><text class="gh-s">从你的信里整理出来的</text></view>
+          <view class="card">
+            <view class="row" wx:for="{{letter.reply.todos}}" wx:key="id">
+              <view class="ic"><view class="i i-check" style="width:26.923rpx;height:26.923rpx;"></view></view>
+              <view class="row-main">
+                <text class="row-t">{{item.text}}</text>
+                <text class="sub">待办{{item.due ? ' · ' + item.due : ''}}</text>
+              </view>
+              <text class="pill green">{{item.badge}}</text>
+            </view>
+            <view class="row" wx:for="{{letter.reply.ideas}}" wx:key="id">
+              <view class="ic idea"><view class="i i-bulb" style="width:26.923rpx;height:26.923rpx;"></view></view>
+              <view class="row-main">
+                <text class="row-t">{{item.text}}</text>
+                <text class="sub">点子</text>
+              </view>
+              <text class="pill green">已收进点子库</text>
+            </view>
+          </view>
+        </block>
+
+        <view class="card stats mt" wx:if="{{letter.reply.energy}}">
+          <view class="stat"><text>精力</text><text class="b">{{letter.reply.energy}}<text class="unit"> / 5</text></text></view>
+          <view class="stat"><text>情绪</text><text class="b">{{letter.reply.mood || '—'}}</text></view>
+          <view class="stat"><text>高光</text><text class="b">{{letter.reply.highlight || '—'}}</text></view>
+        </view>
+
+        <block wx:if="{{letter.reply.lenses.length}}">
+          <view class="gh"><text class="h2">四个角度</text><text class="gh-s" style="color:var(--ink);font-weight:600;">实验</text></view>
+          <view class="card">
+            <view class="row lens" wx:for="{{letter.reply.lenses}}" wx:key="key">
+              <view class="ic" style="background: {{item.color}};">{{item.mark}}</view>
+              <view class="row-main">
+                <text class="lens-k">{{item.name}}</text>
+                <text class="lens-v">{{item.text}}</text>
+              </view>
+            </view>
+            <view class="row foot">
+              <text class="small muted">这部分对你有用吗？</text>
+              <view class="seg2">
+                <view class="seg2-btn {{letter.reply.fb > 0 ? 'on' : ''}}" data-x="1" bindtap="onFb">有用</view>
+                <view class="seg2-btn {{letter.reply.fb < 0 ? 'on' : ''}}" data-x="-1" bindtap="onFb">没用</view>
+              </view>
+            </view>
+          </view>
+        </block>
+
+        <button wx:if="{{letter.showGo}}" class="btn full" hover-class="tap-on" style="margin-top:38.462rpx;" bindtap="goToday">去看今天要做的</button>
+        <view style="padding:0 7.692rpx;margin-top:15.385rpx;">
+          <button class="lk" hover-class="tap-on" bindtap="takeBack">在写信里打开</button>
+        </view>
+      </block>
+
+      <block wx:else>
+        <view wx:if="{{letter.loading}}" class="card mt">
+          <view class="waiting">正在拆信、整理待办和点子…</view>
+        </view>
+        <view wx:if="{{letter.fail}}" class="card pad mt fail-card">
+          <text>{{letter.fail}}</text>
+          <button class="btn sm" hover-class="tap-on" bindtap="retryReply">再试一次</button>
+        </view>
+        <view wx:if="{{!letter.loading}}" class="card paper mt">
+          <text class="letter-text">{{letter.text}}</text>
+        </view>
+        <text class="note" wx:if="{{letter.note}}">{{letter.note}}</text>
+        <view style="padding:0 7.692rpx;margin-top:15.385rpx;">
+          <button class="lk" hover-class="tap-on" bindtap="takeBack">在写信里打开</button>
+        </view>
+      </block>
+      <view class="burn-entry">
+        <button class="burn-link" hover-class="tap-on" bindtap="onBurnAsk">焚毁这封信</button>
+      </view>
+    </block>
+  </view>
+  <toast id="toast" bind:act="onToastAct" />
+  <page-container show="{{ed.show || burn.show}}" position="center" overlay="{{false}}" duration="{{0}}" close-on-slide-down="{{false}}" custom-style="width:100%;height:100%;padding:0;margin:0;background:transparent;overflow:visible;" bind:afterleave="onOverlayBack">
+    <editor wx:if="{{ed.show}}" show="{{ed.show}}" mode="{{ed.mode}}" item="{{ed.item}}" token="{{ed.token}}" theme="{{theme}}" bind:close="closeEditor" bind:submit="onEditorSubmit" />
+    <view wx:elif="{{burn.show}}" class="burn-root">
+      <view class="burn-dim" bindtap="onBurnKeep"></view>
+      <view class="burn-card" catchtap="noop">
+        <view class="burn-msg"><text>焚毁后，这封信和它的回信都会消失，</text><text>找不回来。</text></view>
+        <view class="burn-check" bindtap="onBurnItems">
+          <view class="burn-box {{burn.items ? 'on' : ''}}"></view>
+          <text>同时删掉它整理出的待办和点子</text>
+        </view>
+        <view class="burn-actions">
+          <button class="btn burn-keep" hover-class="tap-on" bindtap="onBurnKeep">留着</button>
+          <view class="burn-hold {{burn.holding ? 'holding' : ''}}" hover-class="none" catchtouchstart="onHoldStart" catchtouchmove="onHoldMove" catchtouchend="onHoldEnd" catchtouchcancel="onHoldEnd" catchlongpress="noop" aria-label="按住一秒半焚毁这封信">
+            <text class="lab-idle">焚毁</text>
+            <view class="fill">
+              <view class="fill-inner" style="width: {{burn.holdW}}px;">
+                <text class="lab-on">焚毁</text>
+              </view>
+            </view>
+          </view>
+        </view>
+        <text class="burn-hint">按住「焚毁」一秒半，松手即取消</text>
+      </view>
+    </view>
+  </page-container>
+</view>

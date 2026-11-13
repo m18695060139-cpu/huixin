@@ -1,0 +1,87 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <view class="subpage-bar sheet-bar" style="padding-top: {{statusBar}}px;">
+    <view>
+      <button class="x" hover-class="tap-on" bindtap="back" aria-label="关闭"><view class="i i-x"></view></button>
+      <text class="t">待办与点子</text>
+      <view class="sp"></view>
+    </view>
+  </view>
+  <view class="page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
+    <view class="seg three">
+      <view class="seg-btn {{tab === 'todos' ? 'on' : ''}}" data-tab="todos" bindtap="onTab">待办</view>
+      <view class="seg-btn {{tab === 'ideas' ? 'on' : ''}}" data-tab="ideas" bindtap="onTab">点子</view>
+      <view class="seg-btn {{tab === 'done' ? 'on' : ''}}" data-tab="done" bindtap="onTab">完成 / 放下</view>
+    </view>
+
+    <view wx:if="{{tab === 'todos'}}" class="card mt">
+      <view wx:if="{{!todos.length}}" class="empty">没有待办。</view>
+      <view class="row" wx:for="{{todos}}" wx:key="id">
+        <button class="ck" hover-class="tap-on" data-id="{{item.id}}" catchtap="onToggle"><view class="box"></view></button>
+        <button class="row-main" hover-class="tap-on" data-id="{{item.id}}" bindtap="editTodo">
+          <text class="row-t">{{item.text}}</text>
+          <text class="sub todo-note" wx:if="{{item.note}}">{{item.note}}</text>
+          <text class="sub {{item.subCls}}">{{item.sub}}</text>
+        </button>
+        <text class="pill {{item.pillCls}}" wx:if="{{item.pill}}">{{item.pill}}</text>
+      </view>
+      <view class="row foot"><button class="lk" hover-class="tap-on" bindtap="newTodo">＋ 加一件事</button></view>
+    </view>
+
+    <block wx:if="{{tab === 'ideas'}}">
+      <view class="card mt">
+        <view wx:if="{{!ideas.length}}" class="empty">点子库是空的。写信时冒出的想法，回信会收到这里。</view>
+        <view class="row" wx:for="{{ideas}}" wx:key="id">
+          <view class="ic sm idea"><view class="i i-bulb" style="width:26.923rpx;height:26.923rpx;"></view></view>
+          <button class="row-main" hover-class="tap-on" data-id="{{item.id}}" bindtap="editIdea">
+            <text class="row-t">{{item.text}}</text>
+            <text class="sub {{item.subCls}}">{{item.sub}}</text>
+          </button>
+          <button class="lk" hover-class="tap-on" data-id="{{item.id}}" catchtap="onIdeaTodo">转待办</button>
+          <button class="lk muted" hover-class="tap-on" data-id="{{item.id}}" catchtap="onIdeaDrop">放下</button>
+        </view>
+        <view class="row foot"><button class="lk" hover-class="tap-on" bindtap="newIdea">＋ 记一个点子</button></view>
+      </view>
+      <view class="fold"><button class="lk muted" hover-class="tap-on" bindtap="toggleDropped">{{showDropped ? '收起放下的点子' : '放下的点子 ›'}}</button></view>
+      <view wx:if="{{showDropped}}" class="card">
+        <view wx:if="{{!dropped.length}}" class="empty">还没有放下的点子。</view>
+        <view class="row" wx:for="{{dropped}}" wx:key="id">
+          <view class="ic sm idea dim"><view class="i i-bulb" style="width:26.923rpx;height:26.923rpx;"></view></view>
+          <view class="row-main done">
+            <text class="row-t">{{item.text}}</text>
+            <text class="sub">{{item.droppedLabel}}</text>
+          </view>
+          <button class="lk" hover-class="tap-on" data-id="{{item.id}}" bindtap="onRestore">恢复</button>
+        </view>
+      </view>
+    </block>
+
+    <block wx:if="{{tab === 'done'}}">
+      <view class="mini-seg">
+        <view class="seg-btn {{done.mode === 'done' ? 'on' : ''}}" data-mode="done" bindtap="onDoneMode">完成 {{done.doneCount}}</view>
+        <view class="seg-btn {{done.mode === 'dropped' ? 'on' : ''}}" data-mode="dropped" bindtap="onDoneMode">放下 {{done.dropCount}}</view>
+      </view>
+      <view wx:if="{{done.empty}}" class="card"><view class="empty">{{done.emptyText}}</view></view>
+      <view wx:for="{{done.groups}}" wx:key="key" class="card grp">
+        <button class="grp-h" hover-class="tap-on" data-key="{{item.key}}" bindtap="onGroup">
+          <text>{{item.label}}</text>
+          <text class="grp-n">{{item.verb}} {{item.count}} 件 <text class="grp-chev {{item.open ? 'up' : ''}}">›</text></text>
+        </button>
+        <block wx:if="{{item.open}}">
+        <view class="row hist" wx:for="{{item.rows}}" wx:for-item="row" wx:key="id">
+          <view wx:if="{{row.dropped}}" class="ck dropped"><view class="box"><view class="xmark"></view></view></view>
+          <button wx:else class="ck on" hover-class="tap-on" data-id="{{row.id}}" catchtap="onToggle"><view class="box"><view class="tick"></view></view></button>
+          <button class="row-main" hover-class="tap-on" data-id="{{row.id}}" bindtap="editTodo">
+            <text class="row-t">{{row.text}}</text>
+            <text class="sub todo-note" wx:if="{{row.note}}">{{row.note}}</text>
+          </button>
+          <text wx:if="{{row.showDate}}" class="hist-d">{{row.dateLabel}}</text>
+        </view>
+        </block>
+      </view>
+    </block>
+  </view>
+  <toast id="toast" bind:act="onToastAct" />
+  <page-container show="{{ed.show}}" position="center" overlay="{{false}}" duration="{{0}}" close-on-slide-down="{{false}}" custom-style="width:100%;height:100%;padding:0;margin:0;background:transparent;overflow:visible;" bind:afterleave="onOverlayBack">
+    <editor show="{{ed.show}}" mode="{{ed.mode}}" item="{{ed.item}}" token="{{ed.token}}" theme="{{theme}}" bind:close="closeEditor" bind:submit="onEditorSubmit" />
+  </page-container>
+</view>

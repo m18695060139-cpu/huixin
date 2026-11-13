@@ -1,0 +1,19 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <st-nav title="回信问题" back="设置" bind:back="back"></st-nav>
+  <view class="page st-page" style="padding-top: {{navBar}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 80px);">
+    <view class="st-sec">
+      <text class="st-head">回信写信时会想着的问题（一行一个）</text>
+      <view class="st-group">
+        <view class="st-row">
+          <view class="st-body st-area-body">
+            <textarea class="st-area" value="{{qText}}" bindinput="onQ" maxlength="1200" auto-height="true" placeholder-class="ph" adjust-position="true" cursor-spacing="160" disable-default-padding="true" />
+          </view>
+        </view>
+        <view class="st-row" hover-class="st-hover" bindtap="onSave">
+          <view class="st-body"><text class="st-t st-accent st-grow">保存问题</text></view>
+        </view>
+      </view>
+    </view>
+  </view>
+  <toast id="toast" />
+</view>

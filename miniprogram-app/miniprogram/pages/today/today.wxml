@@ -1,0 +1,146 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <view class="top-shield" style="height: {{statusBar}}px;"></view>
+  <view class="page tab-pad">
+    <view class="head stick-top" style="padding-top: {{statusBar + 12}}px;">
+      <view class="head-l">
+        <text class="eyebrow">{{dateLabel}}</text>
+        <text class="h1">{{hello}}</text>
+      </view>
+      <view class="count" wx:if="{{count}}">{{count}}</view>
+    </view>
+    <view class="offline" wx:if="{{!online}}">离线中 · 改动会在联网后自动同步</view>
+
+    <block wx:if="{{hero.type === 'envelope'}}">
+      <button class="envelope" hover-class="tap-on" data-date="{{hero.date}}" bindtap="openEnv">
+        <view class="env-art bob">
+          <view class="env-card">
+            <view class="env-flap"></view>
+            <view class="env-edge l"></view>
+            <view class="env-edge r"></view>
+            <view class="env-seal"></view>
+            <view class="env-seal-t"><view class="env-seal-base"></view><text class="env-seal-ch">回</text></view>
+          </view>
+        </view>
+        <view class="env-copy">
+          <text class="env-t">{{hero.title}}</text>
+          <text class="env-s">{{hero.sub}}</text>
+        </view>
+        <view class="env-btn">拆开</view>
+      </button>
+    </block>
+
+    <view wx:elif="{{hero.type === 'sealed'}}" class="card hero">
+      <view class="hero-top">
+        <view class="hero-ic"><view class="i i-box" style="width:34.615rpx;height:34.615rpx;"></view></view>
+        <view style="flex:1;min-width:0;">
+          <text class="hero-t">{{hero.title}}</text>
+          <text class="hero-s">{{hero.sub}}</text>
+        </view>
+        <button class="btn sm ghost" hover-class="tap-on" data-date="{{hero.date}}" bindtap="goWrite">拿回来改</button>
+      </view>
+    </view>
+
+    <view wx:elif="{{hero.type === 'backfill'}}" class="card hero" style="align-items:center;text-align:center;padding-top:46.154rpx;">
+      <view class="env-ghost">
+        <view class="env-ghost-arm l"></view>
+        <view class="env-ghost-arm r"></view>
+      </view>
+      <text class="hero-t" style="font-size:38.462rpx;">{{hero.title}}</text>
+      <text class="hero-s" style="font-size:26.923rpx;line-height:1.6;">{{hero.sub}}</text>
+      <button class="btn full" hover-class="tap-on" data-date="{{hero.date}}" bindtap="goWrite">补写 {{hero.dateLabel}}的信</button>
+      <button class="lk muted" hover-class="tap-on" data-date="{{hero.date}}" bindtap="skipBackfill">今天先不补</button>
+    </view>
+
+    <view wx:elif="{{hero.type === 'write'}}" class="card hero">
+      <view class="hero-top">
+        <view class="hero-ic"><view class="i i-pen" style="width:46.154rpx;height:46.154rpx;"></view></view>
+        <view>
+          <text class="hero-t">{{hero.title}}</text>
+          <text class="hero-s">{{hero.sub}}</text>
+        </view>
+      </view>
+      <button class="btn full" hover-class="tap-on" data-date="{{hero.date}}" bindtap="goWrite">写{{hero.label}}的信</button>
+    </view>
+
+    <button wx:elif="{{hero.type === 'read'}}" class="card row tap" hover-class="tap-on" style="margin-top:30.769rpx;min-height:123.077rpx;" data-date="{{hero.date}}" bindtap="openRead">
+      <view class="ic"><view class="i i-box" style="width:34.615rpx;height:34.615rpx;"></view></view>
+      <view class="row-main">
+        <text class="row-t" style="font-size:28.846rpx;font-weight:600;">{{hero.title}}</text>
+        <text class="sub one-line">{{hero.sub}}</text>
+      </view>
+      <text style="font-size:28.846rpx;color:var(--ink);">再读</text>
+      <view class="i i-chev"></view>
+    </button>
+
+    <view class="gh">
+      <text class="h2">{{todoTitle}}</text>
+      <text class="gh-s" wx:if="{{pendingExtra}}">{{pendingExtra}}</text>
+      <view class="gh-links" wx:else>
+        <button class="lk muted" hover-class="tap-on" data-tab="todos" bindtap="goLists">待办 {{todoOpen}} ›</button>
+      </view>
+    </view>
+    <view class="card">
+      <view wx:if="{{!todos.length && !justDone.length && !showDoneLine}}" class="empty">没有待处理的事。写信时提到要做的事、冒出的点子，回信会自动放到这里。</view>
+      <view class="row" wx:for="{{todos}}" wx:key="id">
+        <button class="ck {{item.done ? 'on' : ''}}" hover-class="tap-on" data-id="{{item.id}}" catchtap="onToggle" aria-label="完成">
+          <view class="box"><view class="tick" wx:if="{{item.done}}"></view></view>
+        </button>
+        <button class="row-main {{item.done ? 'done' : ''}}" hover-class="tap-on" data-id="{{item.id}}" bindtap="editTodo">
+          <text class="row-t">{{item.text}}</text>
+          <text class="sub todo-note" wx:if="{{item.note}}">{{item.note}}</text>
+          <text class="sub {{item.subCls}}">{{item.sub}}</text>
+        </button>
+        <text class="pill {{item.pillCls}}" wx:if="{{item.pill}}">{{item.pill}}</text>
+      </view>
+      <view class="row" wx:for="{{justDone}}" wx:key="id">
+        <button class="ck on" hover-class="tap-on" data-id="{{item.id}}" catchtap="onToggle">
+          <view class="box"><view class="tick"></view></view>
+        </button>
+        <button class="row-main done" hover-class="tap-on" data-id="{{item.id}}" bindtap="editTodo">
+          <text class="row-t">{{item.text}}</text>
+          <text class="sub">{{item.sub}}</text>
+        </button>
+        <text class="pill green">{{item.pill || '完成'}}</text>
+      </view>
+      <view wx:if="{{showDoneLine}}" class="row done-line" hover-class="tap-on" data-tab="done" bindtap="goLists">
+        <view class="ck on"><view class="box"><view class="tick"></view></view></view>
+        <view class="row-main"><text class="row-t">今天完成了 {{doneCount}} 件</text></view>
+        <text class="lk muted">查看 ›</text>
+      </view>
+      <view class="row foot">
+        <button class="lk" hover-class="tap-on" bindtap="newTodo">＋ 加一件事</button>
+        <button class="lk muted" hover-class="tap-on" data-tab="todos" bindtap="goLists">{{todoMoreLabel}}</button>
+      </view>
+    </view>
+
+    <block wx:if="{{ideas}}">
+      <view class="gh"><text class="h2">点子</text><text class="gh-s">{{ideas.hint}}</text></view>
+      <view class="card">
+        <view class="row" wx:for="{{ideas.items}}" wx:key="id">
+          <view class="ic sm idea"><view class="i i-bulb" style="width:26.923rpx;height:26.923rpx;"></view></view>
+          <button class="row-main" hover-class="tap-on" data-id="{{item.id}}" bindtap="editIdea">
+            <text class="row-t">{{item.text}}</text>
+            <text class="sub {{item.subCls}}">{{item.sub}}</text>
+          </button>
+          <button class="lk" hover-class="tap-on" data-id="{{item.id}}" catchtap="onIdeaTodo">转待办</button>
+          <button class="lk muted" hover-class="tap-on" data-id="{{item.id}}" catchtap="onIdeaDrop">放下</button>
+        </view>
+        <view class="row foot">
+          <button class="lk" hover-class="tap-on" bindtap="newIdea">＋ 记一个点子</button>
+          <button class="lk muted" hover-class="tap-on" data-tab="ideas" bindtap="goLists">{{ideas.moreLabel}}</button>
+        </view>
+      </view>
+    </block>
+
+    <button wx:if="{{memory}}" class="card memo tap" hover-class="tap-on" bindtap="nextMemory" aria-label="换一句">
+      <text class="lab">{{memory.days}} 天前的你写道</text>
+      <text class="q">{{memory.quote}}</text>
+      <text class="sub">{{memory.meta}}</text>
+    </button>
+  </view>
+
+  <toast id="toast" bind:act="onToastAct" />
+  <page-container show="{{ed.show}}" position="center" overlay="{{false}}" duration="{{0}}" close-on-slide-down="{{false}}" custom-style="width:100%;height:100%;padding:0;margin:0;background:transparent;overflow:visible;" bind:afterleave="onOverlayBack">
+    <editor show="{{ed.show}}" mode="{{ed.mode}}" item="{{ed.item}}" token="{{ed.token}}" theme="{{theme}}" bind:close="closeEditor" bind:submit="onEditorSubmit" />
+  </page-container>
+</view>

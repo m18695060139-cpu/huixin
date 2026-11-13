@@ -1,0 +1,185 @@
+.reply-p {
+  display: block;
+  margin: 0;
+  font-family: var(--letter-font);
+  font-size: 30.769rpx;
+  line-height: 1.95;
+}
+.reply-sign .sign-b { font-size: 26.923rpx; color: var(--ink); font-weight: 700; }
+.reply-sign .when { font-size: 23.077rpx; color: var(--sub); }
+.mine-body { padding: 0 30.769rpx 30.769rpx; font-size: 28.846rpx; line-height: 1.85; color: var(--sub); }
+.lens-k { display: block; font-size: 25rpx; font-weight: 600; color: var(--sub); }
+.lens-v { display: block; font-size: 28.846rpx; line-height: 1.5; }
+.fail-card { display: flex; flex-direction: column; gap: 23.077rpx; font-size: 28.846rpx; line-height: 1.6; }
+.ic.gray { background: #8E8E93; }
+
+/* 焚毁这封信，对齐网页版文案和按住确认，不要特效 */
+.burn-entry {
+  margin-top: 123.077rpx;
+  padding: 7.692rpx 7.692rpx 38.462rpx;
+  text-align: center;
+}
+.burn-link {
+  border: none;
+  background: none;
+  color: var(--sub);
+  font-size: 25rpx;
+  font-weight: 400;
+  letter-spacing: .02em;
+  padding: 23.077rpx 30.769rpx;
+  opacity: .7;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+}
+.burn-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.burn-dim {
+  position: absolute;
+  top: 0; right: 0; bottom: 0; left: 0;
+  background: rgba(0,0,0,.36);
+  animation: fadein .22s ease;
+}
+@keyframes fadein { from { opacity: 0 } to { opacity: 1 } }
+.burn-card {
+  position: absolute;
+  left: 30.769rpx;
+  right: 30.769rpx;
+  bottom: calc(var(--safe-bottom) + 34.615rpx);
+  max-width: 1015.385rpx;
+  margin: 0 auto;
+  background: var(--card);
+  color: var(--text);
+  border-radius: 42.308rpx;
+  padding: 50rpx 42.308rpx 34.615rpx;
+  box-shadow: 0 15.385rpx 57.692rpx rgba(0,0,0,.12);
+  animation: sheetin .28s cubic-bezier(.2,.8,.2,1);
+  box-sizing: border-box;
+}
+.theme-night .burn-card { box-shadow: 0 15.385rpx 57.692rpx rgba(0,0,0,.6); }
+.theme-mono .burn-card { border-radius: 11.538rpx; }
+.burn-msg {
+  margin: 0 0 11.538rpx;
+  font-size: 32.692rpx;
+  font-weight: 600;
+  line-height: 1.5;
+  text-align: center;
+}
+.burn-msg text { display: block; }
+.burn-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 19.231rpx;
+  margin: 30.769rpx 0 42.308rpx;
+  padding: 23.077rpx;
+  border-radius: 26.923rpx;
+  background: var(--tile);
+  font-size: 28.846rpx;
+  line-height: 1.45;
+  color: var(--text);
+}
+.theme-mono .burn-check { border-radius: 7.692rpx; }
+.burn-box {
+  width: 42.308rpx;
+  height: 42.308rpx;
+  margin-top: 1.923rpx;
+  flex: none;
+  border: 3.846rpx solid var(--ring);
+  border-radius: 11.538rpx;
+  background: var(--card);
+  box-sizing: border-box;
+  position: relative;
+}
+.theme-mono .burn-box { border-radius: 7.692rpx; }
+.burn-box.on {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+.burn-box.on::after {
+  content: "";
+  position: absolute;
+  left: 10.5rpx;
+  top: 8rpx;
+  width: 21.154rpx;
+  height: 11.538rpx;
+  border-left: 3.846rpx solid var(--on-ink);
+  border-bottom: 3.846rpx solid var(--on-ink);
+  transform: rotate(-45deg);
+}
+.burn-actions {
+  display: flex;
+  gap: 19.231rpx;
+}
+.burn-keep {
+  flex: 1;
+  height: 96.154rpx;
+  min-height: 96.154rpx;
+  border-radius: 48.077rpx;
+  background: var(--text);
+  color: var(--card);
+  font-size: 30.769rpx;
+  font-weight: 600;
+}
+.theme-mono .burn-keep { border-radius: 11.538rpx; }
+.burn-hold {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  height: 96.154rpx;
+  border-radius: 48.077rpx;
+  background: var(--tile);
+  color: var(--danger);
+  font-size: 30.769rpx;
+  font-weight: 600;
+}
+.theme-mono .burn-hold { border-radius: 11.538rpx; }
+.burn-hold .fill {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 0;
+  overflow: hidden;
+  background: var(--danger);
+  pointer-events: none;
+  z-index: 0;
+}
+.burn-hold.holding .fill {
+  animation: holdfill 1.5s linear forwards;
+}
+@keyframes holdfill { from { width: 0; } to { width: 100%; } }
+.burn-hold .lab-idle,
+.burn-hold .lab-on {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  font-size: 30.769rpx;
+  font-weight: 600;
+}
+.burn-hold .lab-idle {
+  width: 100%;
+  color: var(--danger);
+  z-index: 1;
+}
+.burn-hold .fill-inner {
+  position: relative;
+  height: 100%;
+}
+.burn-hold .lab-on {
+  width: 100%;
+  color: var(--card);
+  z-index: 2;
+}
+.burn-hint {
+  margin: 23.077rpx 0 0;
+  display: block;
+  text-align: center;
+  font-size: 23.077rpx;
+  color: var(--sub);
+  line-height: 1.4;
+}

@@ -1,0 +1,110 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <view class="top-shield" style="height: {{statusBar}}px;"></view>
+  <view class="page tab-pad">
+    <view class="head stick-top" style="padding-top: {{statusBar + 12}}px;">
+      <view class="head-l">
+        <text class="eyebrow">{{eyebrow}}</text>
+        <text class="h1">信箱</text>
+      </view>
+      <view class="round-btn" bindtap="goSettings" aria-label="设置">
+        <view class="i i-gear"></view>
+      </view>
+    </view>
+    <view class="offline" wx:if="{{!online}}">离线中 · 改动会在联网后自动同步</view>
+
+    <view class="seg">
+      <view class="seg-btn {{tab === 'all' ? 'on' : ''}}" data-tab="all" bindtap="onTab">全部</view>
+      <view class="seg-btn {{tab === 'week' ? 'on' : ''}}" data-tab="week" bindtap="onTab">周信</view>
+      <view class="seg-btn {{tab === 'quarter' ? 'on' : ''}}" data-tab="quarter" bindtap="onTab">季信</view>
+      <view class="seg-btn {{tab === 'year' ? 'on' : ''}}" data-tab="year" bindtap="onTab">年信</view>
+    </view>
+
+    <view class="tiles">
+      <button wx:for="{{tiles}}" wx:key="key" class="tile" hover-class="tap-on" data-key="{{item.key}}" bindtap="goLists">
+        <text>{{item.label}}</text>
+        <text class="b">{{item.n}}</text>
+      </button>
+    </view>
+
+    <block wx:if="{{tab === 'week' || tab === 'quarter' || tab === 'year'}}">
+      <text class="note" style="margin-top:34.615rpx;">{{kindHead.note}}</text>
+      <view style="padding:0 7.692rpx;">
+        <button class="lk" hover-class="tap-on" data-kind="{{kindHead.kind}}" data-key="{{kindHead.key}}" bindtap="genDigest">{{kindHead.gen}}</button>
+      </view>
+      <block wx:if="{{kindDigests.length}}">
+        <view wx:for="{{kindDigests}}" wx:key="key" style="margin-top:23.077rpx;">
+          <view class="digest" data-kind="{{item.kind}}" data-key="{{item.key}}" bindtap="openDigest">
+            <view class="digest-h"><text class="badge">{{item.badge}}</text><text>{{item.lab}}</text></view>
+            <text class="digest-t" wx:if="{{item.title}}">{{item.title}}</text>
+            <text class="digest-b" wx:if="{{!item.hasStats}}">{{item.excerpt}}</text>
+            <view class="digest-stats" wx:if="{{item.hasStats}}">
+              <view><text>平均精力</text><text class="b">{{item.energy}}</text></view>
+              <view><text>完成待办</text><text class="b">{{item.todos}}</text></view>
+              <view><text>可能漏掉</text><text class="b">{{item.forgotten}}</text></view>
+            </view>
+            <text class="digest-more">{{item.read}}</text>
+          </view>
+        </view>
+      </block>
+      <view wx:else class="card empty mt">{{kindHead.empty}}</view>
+    </block>
+
+    <block wx:else>
+      <view class="gh"><text class="h2">状态</text><text class="gh-s">近 30 天</text></view>
+      <view wx:if="{{!state.ready}}" class="card empty">{{state.empty}}</view>
+      <view wx:else class="card pad">
+        <view class="big-num">
+          <text class="small muted" style="font-weight:600;">平均精力</text>
+          <text class="b">{{state.avg}}</text>
+          <text class="small muted">/ 5</text>
+          <text wx:if="{{state.trend}}" class="{{state.trendCls === 'down' ? 'down' : 'up'}}" style="{{state.trendCls === 'flat' ? 'color:var(--sub);' : ''}}">{{state.trend}}</text>
+        </view>
+        <view class="chart-box">
+          <canvas type="2d" id="energy" class="chart"></canvas>
+        </view>
+        <view class="chart-x"><text>{{state.start}}</text><text>今天</text></view>
+        <view class="kv" wx:if="{{state.top}}"><text>出现最多的情绪</text><text class="b">{{state.top}}</text></view>
+        <view class="kv" wx:if="{{state.rates}}"><text>习惯完成率</text><text class="b">{{state.rates}}</text></view>
+      </view>
+
+      <view wx:if="{{empty}}" class="card empty mt">信箱还是空的。今晚写第一封信吧。
+        <button class="lk" hover-class="tap-on" data-date="{{writeDate}}" bindtap="goWrite">去写信 ›</button>
+      </view>
+
+      <block wx:for="{{groups}}" wx:key="wk">
+        <view class="gh"><text class="h2">{{item.title}}</text><text class="gh-s">{{item.range}}</text></view>
+        <view wx:if="{{item.digest}}" class="digest" style="margin-bottom:23.077rpx;" data-kind="{{item.digest.kind}}" data-key="{{item.digest.key}}" bindtap="openDigest">
+          <view class="digest-h"><text class="badge">{{item.digest.badge}}</text><text>{{item.digest.lab}}</text></view>
+          <text class="digest-t" wx:if="{{item.digest.title}}">{{item.digest.title}}</text>
+          <text class="digest-b" wx:if="{{!item.digest.hasStats}}">{{item.digest.excerpt}}</text>
+          <view class="digest-stats" wx:if="{{item.digest.hasStats}}">
+            <view><text>平均精力</text><text class="b">{{item.digest.energy}}</text></view>
+            <view><text>完成待办</text><text class="b">{{item.digest.todos}}</text></view>
+            <view><text>可能漏掉</text><text class="b">{{item.digest.forgotten}}</text></view>
+          </view>
+          <text class="digest-more">{{item.digest.read}}</text>
+        </view>
+        <view class="card">
+          <view wx:for="{{item.rows}}" wx:for-item="row" wx:key="date" class="row day {{row.kind === 'gap' ? 'gapday' : ''}}" hover-class="tap-on" data-date="{{row.date}}" data-kind="{{row.kind}}" bindtap="onRow">
+            <view class="dt {{row.kind === 'gap' ? 'gap' : ''}}">
+              <text class="num">{{row.num}}</text>
+              <text class="wd">{{row.wd}}</text>
+            </view>
+            <view class="row-main">
+              <text class="row-t one-line">{{row.kind === 'gap' ? '这天没有写信' : row.line}}</text>
+              <text class="sub">{{row.kind === 'gap' ? '点一下补写' : row.meta}}</text>
+            </view>
+            <view class="i i-chev"></view>
+          </view>
+          <view class="row foot" wx:if="{{item.canGen}}">
+            <button class="lk" hover-class="tap-on" data-kind="week" data-key="{{item.wk}}" bindtap="genDigest">让回信写这一周的周信 ›</button>
+          </view>
+        </view>
+      </block>
+      <view wx:if="{{more}}" style="text-align:center;margin-top:38.462rpx;">
+        <button class="btn ghost sm" hover-class="tap-on" bindtap="older">更早的信</button>
+      </view>
+    </block>
+  </view>
+  <toast id="toast" />
+</view>

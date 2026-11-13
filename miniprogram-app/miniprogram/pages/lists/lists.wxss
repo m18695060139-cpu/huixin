@@ -1,0 +1,12 @@
+.seg.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.seg .seg-btn, .mini-seg .seg-btn {
+  height: 61.538rpx; border-radius: 15.385rpx; font-size: 25rpx;
+  display: flex; align-items: center; justify-content: center;
+}
+.mini-seg .seg-btn { height: auto; padding: 11.538rpx 26.923rpx; font-size: 26.923rpx; border-radius: 17.308rpx; color: var(--sub); }
+.seg-btn.on, .mini-seg .seg-btn.on {
+  background: var(--card);
+  color: var(--text);
+  font-weight: 600;
+  box-shadow: 0 1.923rpx 5.769rpx rgba(0,0,0,.12);
+}

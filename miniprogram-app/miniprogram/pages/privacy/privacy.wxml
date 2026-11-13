@@ -1,0 +1,24 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <st-nav title="隐私说明" back="设置" bind:back="back"></st-nav>
+  <view class="page" style="padding-top: {{navBar}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
+    <view class="card pad privacy-body">
+      <text class="h">这是给你自己用的记录本</text>
+      <text class="bullet">回信小记不提供分享、广场或别人可见的页面。右上角菜单里的转发已关闭。</text>
+      <text class="h">会保存什么</text>
+      <text class="bullet">你写下的信、待办、点子、习惯名、称呼和自省提示，以及你自己选的心情和精力。</text>
+      <text class="bullet">微信云开发用来识别「这是你的数据」的 openid。不收集手机号、头像、昵称、位置和通讯录。</text>
+      <text class="h">存在哪里</text>
+      <text class="bullet">存在微信云开发。数据库权限是「仅创建者可读写」，别人的小程序登录读不到你的记录。</text>
+      <text class="bullet">保存文字前会做内容安全检查。若被拦住，会提示你修改，已经写在输入框里的字不会被清掉。</text>
+      <text class="h">你可以删掉</text>
+      <text class="bullet">设置里的「清空我的全部数据」会删除云端和这台手机上的记录。</text>
+      <text class="h">只读 API 密钥（可选）</text>
+      <text class="bullet">只有你自己在设置里点「生成密钥」才会有。不生成，就没有任何外部工具能读你的数据。</text>
+      <text class="bullet">有了这串密钥，任何人或工具都能读到你全部的信、回信、待办、点子、习惯和周信季信。接口只能读，不能改。</text>
+      <text class="bullet">你把密钥交给谁，数据就会发给谁。它离开回信小记之后怎么保存、怎么使用，由对方负责，回信小记管不了。只交给你信任的 agent 或工具。</text>
+      <text class="bullet">服务器上只保存密钥的摘要，不保存完整密钥；完整密钥只在生成时显示一次。设置里能看到它是什么时候生成、最近一次什么时候被使用。</text>
+      <text class="bullet">点「复制」时，密钥会写进这台手机的剪贴板，只用来让你粘贴给自己选的工具。</text>
+      <text class="bullet">随时可以在设置里「作废」或「重新生成」，旧密钥马上失效。「清空我的全部数据」也会一并作废密钥。</text>
+    </view>
+  </view>
+</view>

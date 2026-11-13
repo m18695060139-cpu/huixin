@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "openapi": ["security.msgSecCheck"]
+  },
+  "timeout": 60,
+  "memorySize": 256,
+  "triggers": [
+    {
+      "name": "digestAt6",
+      "type": "timer",
+      "config": "0 0 6 * * * *"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+.editor-wrap { position: relative; }
+.editor-ph {
+  position: absolute; left: 0; top: 0; right: 0;
+  color: var(--ring); font-family: var(--letter-font); font-size: 32.692rpx; line-height: 1.9;
+  white-space: pre-wrap; word-break: break-word; pointer-events: none; z-index: 0;
+}
+.day-title { font-size: 30.769rpx; font-weight: 600; display: block; text-align: center; }
+.nav-btn.off { color: var(--ring); }
+.round-btn.ghost { background: transparent; }
+.sent .tick {
+  width: 15.385rpx; height: 9.615rpx; border-left: 3.846rpx solid #000000; border-bottom: 3.846rpx solid #000000;
+  transform: rotate(-45deg); margin-top: -3.846rpx;
+}
+.dot { width: 57.692rpx; height: 57.692rpx; }
+
+.tidy-dock {
+  display: flex;
+  flex-direction: column;
+  gap: 15.385rpx;
+  align-items: stretch;
+}
+.tidy-st { font-size: 26.923rpx; color: var(--sub); text-align: center; padding: 7.692rpx 0; }
+.tidy-result {
+  display: block;
+  font-size: 28.846rpx;
+  line-height: 1.55;
+  color: var(--text);
+  background: var(--card);
+  border-radius: 26.923rpx;
+  padding: 23.077rpx 26.923rpx;
+  max-height: 269.231rpx;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.tidy-acts { display: flex; justify-content: center; gap: 15.385rpx; flex-wrap: wrap; }
+.tidy-acts .chip { height: 69.231rpx; padding: 0 30.769rpx; border-radius: 34.615rpx; background: var(--card); font-size: 26.923rpx; display: flex; align-items: center; }
+.theme-mono .tidy-result { border-radius: 7.692rpx; }

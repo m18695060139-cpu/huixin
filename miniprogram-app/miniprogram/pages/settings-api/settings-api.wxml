@@ -1,0 +1,73 @@
+<view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
+  <st-nav title="API 密钥" back="设置" bind:back="back"></st-nav>
+  <view class="page st-page" style="padding-top: {{navBar}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 80px);">
+
+    <view class="st-sec">
+      <view class="st-group">
+        <view class="st-row" wx:if="{{key.loading}}">
+          <view class="st-body"><text class="st-empty">读取中…</text></view>
+        </view>
+        <view class="st-row" wx:elif="{{key.error}}">
+          <view class="st-body"><text class="st-empty">{{key.error}}</text></view>
+        </view>
+        <view class="st-row" wx:elif="{{!key.exists}}">
+          <view class="st-body">
+            <view class="st-main">
+              <text class="st-t st-grow">还没有密钥</text>
+              <text class="st-sub">生成后，你信任的 agent 或工具可以用它读取你的数据</text>
+            </view>
+          </view>
+        </view>
+        <view class="st-row" wx:else>
+          <view class="st-body">
+            <view class="st-main">
+              <text class="st-t st-grow">密钥 {{key.hint}}…</text>
+              <text class="st-sub">{{key.createdText}} 生成 · {{key.usedText}}</text>
+            </view>
+          </view>
+        </view>
+      </view>
+      <text class="st-foot">{{keyRisk}}</text>
+    </view>
+
+    <block wx:if="{{!key.loading && !key.error && key.exists}}">
+      <view class="st-sec">
+        <view class="st-group">
+          <view class="st-row">
+            <view class="st-body st-key-body">
+              <text class="st-key" user-select="true">{{key.doc}}</text>
+              <view class="st-key-foot">
+                <view class="st-copy" hover-class="st-act-on" bindtap="onCopy">{{key.fresh ? '复制' : '复制用法'}}</view>
+                <text class="st-t st-grow st-risk">{{key.fresh ? '只显示这一次，先复制好。' : '把密钥那行换成你保存的密钥。'}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+      <view class="st-sec">
+        <view class="st-group">
+          <view class="st-row" hover-class="st-hover" bindtap="onRegen">
+            <view class="st-body"><text class="st-t st-accent st-grow">{{key.busy ? '生成中…' : '重新生成'}}</text></view>
+          </view>
+        </view>
+      </view>
+      <view class="st-sec">
+        <view class="st-group">
+          <view class="st-row" hover-class="st-hover" bindtap="onRevoke">
+            <view class="st-body"><text class="st-t st-danger st-grow">作废</text></view>
+          </view>
+        </view>
+      </view>
+    </block>
+
+    <view class="st-sec" wx:if="{{!key.loading && !key.error && !key.exists}}">
+      <view class="st-group">
+        <view class="st-row" hover-class="st-hover" bindtap="onNew">
+          <view class="st-body"><text class="st-t st-accent st-grow">{{key.busy ? '生成中…' : '生成密钥'}}</text></view>
+        </view>
+      </view>
+    </view>
+
+  </view>
+  <toast id="toast" />
+</view>

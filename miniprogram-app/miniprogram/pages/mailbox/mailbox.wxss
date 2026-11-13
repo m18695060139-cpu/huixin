@@ -1,0 +1,6 @@
+.seg-btn {
+  height: 61.538rpx; border-radius: 15.385rpx; font-size: 25rpx;
+  display: flex; align-items: center; justify-content: center;
+  flex: 1 1 0; width: 0; min-width: 0;
+}
+.seg-btn.on { background: var(--card); box-shadow: 0 1.923rpx 5.769rpx rgba(0,0,0,.12); font-weight: 600; }

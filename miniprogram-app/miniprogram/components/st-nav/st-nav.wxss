@@ -1,0 +1,77 @@
+/* 自定义顶栏：padding-top 是状态栏高度，标题行按胶囊高度垂直居中。标题相对整屏居中。 */
+.st-nav {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 40;
+  background: var(--bg);
+  box-sizing: content-box;
+}
+.st-nav-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.st-nav .t {
+  font-weight: 600;
+  font-size: 32.692rpx;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  width: 100%;
+  padding: 0 160rpx;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+.st-back {
+  position: absolute;
+  left: 8rpx;
+  top: 0;
+  right: auto;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  color: var(--ink);
+  font-size: 30.769rpx;
+  padding: 0 15.385rpx;
+  z-index: 2;
+  background: transparent;
+  border: none;
+  margin: 0;
+  line-height: 1;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.st-back::after { display: none; }
+.st-back .i-left {
+  width: 38.462rpx;
+  height: 38.462rpx;
+  background-color: var(--ink);
+  flex: none;
+}
+.st-back-t { color: var(--ink); font-size: 30.769rpx; }
+.st-nav-close {
+  position: absolute;
+  left: 15.385rpx;
+  right: auto;
+  top: 50%;
+  bottom: auto;
+  transform: translateY(-50%);
+  width: 65.385rpx;
+  min-width: 65.385rpx;
+  max-width: 65.385rpx;
+  height: 65.385rpx;
+  border-radius: 32.692rpx;
+  background-color: var(--card);
+  padding: 0;
+  z-index: 2;
+}

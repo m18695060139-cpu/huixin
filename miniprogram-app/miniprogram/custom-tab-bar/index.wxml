@@ -1,0 +1,18 @@
+<view class="tab-slot theme-{{theme}} {{hidden ? 'hide-m' : ''}}">
+  <view class="tabbar">
+    <view class="nav">
+      <view class="tab {{selected === 0 ? 'on' : ''}}" data-i="0" bindtap="go">
+        <view class="i i-today"></view>
+        <text>今天</text>
+        <view class="badge-dot" wx:if="{{badge && selected !== 0}}"></view>
+      </view>
+      <view class="tab write {{selected === 1 ? 'on' : ''}}" data-i="1" bindtap="go">
+        <view class="i i-pen"></view>
+      </view>
+      <view class="tab {{selected === 2 ? 'on' : ''}}" data-i="2" bindtap="go">
+        <view class="i i-box"></view>
+        <text>信箱</text>
+      </view>
+    </view>
+  </view>
+</view>

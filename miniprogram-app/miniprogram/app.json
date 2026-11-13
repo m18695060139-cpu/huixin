@@ -1,0 +1,50 @@
+{
+  "pages": [
+    "pages/today/today",
+    "pages/write/write",
+    "pages/mailbox/mailbox",
+    "pages/letter/letter",
+    "pages/digest/digest",
+    "pages/lists/lists",
+    "pages/settings/settings",
+    "pages/settings-ai/settings-ai",
+    "pages/settings-api/settings-api",
+    "pages/settings-name/settings-name",
+    "pages/settings-deliver/settings-deliver",
+    "pages/settings-appearance/settings-appearance",
+    "pages/settings-habits/settings-habits",
+    "pages/settings-questions/settings-questions",
+    "pages/settings-demo/settings-demo",
+    "pages/privacy/privacy"
+  ],
+  "window": {
+    "navigationBarTitleText": "回信小记",
+    "navigationStyle": "custom",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F2F2F7",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "custom": true,
+    "color": "#6C6C70",
+    "selectedColor": "#D0402B",
+    "backgroundColor": "#F2F2F7",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/today/today",
+        "text": "今天"
+      },
+      {
+        "pagePath": "pages/mailbox/mailbox",
+        "text": "信箱"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "usingComponents": {
+    "st-nav": "/components/st-nav/st-nav"
+  }
+}
+
