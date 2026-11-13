@@ -65,6 +65,10 @@ module.exports = Behavior({
       const bar = typeof this.getTabBar === 'function' && this.getTabBar();
       if (bar) bar.setData({ hidden: false });
     },
+    // 系统右滑 / 安卓返回：page-container 会先关图层，不销毁当前页
+    onOverlayBack() {
+      if (this.data.ed && this.data.ed.show) this.closeEditor();
+    },
     // 跟网页版一样先改本机、马上关掉面板，云端在后台慢慢存。
     // 只有内容安全检查没过时才退回：本机已经回滚，再把刚写的内容原样放回面板，不会丢。
     onEditorSubmit(e) {

@@ -357,14 +357,34 @@ Page({
     this.restoreChrome();
     this._taking = false;
   },
+  onOverlayBack() {
+    // 寄出屏在展示时，返回只关掉这一层，停在已寄出的写信页，不要退回未寄出的编辑态
+    if (this._leaveAfterSent) {
+      this._leaveAfterSent = false;
+      if (this._leaving) return;
+      this._leaving = true;
+      if (this.data.sentShow) this.setData({ sentShow: false });
+      this.restoreChrome();
+      this._pageHidden = true;
+      nav.closeWritePage();
+      return;
+    }
+    if (this.data.sentShow) {
+      this.setData({ sentShow: false });
+      this.restoreChrome();
+      return;
+    }
+    if (this.data.ed && this.data.ed.show) this.closeEditor();
+  },
   sentClose() {
     if (this._leaving) return;
-    this._leaving = true;
     this._sendGen = (this._sendGen || 0) + 1;
+    this._leaveAfterSent = true;
     this.setData({ sentShow: false });
     this.restoreChrome();
-    this._pageHidden = true;
-    nav.closeWritePage();
+    // page-container 关掉后走 afterleave；给一个备援，避免个别基础库不触发
+    const self = this;
+    setTimeout(function () { if (self._leaveAfterSent) self.onOverlayBack(); }, 80);
   },
   closeWrite() {
     if (this._leaving) return;
