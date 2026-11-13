@@ -1,9 +1,9 @@
 <view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
   <view class="subpage-bar sheet-bar" style="padding-top: {{statusBar}}px;">
     <view>
-      <view class="sp"></view>
-      <text class="t"></text>
       <button class="x" hover-class="tap-on" bindtap="back" aria-label="关闭"><view class="i i-x"></view></button>
+      <text class="t"></text>
+      <view class="sp"></view>
     </view>
   </view>
   <view class="page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">
@@ -108,10 +108,35 @@
           <button class="lk" hover-class="tap-on" bindtap="takeBack">在写信里打开</button>
         </view>
       </block>
+      <view class="burn-entry">
+        <button class="burn-link" hover-class="tap-on" bindtap="onBurnAsk">焚毁这封信</button>
+      </view>
     </block>
   </view>
   <toast id="toast" bind:act="onToastAct" />
-  <page-container show="{{ed.show}}" position="center" overlay="{{false}}" duration="{{0}}" close-on-slide-down="{{false}}" custom-style="width:100%;height:100%;padding:0;margin:0;background:transparent;overflow:visible;" bind:afterleave="onOverlayBack">
-    <editor show="{{ed.show}}" mode="{{ed.mode}}" item="{{ed.item}}" token="{{ed.token}}" theme="{{theme}}" bind:close="closeEditor" bind:submit="onEditorSubmit" />
+  <page-container show="{{ed.show || burn.show}}" position="center" overlay="{{false}}" duration="{{0}}" close-on-slide-down="{{false}}" custom-style="width:100%;height:100%;padding:0;margin:0;background:transparent;overflow:visible;" bind:afterleave="onOverlayBack">
+    <editor wx:if="{{ed.show}}" show="{{ed.show}}" mode="{{ed.mode}}" item="{{ed.item}}" token="{{ed.token}}" theme="{{theme}}" bind:close="closeEditor" bind:submit="onEditorSubmit" />
+    <view wx:elif="{{burn.show}}" class="burn-root">
+      <view class="burn-dim" bindtap="onBurnKeep"></view>
+      <view class="burn-card" catchtap="noop">
+        <view class="burn-msg"><text>焚毁后，这封信和它的回信都会消失，</text><text>找不回来。</text></view>
+        <view class="burn-check" bindtap="onBurnItems">
+          <view class="burn-box {{burn.items ? 'on' : ''}}"></view>
+          <text>同时删掉它整理出的待办和点子</text>
+        </view>
+        <view class="burn-actions">
+          <button class="btn burn-keep" hover-class="tap-on" bindtap="onBurnKeep">留着</button>
+          <view class="burn-hold {{burn.holding ? 'holding' : ''}}" hover-class="none" catchtouchstart="onHoldStart" catchtouchmove="onHoldMove" catchtouchend="onHoldEnd" catchtouchcancel="onHoldEnd" catchlongpress="noop" aria-label="按住一秒半焚毁这封信">
+            <text class="lab-idle">焚毁</text>
+            <view class="fill">
+              <view class="fill-inner" style="width: {{burn.holdW}}px;">
+                <text class="lab-on">焚毁</text>
+              </view>
+            </view>
+          </view>
+        </view>
+        <text class="burn-hint">按住「焚毁」一秒半，松手即取消</text>
+      </view>
+    </view>
   </page-container>
 </view>

@@ -61,10 +61,10 @@
 .st-back-t { color: var(--ink); font-size: 30.769rpx; }
 .st-nav-close {
   position: absolute;
-  right: 15.385rpx;
+  left: 15.385rpx;
+  right: auto;
   top: 50%;
   bottom: auto;
-  left: auto;
   transform: translateY(-50%);
   width: 65.385rpx;
   min-width: 65.385rpx;

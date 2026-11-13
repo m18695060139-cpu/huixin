@@ -7,6 +7,7 @@ const CACHE = 'hx_mp_v1';
 
 const listeners = [];
 const held = {};
+const burned = {};
 
 function blank() {
   return {
@@ -145,6 +146,19 @@ function markOpened(date) {
   emit();
 }
 
+// 焚毁成功后立刻从本机拿掉。burned 防止正在进行的 refresh 把旧信又合并回来。
+function applyBurn(date, items) {
+  if (!date) return;
+  burned[date] = true;
+  delete data.letters[date];
+  if (items) {
+    data.todos = (data.todos || []).filter(x => x.source_date !== date);
+    data.ideas = (data.ideas || []).filter(x => x.source_date !== date);
+  }
+  saveCache();
+  emit();
+}
+
 function upsertTodo(todo) {
   const i = data.todos.findIndex(x => x.id === todo.id);
   if (i >= 0) data.todos[i] = Object.assign({}, data.todos[i], todo);
@@ -236,6 +250,7 @@ function resetLocal() {
   data.online = cloud.cloudOn();
   data.cloud = data.online;
   Object.keys(held).forEach(k => delete held[k]);
+  Object.keys(burned).forEach(k => delete burned[k]);
   try {
     const info = wx.getStorageInfoSync();
     (info.keys || []).forEach(k => {
@@ -288,8 +303,10 @@ function applyCloud(bundle) {
     letters[row.date] = next;
   });
   Object.keys(data.letters).forEach(d => {
+    if (burned[d]) return;
     if (!letters[d] && (held[d] || data.letters[d])) letters[d] = data.letters[d];
   });
+  Object.keys(letters).forEach(d => { delete burned[d]; });
   data.letters = letters;
   data.todos = (bundle.todos || []).map(row => ({
     _id: row._id,
@@ -365,7 +382,7 @@ async function refresh() {
 
 module.exports = {
   get, subscribe, boot, refresh, setOnline, clearWarn, hold, unhold,
-  upsertLetter, markOpened, upsertTodo, removeTodo, removeIdea, upsertIdea, upsertHabit, setLog,
+  upsertLetter, markOpened, applyBurn, upsertTodo, removeTodo, removeIdea, upsertIdea, upsertHabit, setLog,
   setReplying, getReplying,
   patchSettings, skipBackfill, setWriteTarget, takeWriteTarget, noteCloudId, resetLocal,
 };

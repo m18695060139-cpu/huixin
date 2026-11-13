@@ -301,6 +301,30 @@ async function saveSettings(patch) {
 }
 
 
+async function burnLetter(date, items) {
+  const dropTodos = [];
+  const dropIdeas = [];
+  if (items) {
+    (state.get().todos || []).forEach(x => { if (x.source_date === date) dropTodos.push(x.id); });
+    (state.get().ideas || []).forEach(x => { if (x.source_date === date) dropIdeas.push(x.id); });
+  }
+  try {
+    const r = await cloud.call('save', { entity: 'letter', action: 'burn', payload: { date: date, items: !!items } });
+    if (!r || r.ok === false) return r || { ok: false, message: '没能焚毁，请再试一次' };
+    cloud.drop(function (x) {
+      if (x.entity === 'letter' && x.payload && x.payload.date === date) return true;
+      if (items && x.entity === 'todo' && x.payload && (x.payload.source_date === date || dropTodos.indexOf(x.payload.id) >= 0)) return true;
+      if (items && x.entity === 'idea' && x.payload && (x.payload.source_date === date || dropIdeas.indexOf(x.payload.id) >= 0)) return true;
+      return false;
+    });
+    state.applyBurn(date, !!items);
+    clearDraft(date);
+    return r;
+  } catch (e) {
+    return { ok: false, message: '没能焚毁，请再试一次' };
+  }
+}
+
 async function wipe() {
   if (cloud.cloudOn()) {
     try { await cloud.call('wipe', {}); }
@@ -316,5 +340,5 @@ module.exports = {
   saveTodo, toggleTodo, dropTodo, deleteTodo,
   saveIdea, setIdeaStatus, ideaToTodo,
   saveHabit, archiveHabit, toggleHabit,
-  saveSettings, wipe,
+  saveSettings, burnLetter, wipe,
 };

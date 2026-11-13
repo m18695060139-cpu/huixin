@@ -39,6 +39,7 @@ exports.main = async (event) => {
   const action = event && event.action;
   const payload = (event && event.payload) || {};
   try {
+    if (entity === 'letter' && action === 'burn') return await burnLetter(OPENID, payload);
     if (entity === 'letter') return await saveLetter(OPENID, payload);
     if (entity === 'todo') return await saveTodo(OPENID, action, payload);
     if (entity === 'idea') return await saveIdea(OPENID, action, payload);
@@ -65,6 +66,42 @@ async function upsert(coll, openid, match, data) {
   }
   const add = await db.collection(coll).add({ data: Object.assign({}, match, data, { _openid: openid }) });
   return add._id;
+}
+
+
+async function removeWhere(name, openid, match) {
+  const coll = db.collection(name);
+  let n = 0;
+  for (let i = 0; i < 50; i++) {
+    let res;
+    try {
+      res = await coll.where(Object.assign({ _openid: openid }, match)).limit(100).get();
+    } catch (e) {
+      break;
+    }
+    const rows = (res && res.data) || [];
+    if (!rows.length) break;
+    await Promise.all(rows.map(row => coll.doc(row._id).remove()));
+    n += rows.length;
+    if (rows.length < 100) break;
+  }
+  return n;
+}
+
+// 焚毁一封信。只删当前用户这一天的信和回信；待办点子默认留下，勾了才删。周信季信年信不改。
+async function burnLetter(openid, payload) {
+  const date = payload && payload.date;
+  const items = !!(payload && payload.items);
+  if (!isDate(date)) return fail('日期不对');
+  const row = await find('letters', openid, { date: date });
+  if (!row) return fail('找不到这封信', 'not-found');
+  await removeWhere('letters', openid, { date: date });
+  let todos = 0, ideas = 0;
+  if (items) {
+    todos = await removeWhere('todos', openid, { source_date: date });
+    ideas = await removeWhere('ideas', openid, { source_date: date });
+  }
+  return { ok: true, items: items, todos: todos, ideas: ideas };
 }
 
 async function saveLetter(openid, payload) {

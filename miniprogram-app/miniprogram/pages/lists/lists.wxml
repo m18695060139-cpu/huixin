@@ -1,9 +1,9 @@
 <view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
   <view class="subpage-bar sheet-bar" style="padding-top: {{statusBar}}px;">
     <view>
-      <view class="sp"></view>
-      <text class="t">待办与点子</text>
       <button class="x" hover-class="tap-on" bindtap="back" aria-label="关闭"><view class="i i-x"></view></button>
+      <text class="t">待办与点子</text>
+      <view class="sp"></view>
     </view>
   </view>
   <view class="page" style="padding-top: {{statusBar + 58}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 40px);">

@@ -111,4 +111,13 @@ function clearQueue() {
   saveQueue();
 }
 
-module.exports = { setHooks, cloudOn, call, enqueue, flush, clearQueue, pending };
+function drop(pred) {
+  const q = loadQueue();
+  const next = q.filter(x => !pred(x));
+  if (next.length !== q.length) {
+    queue = next;
+    saveQueue();
+  }
+}
+
+module.exports = { setHooks, cloudOn, call, enqueue, flush, clearQueue, drop, pending };

@@ -386,6 +386,11 @@ details.mine .letter-text { padding: 0 30.769rpx 30.769rpx; font-size: 28.846rpx
   padding: 23.077rpx 26.923rpx; font-size: 32.692rpx; outline: none;
 }
 textarea.input { line-height: 1.6; resize: vertical; }
+/* 对齐网页 rows=2/3。auto-height 按正文算高，空着时不管占位文字，
+   所以要把最小高度写成能完整放下多行 placeholder 的尺寸。
+   行高 32.692rpx * 1.6 + 上下 padding 23.077rpx*2 */
+textarea.input.area-2 { min-height: 150.77rpx; }
+textarea.input.area-3 { min-height: 203.077rpx; }
 .group { background: var(--card); border-radius: 26.923rpx; }
 .group .row { padding: 0 26.923rpx; }
 .opts { display: flex; flex-direction: column; }
@@ -714,6 +719,19 @@ button.btn.ghost { background-color: var(--tile); color: var(--text); }
 button.btn.sm { height: 69.231rpx; border-radius: 34.615rpx; padding: 0 30.769rpx; font-size: 26.923rpx; width: auto; flex: none; }
 button.btn.dark { background-color: #2C2C2E; color: #FFFFFF; }
 button.btn.light { background-color: #FFFFFF; color: #000000; }
+/* 焚毁确认「留着」跟网页一样用正文字色，不用品牌红 */
+button.btn.burn-keep {
+  flex: 1;
+  width: auto;
+  height: 96.154rpx;
+  min-height: 96.154rpx;
+  border-radius: 48.077rpx;
+  background-color: var(--text);
+  color: var(--card);
+  font-size: 30.769rpx;
+  font-weight: 600;
+}
+.theme-mono button.btn.burn-keep { border-radius: 11.538rpx; }
 button.lk { width: auto; background: transparent; color: var(--ink); padding: 19.231rpx 0; }
 button.chip, .chip {
   width: auto;
