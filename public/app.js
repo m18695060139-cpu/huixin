@@ -254,6 +254,7 @@
       applyTheme();
       pickStartTab();
       render();
+      bootNav();
       try { await refresh(); if (!V.editing) render(); } catch (e) { setOnline(false); }
       flush();
       return;
@@ -262,6 +263,7 @@
       await refresh();
       pickStartTab();
       render();
+      bootNav();
     } catch (e) {
       if (!S) showLogin(/请先登录/.test(e.message) ? '' : '连不上服务器，请检查网络后再试');
     }
@@ -302,6 +304,7 @@
         await refresh();
         pickStartTab();
         render();
+        bootNav();
       } catch (err) {
         $('#login-msg').textContent = err.message;
         btn.disabled = false; btn.textContent = label;
@@ -582,7 +585,7 @@
     V._composing = showEditor;
 
     const bar = `<div class="wbar">
-      ${showEditor ? `<button class="round-btn" data-act="tab" data-v="today" aria-label="关闭">${ICON.x}</button>` : '<span style="width:40px"></span>'}
+      ${showEditor ? `<button class="round-btn" data-act="close-write" aria-label="关闭">${ICON.x}</button>` : '<span style="width:40px"></span>'}
       <div class="daynav">
         <button class="nav-btn" data-act="day" data-v="-1" aria-label="前一天">${ICON.left}</button>
         <div class="lab"><b>${label}</b><span>${cn(d)} 星期${wd(d)}</span></div>
@@ -884,12 +887,20 @@
   }
 
   // ───────────── 二级页面 ─────────────
-  function openSheet(s) { s.fresh = true; V.sheets.push(s); render(); }
+  function openSheet(s, opts) {
+    s.fresh = true;
+    V.sheets.push(s);
+    render();
+    if (opts && opts.replace) navReplace();
+    else navPush();
+  }
   function closeSheet() {
     if (V.burn && V.burn.phase === 'fire') return;
+    if (navBack()) return;
+    // 没有可回的历史层（例如刚登录还没种下栈），就地关掉
     if (V.burn && V.burn.phase === 'confirm') { V.burn = null; render(); return; }
     const top = V.sheets[V.sheets.length - 1];
-    if (top && top.type === 'settings') { closeSettings(); return; }
+    if (top && top.type === 'settings') { closeSettingsFromHistory(); return; }
     V.sheets.pop(); V.droppedIdeas = undefined; if (!V.sheets.length) { V.openGroups = null; V.olderTodos = undefined; } render();
   }
   function viewSheet(s) {
@@ -1041,11 +1052,205 @@
   function dropSettingsHistory() {
     V.setPage = '';
     V.setAnim = '';
-    if (location.hash.startsWith('#settings')) history.replaceState({}, '', location.pathname + location.search);
+    if (V.key) V.key.fresh = '';
   }
   function setUrl(page) { return page ? '#settings/' + page : '#settings'; }
 
-  let setHistLock = false;
+  // ───────────── 返回栈 ─────────────
+  // 每一层可进入的界面（写信、信、回信、周季年信、待办列表、待办/点子编辑、
+  // 设置及二级页、寄出屏、焚毁确认）都 pushState。手机边缘滑动和浏览器后退
+  // 都走 popstate，只退一层。点 ✕ / 返回也走 history.back()，避免自己关了
+  // 却留下一条空历史。自己记 navDepth，因为浏览器不让读整个历史栈。
+  let navDepth = 0;
+  let navLock = null;          // null | 'rewind'
+  let navRewindTo = 0;
+  let navRewindAfter = null;
+
+  function navSnap() {
+    return {
+      hx: 'nav',
+      depth: navDepth,
+      tab: V.tab,
+      writeDate: V.writeDate,
+      editing: !!V.editing,
+      sheets: V.sheets.map(s => ({
+        type: s.type, date: s.date, id: s.id, kind: s.kind, key: s.key,
+        tab: s.tab, note: s.note,
+      })),
+      setPage: V.setPage || '',
+      sent: V.sent ? { date: V.sent.date, at: V.sent.at ? new Date(V.sent.at).toISOString() : null } : null,
+      burn: (V.burn && V.burn.phase === 'confirm') ? { date: V.burn.date, items: !!V.burn.items } : null,
+    };
+  }
+  function navUrl(st) {
+    const s = st || navSnap();
+    if (s.burn) return '#burn';
+    if (s.sent) return '#sent';
+    const top = s.sheets && s.sheets[s.sheets.length - 1];
+    if (top) {
+      if (top.type === 'settings') return s.setPage ? '#settings/' + s.setPage : '#settings';
+      if (top.type === 'reply' && top.date) return '#reply/' + top.date;
+      if (top.type === 'letter' && top.date) return '#letter/' + top.date;
+      if (top.type === 'digest') return '#digest/' + (top.kind || '') + '/' + encodeURIComponent(top.key || '');
+      if (top.type === 'lists') return '#lists' + (top.tab ? '/' + top.tab : '');
+      if (top.type === 'todo') return '#todo';
+      if (top.type === 'idea') return '#idea';
+      if (top.type === 'drop') return '#drop';
+    }
+    if (s.tab === 'write') return '#write';
+    if (s.tab === 'mailbox') return '#mailbox';
+    return location.pathname + location.search;
+  }
+  function navSeed() {
+    navDepth = 0;
+    history.replaceState(navSnap(), '', navUrl());
+  }
+  function navPush() {
+    if (navLock) return;
+    navDepth += 1;
+    history.pushState(navSnap(), '', navUrl());
+  }
+  function navReplace() {
+    if (navLock) return;
+    const st = navSnap();
+    st.depth = navDepth;
+    history.replaceState(st, '', navUrl(st));
+  }
+  function navBack() {
+    if (navLock) return false;
+    if (history.state && history.state.hx === 'nav' && (history.state.depth || 0) > 0) {
+      history.back();
+      return true;
+    }
+    return false;
+  }
+  function navTargetDepth() {
+    let d = 0;
+    if (V.tab === 'write') d++;
+    d += V.sheets.length;
+    if (V.setPage) d++;
+    if (V.sent) d++;
+    if (V.burn && V.burn.phase === 'confirm') d++;
+    return d;
+  }
+  // 界面已经改好（寄出关掉、焚毁完成、切 tab），把多出来的历史条目收回来，
+  // 并 replace 成现在的界面，清掉指向已焚毁信件这类过期状态的前进记录。
+  function navRewind(toDepth, after) {
+    toDepth = Math.max(0, toDepth);
+    if (navDepth <= toDepth) {
+      navDepth = toDepth;
+      navReplace();
+      if (after) after();
+      return;
+    }
+    navLock = 'rewind';
+    navRewindTo = toDepth;
+    navRewindAfter = after || null;
+    history.back();
+  }
+  function navRewindToCurrent(after) {
+    navRewind(navTargetDepth(), after);
+  }
+  function resetOverlays() {
+    V.sheets = [];
+    V.setPage = '';
+    V.setAnim = '';
+    V.sent = null;
+    if (!(V.burn && V.burn.phase === 'fire')) V.burn = null;
+    V.droppedIdeas = undefined;
+    V.openGroups = null;
+    V.olderTodos = undefined;
+    if (V.key) V.key.fresh = '';
+  }
+  function leavingWrite(nextTab) {
+    if (V.tab === 'write' && nextTab !== 'write') {
+      flushWriteDraft();
+      V.editing = false;
+      if (rec) try { rec.stop(); } catch (e) { /* ignore */ }
+    }
+  }
+  function flushWriteDraft() {
+    clearTimeout(afterRender._t);
+    const ed = $('#editor');
+    if (!ed) return;
+    const d = V.writeDate;
+    if (!d || !S) return;
+    const text = ed.value;
+    const l = S.letters[d];
+    const had = !!(l && l.text && l.text.trim());
+    if (!String(text).trim() && had) {
+      // 空内容不得覆盖已有正文（已寄出的信尤其不能被掏空）
+      store.del('hx_draft_' + d);
+      return;
+    }
+    store.set('hx_draft_' + d, text);
+    if (text !== ((l && l.text) || '')) saveLetter(d, text);
+  }
+  function applyNav(st) {
+    navDepth = (st && st.depth) || 0;
+    const sheets = ((st && st.sheets) || []).filter(s => {
+      if ((s.type === 'letter' || s.type === 'reply') && S && !S.letters[s.date]) return false;
+      return true;
+    }).map(s => Object.assign({}, s, { fresh: false }));
+    const wasPage = V.setPage || '';
+    const nextPage = (st && st.setPage) || '';
+    V.tab = (st && st.tab) || 'today';
+    if (st && st.writeDate) V.writeDate = st.writeDate;
+    V.sheets = sheets;
+    V.setPage = nextPage;
+    V.setAnim = (!wasPage && nextPage) ? 'push' : (wasPage && !nextPage) ? 'pop' : '';
+    if (!sheets.some(s => s.type === 'lists')) V.droppedIdeas = undefined;
+    if (!sheets.length) { V.openGroups = null; V.olderTodos = undefined; }
+    if (st && st.sent && S && S.letters[st.sent.date] && sendsTonight(st.sent.date)) {
+      V.sent = { date: st.sent.date, at: st.sent.at ? new Date(st.sent.at) : new Date() };
+    } else {
+      V.sent = null;
+    }
+    if (st && st.burn && S && S.letters[st.burn.date]) {
+      V.burn = { date: st.burn.date, items: !!st.burn.items, phase: 'confirm' };
+    } else if (!(V.burn && V.burn.phase === 'fire')) {
+      V.burn = null;
+    }
+    V.editing = !!(st && st.editing && V.tab === 'write');
+    if (sheets.some(s => s.type === 'settings')) {
+      V.ai = V.ai || { loading: true };
+      V.key = V.key || { loading: true };
+    }
+    render();
+  }
+  function bootNav() {
+    // 先把当前页种成根，避免第一条后退直接离开站点；再按地址栏补一层。
+    const hash = (location.hash || '').replace(/^#/, '');
+    navDepth = 0;
+    const seed = navSnap();
+    seed.tab = (V.tab === 'write') ? 'today' : (V.tab || 'today');
+    seed.sheets = [];
+    seed.setPage = '';
+    seed.sent = null;
+    seed.burn = null;
+    seed.editing = false;
+    history.replaceState(seed, '', location.pathname + location.search);
+    if (!S) return;
+    if (hash === 'mailbox') {
+      V.tab = 'mailbox';
+      render();
+      navReplace();
+    } else if (hash === 'write') {
+      V.tab = 'write';
+      V.writeDate = V.writeDate || letterDay();
+      render();
+      navPush();
+    } else if (hash === 'settings' || hash.startsWith('settings/')) {
+      const page = hash.startsWith('settings/') ? hash.slice('settings/'.length) : '';
+      openSettings();
+      if (page && SET_TITLES[page]) {
+        V.setPage = page;
+        V.setAnim = '';
+        render();
+        navPush();
+      }
+    }
+  }
 
   function openSettings() {
     if (settingsOpen()) return;
@@ -1054,7 +1259,6 @@
     V.setPage = '';
     V.setAnim = '';
     openSheet({ type: 'settings' });
-    history.pushState({ hx: 'set', page: '' }, '', setUrl(''));
     loadAI();
     loadKey();
   }
@@ -1063,18 +1267,19 @@
     flushSetPage();
     V.setPage = page;
     V.setAnim = 'push';
-    history.pushState({ hx: 'set', page }, '', setUrl(page));
     render();
+    navPush();
   }
   function backSetPage() {
-    if (history.state && history.state.hx === 'set' && history.state.page) history.back();
-    else applySetPage('', 'pop');
+    if (navBack()) return;
+    applySetPage('', 'pop');
   }
   function applySetPage(page, anim) {
     flushSetPage();
     V.setPage = page || '';
     V.setAnim = anim || '';
     render();
+    navReplace();
   }
   function closeSettingsFromHistory() {
     flushSetPage();
@@ -1084,49 +1289,69 @@
     if (settingsOpen()) V.sheets.pop();
     V.droppedIdeas = undefined;
     if (!V.sheets.length) { V.openGroups = null; V.olderTodos = undefined; }
-    if (location.hash.startsWith('#settings')) history.replaceState({}, '', location.pathname + location.search);
     render();
   }
   function closeSettings() {
     flushSetPage();
     if (V.key) V.key.fresh = '';
-    if (history.state && history.state.hx === 'set') {
-      setHistLock = 'close';
-      history.back();
-      return;
-    }
+    if (navBack()) return;
     closeSettingsFromHistory();
   }
   window.addEventListener('popstate', () => {
-    if (setHistLock === 'close') {
-      if (history.state && history.state.hx === 'set') { history.back(); return; }
-      setHistLock = false;
-      closeSettingsFromHistory();
+    if (navLock === 'rewind') {
+      const st = history.state;
+      const d = (st && st.hx === 'nav') ? (st.depth || 0) : 0;
+      if (d > navRewindTo) { history.back(); return; }
+      navDepth = navRewindTo;
+      navLock = null;
+      const after = navRewindAfter;
+      navRewindAfter = null;
+      navReplace();
+      if (after) after();
       return;
     }
     if (!S) return;
     const st = history.state;
+    // 焚毁请求进行中，不允许后退取消；把刚弹掉的这一层推回去
+    if (V.burn && V.burn.phase === 'fire') {
+      navDepth = (st && st.hx === 'nav' ? (st.depth || 0) : navDepth) + 1;
+      history.pushState(navSnap(), '', navUrl());
+      return;
+    }
+    if (V.tab === 'write' && (!st || st.hx !== 'nav' || st.tab !== 'write')) leavingWrite((st && st.tab) || 'today');
+    if ((settingsOpen() || V.setPage) && !(st && st.setPage && st.setPage === V.setPage)) flushSetPage();
+    if (st && st.hx === 'nav') {
+      applyNav(st);
+      return;
+    }
+    // 兼容旧的设置历史 { hx: 'set' }，以及退到我们种下根之前的空白条目
     if (st && st.hx === 'set') {
       if (!settingsOpen()) {
         V.setPage = st.page || '';
         V.setAnim = '';
         V.ai = V.ai || { loading: true };
         V.key = V.key || { loading: true };
-        openSheet({ type: 'settings' });
-        loadAI();
-        loadKey();
-        return;
+        V.sheets.push({ type: 'settings', fresh: false });
+        if (!V.ai.data) loadAI();
+        if (!V.key.data) loadKey();
+      } else {
+        flushSetPage();
+        const was = V.setPage || '';
+        V.setPage = st.page || '';
+        V.setAnim = (!was && V.setPage) ? 'push' : (was && !V.setPage) ? 'pop' : '';
       }
-      const was = V.setPage || '';
-      const next = st.page || '';
-      flushSetPage();
-      V.setPage = next;
-      V.setAnim = (!was && next) ? 'push' : (was && !next) ? 'pop' : '';
       render();
-    } else if (settingsOpen()) {
-      closeSettingsFromHistory();
+      return;
     }
+    leavingWrite('today');
+    resetOverlays();
+    V.tab = 'today';
+    navDepth = 0;
+    render();
   });
+
+  // 测试用：给 Playwright 读当前栈深和界面，不会改变行为
+  try { window.__hxNav = () => ({ depth: navDepth, lock: navLock, state: history.state, v: { tab: V.tab, writeDate: V.writeDate, editing: V.editing, sheets: V.sheets.map(s => s.type), setPage: V.setPage || '', sent: V.sent, burn: V.burn } }); } catch (e) { /* ignore */ }
 
   function flushSetPage() {
     if (!S) return;
@@ -1514,6 +1739,7 @@
       V.sheets = V.sheets.filter(s => !((s.type === 'letter' || s.type === 'reply') && s.date === date));
       toCache();
       render();
+      navRewindToCurrent();
     } catch (e) {
       if (V.burn === b) { b.phase = 'confirm'; b.busy = false; render(); }
       toast(e.message || '没能焚毁，请再试一次');
@@ -1639,6 +1865,8 @@
   // ───────────── 动作 ─────────────
   async function saveLetter(d, text) {
     const l = S.letters[d] || (S.letters[d] = { date: d, text: '', reply: null });
+    // 空保存不得覆盖已有正文（关掉空编辑器时，不能把已寄出的信掏空）
+    if (!(text || '').trim() && l.text && l.text.trim()) return;
     l.text = text;
     toCache();
     queue('PUT', '/letters/' + d, { text });
@@ -1659,6 +1887,8 @@
     V.editing = false; V.replying = true; V.replyErr = '';
     V.sent = sendsTonight(d) ? { date: d, at: new Date() } : null;
     toCache(); render();
+    navReplace();
+    if (V.sent) navPush();
     try {
       await api('PUT', '/letters/' + d, { text });
       outbox = outbox.filter(o => o.key !== 'PUT /letters/' + d); store.set('hx_outbox', outbox);
@@ -1703,15 +1933,23 @@
       S.digests.unshift(r.digest);
       S.digests.sort((a, b) => (a.key < b.key ? 1 : -1));
       toCache();
+      const hadDigest = V.sheets.some(s => s.type === 'digest');
       V.sheets = V.sheets.filter(s => s.type !== 'digest');
-      openSheet({ type: 'digest', kind: r.digest.kind, key: r.digest.key });
+      openSheet({ type: 'digest', kind: r.digest.kind, key: r.digest.key }, hadDigest ? { replace: true } : undefined);
     } catch (e) { toast(e.message); }
   }
 
   function startEdit(d) {
-    V.tab = 'write'; V.writeDate = d; V.editing = true; V.sent = null; V.sheets = [];
+    if (settingsOpen() || V.setPage) flushSetPage();
+    leavingWrite('write');
+    resetOverlays();
+    V.tab = 'write'; V.writeDate = d; V.editing = true; V.sent = null;
     store.set('hx_draft_' + d, (S.letters[d] || {}).text || '');
     render();
+    const want = navTargetDepth();
+    if (navDepth === want) navReplace();
+    else if (navDepth > want) navRewind(want);
+    else navPush();
   }
 
   document.addEventListener('click', async e => {
@@ -1720,17 +1958,42 @@
     const act = el.dataset.act, v = el.dataset.v;
     const t = today();
     switch (act) {
-      case 'tab':
-        if (V.tab === 'write' && v !== 'write') { V.editing = false; if (rec) rec.stop(); }
-        if (settingsOpen()) flushSetPage();
-        dropSettingsHistory();
-        V.tab = v; V.sheets = []; V.sent = null;
+      case 'tab': {
+        if (v === V.tab && !V.sheets.length && !V.sent && !(V.burn && V.burn.phase === 'confirm') && !V.setPage) break;
+        if (settingsOpen() || V.setPage) flushSetPage();
+        leavingWrite(v);
+        resetOverlays();
+        V.tab = v;
         if (v === 'write') V.writeDate = V.writeDate || letterDay();
-        render(); break;
-      case 'write-day':
-        if (settingsOpen()) flushSetPage();
-        dropSettingsHistory();
-        V.tab = 'write'; V.writeDate = v; V.editing = !hasText(v); V.replyErr = ''; V.sheets = []; V.sent = null; render(); break;
+        render();
+        if (v === 'write') {
+          if (navDepth === 0) navPush();
+          else navRewind(0, () => navPush());
+        } else {
+          navRewind(0);
+        }
+        break;
+      }
+      case 'close-write':
+        leavingWrite('today');
+        if (navBack()) break;
+        resetOverlays();
+        V.tab = 'today';
+        render();
+        navRewind(0);
+        break;
+      case 'write-day': {
+        if (settingsOpen() || V.setPage) flushSetPage();
+        const already = V.tab === 'write' && navDepth > 0 && !V.sheets.length && !V.sent;
+        leavingWrite('write');
+        resetOverlays();
+        V.tab = 'write'; V.writeDate = v; V.editing = !hasText(v); V.replyErr = ''; V.sent = null;
+        render();
+        if (already) navReplace();
+        else if (navDepth === 0) navPush();
+        else navRewind(0, () => navPush());
+        break;
+      }
       case 'day': {
         const n = addDays(V.writeDate, Number(v));
         if (n > letterDay()) return;
@@ -1769,7 +2032,7 @@
       case 'todo-drop': {
         // 放下前先问一句原因：把编辑页里已经写的备注带过去
         const note = $('#tf-note') ? $('#tf-note').value.trim() : null;
-        V.sheets.pop(); openSheet({ type: 'drop', id: v, note }); break;
+        V.sheets.pop(); openSheet({ type: 'drop', id: v, note }, { replace: true }); break;
       }
       case 'drop-reason': {
         const ta = $('#dn-note'); if (!ta) return;
@@ -1799,13 +2062,20 @@
         S.todos.push(x);
         queue('PUT', '/ideas/' + v, { status: 'todo' }); queue('PUT', '/todos/' + x.id, x);
         S.ideas = S.ideas.filter(y => y.id !== v);
-        toCache(); if (V.sheets.length && V.sheets[V.sheets.length - 1].type === 'idea') V.sheets.pop(); render(); toast('已转成待办'); break;
+        toCache();
+        if (V.sheets.length && V.sheets[V.sheets.length - 1].type === 'idea') V.sheets.pop();
+        render();
+        navRewindToCurrent();
+        toast('已转成待办'); break;
       }
       case 'idea-drop':
         V._droppedIdea = S.ideas.find(y => y.id === v) || null;
         queue('PUT', '/ideas/' + v, { status: 'dropped' });
         S.ideas = S.ideas.filter(y => y.id !== v);
-        toCache(); if (V.sheets.length && V.sheets[V.sheets.length - 1].type === 'idea') V.sheets.pop(); render();
+        toCache();
+        if (V.sheets.length && V.sheets[V.sheets.length - 1].type === 'idea') V.sheets.pop();
+        render();
+        navRewindToCurrent();
         toast('已放下', V._droppedIdea ? { label: '撤回', act: 'idea-undrop', v } : null); break;
       case 'done-mode': V.doneMode = v; render(); break;
       case 'done-group': {
@@ -1849,10 +2119,18 @@
       case 'edit-letter': startEdit(V.writeDate); break;
       case 'take-back': startEdit(v || V.writeDate); break;
       case 'cancel-edit': V.editing = false; store.del('hx_draft_' + V.writeDate); render(); break;
-      case 'sent-close': V.sent = null; V.tab = 'today'; render(); break;
+      case 'sent-close':
+        V.sent = null; V.tab = 'today'; resetOverlays(); render(); navRewind(0); break;
       case 'skip-backfill': store.set('hx_skipbf_' + v, true); render(); break;
       case 'open-reply': markOpened(v); openSheet({ type: 'reply', date: v }); break;
-      case 'go-today': V.sheets = []; V.tab = 'today'; render(); break;
+      case 'go-today':
+        if (settingsOpen() || V.setPage) flushSetPage();
+        leavingWrite('today');
+        resetOverlays();
+        V.tab = 'today';
+        render();
+        navRewind(0);
+        break;
       case 'fb': {
         const key = el.dataset.d + '|' + v; const val = Number(el.dataset.x);
         const next = S.feedback[key] === val ? 0 : val;
@@ -1862,7 +2140,16 @@
       }
       case 'mb': V.mb = v; render(); break;
       case 'letter': if (!isSealed(v)) markOpened(v); openSheet({ type: 'letter', date: v }); break;
-      case 'open-in-write': V.sheets = []; V.tab = 'write'; V.writeDate = v; V.editing = false; V.sent = null; render(); break;
+      case 'open-in-write': {
+        if (settingsOpen() || V.setPage) flushSetPage();
+        leavingWrite('write');
+        resetOverlays();
+        V.tab = 'write'; V.writeDate = v; V.editing = false; V.sent = null;
+        render();
+        if (navDepth === 0) navPush();
+        else navRewind(0, () => navPush());
+        break;
+      }
       case 'digest': { const [kind, key] = v.split('|'); openSheet({ type: 'digest', kind, key }); break; }
       case 'gen': { const [kind, key] = v.split('|'); generate(kind, key); break; }
       case 'older': {
@@ -1948,9 +2235,12 @@
       }
       case 'burn-ask':
         V.burn = { date: v, items: false, phase: 'confirm' };
-        render(); break;
+        render();
+        navPush();
+        break;
       case 'burn-keep':
         if (V.burn && V.burn.phase === 'fire') return;
+        if (navBack()) break;
         V.burn = null; render(); break;
       case 'burn-items': {
         if (!V.burn) return;
@@ -1974,8 +2264,10 @@
         try { await api('POST', '/logout'); } catch (err) { /* ignore */ }
         store.del('hx_outbox'); store.del('hx_opened2'); outbox = []; opened = new Set();
         dropSettingsHistory();
-        V.sheets = [];
-        showLogin(); break;
+        resetOverlays();
+        showLogin();
+        navRewind(0);
+        break;
     }
   });
 

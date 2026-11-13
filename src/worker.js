@@ -73,6 +73,11 @@ async function api(req, env, ctx, url) {
     if (!isDate(date)) return err('日期不对');
     if (seg.length === 2 && m === 'PUT') {
       const text = String(body.text || '').slice(0, 20000);
+      // 空保存不得覆盖已寄出（或已有正文）的信，和客户端、小程序同一条规则
+      const ex = await env.DB.prepare('SELECT text, reply FROM letters WHERE user_id = ? AND date = ?').bind(U, date).first();
+      if (ex && String(ex.text || '').trim() && !String(text).trim()) {
+        return json({ ok: true, unchanged: true });
+      }
       await env.DB.prepare(`INSERT INTO letters (user_id, date, text, updated_at) VALUES (?, ?, ?, ?)
         ON CONFLICT(user_id, date) DO UPDATE SET text = excluded.text, updated_at = excluded.updated_at`)
         .bind(U, date, text, nowIso()).run();
