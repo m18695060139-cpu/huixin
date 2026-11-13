@@ -32,7 +32,7 @@
         <view class="card reply-letter">
           <text wx:for="{{letter.reply.paras}}" wx:key="*this" class="reply-p">{{item}}</text>
           <view class="reply-sign">
-            <text class="sign-b">Re: 回信</text>
+            <text class="sign-b">回信</text>
             <text class="when">{{letter.reply.when}}{{letter.reply.engine ? ' · ' + letter.reply.engine : ''}}</text>
           </view>
         </view>

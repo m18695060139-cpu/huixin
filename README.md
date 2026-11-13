@@ -1,6 +1,6 @@
 > ⚠️ 本分支（miniprogram）是【微信小程序版本】，代码在 miniprogram-app/ 目录。网页版（Cloudflare Workers）在 main 分支，两者独立，请勿合并。
 
-# 回信 Re:
+# 回信
 
 每晚写一封信给自己，AI 替未来的你回信。
 

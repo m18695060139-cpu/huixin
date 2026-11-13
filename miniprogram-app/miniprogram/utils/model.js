@@ -553,7 +553,7 @@ function letterModel(S, day, now) {
     missing: false,
     date: day,
     no: letterNo(S, day),
-    eyebrow: (reply ? 'Re: ' : '') + 'No.' + letterNo(S, day) + ' · 星期' + date.wd(day),
+    eyebrow: 'No.' + letterNo(S, day) + ' · 星期' + date.wd(day),
     title: title,
     text: l.text || '',
     hideBody: hideBody,

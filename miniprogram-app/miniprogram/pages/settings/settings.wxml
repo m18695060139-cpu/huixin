@@ -115,7 +115,7 @@
       </view>
     </view>
 
-    <text class="st-tag">回信 Re: · 今晚写给明早的自己</text>
+    <text class="st-tag">回信 · 今晚写给明早的自己</text>
   </view>
   <toast id="toast" />
 </view>
