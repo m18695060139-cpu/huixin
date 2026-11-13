@@ -212,23 +212,19 @@ Page({
     const tonight = this.data.meta.tonight;
     const date = this.data.date;
     this._replying = date;
-    const r = await actions.saveLetter(date, {
+    try { wx.hideKeyboard(); } catch (e) { /* 没有键盘就不必管 */ }
+    // 跟网页版一样：先出寄出屏，云端保存在后台做。
+    // saveLetter 会先同步写好本机 sent_at 和正文，再 await 云函数；界面不必等那一两秒。
+    const savePromise = actions.saveLetter(date, {
       text: text,
       mood: this.data.mood,
       energy: this.data.energy || null,
     }, { sent: true });
-    if (r && r.code === 'risky') {
-      this._sending = false;
-      this._replying = '';
-      this.setData({ warn: r.message, editing: true, sentBusy: false });
-      this.setTab(1, false);
-      return;
-    }
     const meta = model.writeMeta(state.get(), this.data.date, new Date());
     this.setData({
       editing: false,
       warn: '',
-      saveState: r && r.local ? '存在本机' : '已寄出',
+      saveState: '已寄出',
       sentShow: !!tonight,
       sentBusy: !!AI_ENABLED,
       sentReady: false,
@@ -240,6 +236,29 @@ Page({
     });
     this.setTab(1, false);
     if (tonight) this.paintSentChrome();
+    const r = await savePromise;
+    if (r && r.code === 'risky') {
+      this._sending = false;
+      this._replying = '';
+      if (this.data.date === date) {
+        this.setData({
+          warn: r.message,
+          editing: true,
+          sentShow: false,
+          sentBusy: false,
+          sentReady: false,
+          sentFail: false,
+          saveState: '未保存',
+        });
+        this.setTab(1, false);
+        this.restoreChrome();
+      }
+      try { wx.showToast({ title: (r.message || '这封信没能寄出，请改一改再寄').slice(0, 24), icon: 'none', duration: 3000 }); } catch (e) { /* 离开本页时也要让人知道没寄出 */ }
+      return;
+    }
+    // 保存成功后一定去问回信：用户在等待期间点了「晚安」或「拿回来改」，
+    // 只是不要再改寄出屏的状态（下面用 sendGen 挡住），不能把整理也取消掉。
+    if (r && r.local && this.data.date === date) this.setData({ saveState: '存在本机' });
     let ok = false;
     if (AI_ENABLED && wx.cloud) {
       state.setReplying(date);
