@@ -10,11 +10,14 @@ Page({
   data: { mb: 'all', limit: 140, tab: 'all' },
   onShow() {
     this.hideShare();
-    this.unsub = state.subscribe(() => this.paint());
+    this._active = true;
+    // tab 页切走不销毁。只订阅一次并在隐藏时也保持，这样焚信等后台改动能立刻写进本页 data。
+    // 从信箱打开信再 switchTab 回来时，部分基础库不会再调 onShow（认为还是当前 tab）。
+    if (!this.unsub) this.unsub = state.subscribe(() => this.paint());
     this.paint();
   },
-  onHide() { if (this.unsub) this.unsub(); },
-  onUnload() { if (this.unsub) this.unsub(); },
+  onHide() { this._active = false; },
+  onUnload() { this._active = false; if (this.unsub) { this.unsub(); this.unsub = null; } },
   onPullDownRefresh() {
     state.refresh().finally(() => wx.stopPullDownRefresh());
   },
@@ -24,7 +27,9 @@ Page({
       limit: this.data.limit,
       theme: getApp().resolvedTheme(),
     });
+    // 隐藏时也更新 data，回来一眼就是新列表，不会闪出已烧掉的信。
     this.setData(view);
+    if (!this._active) return;
     this.setTab(2, true);
     if (view.state && view.state.ready && view.tab === 'all') {
       const chart = view.state;

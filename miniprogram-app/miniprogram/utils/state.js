@@ -8,6 +8,7 @@ const CACHE = 'hx_mp_v1';
 const listeners = [];
 const held = {};
 const burned = {};
+const burnedItems = {};
 
 function blank() {
   return {
@@ -132,7 +133,14 @@ function clearWarn() {
   emit();
 }
 
+function clearBurn(date) {
+  if (date && burned[date]) delete burned[date];
+}
+
 function upsertLetter(date, fields) {
+  // 已焚毁后拒绝把旧信写回来（进行中的保存、回信回调等）。
+  // 用户同一天再写新信时，saveLetter 会先 clearBurn。
+  if (burned[date]) return;
   const prev = data.letters[date] || { date: date, text: '', mood: '', energy: null, sent_at: '', opened: false };
   data.letters[date] = Object.assign({}, prev, fields, { date: date });
   saveCache();
@@ -152,6 +160,8 @@ function applyBurn(date, items) {
   burned[date] = true;
   delete data.letters[date];
   if (items) {
+    // 勾了「同时删掉待办和点子」时，也挡住正在进行的 refresh 把它们合回来。
+    burnedItems[date] = true;
     data.todos = (data.todos || []).filter(x => x.source_date !== date);
     data.ideas = (data.ideas || []).filter(x => x.source_date !== date);
   }
@@ -160,6 +170,7 @@ function applyBurn(date, items) {
 }
 
 function upsertTodo(todo) {
+  if (todo && todo.source_date && burnedItems[todo.source_date]) return;
   const i = data.todos.findIndex(x => x.id === todo.id);
   if (i >= 0) data.todos[i] = Object.assign({}, data.todos[i], todo);
   else data.todos.unshift(todo);
@@ -180,6 +191,7 @@ function removeIdea(id) {
 }
 
 function upsertIdea(idea) {
+  if (idea && idea.source_date && burnedItems[idea.source_date]) return;
   const i = data.ideas.findIndex(x => x.id === idea.id);
   if (i >= 0) data.ideas[i] = Object.assign({}, data.ideas[i], idea);
   else data.ideas.unshift(idea);
@@ -251,6 +263,7 @@ function resetLocal() {
   data.cloud = data.online;
   Object.keys(held).forEach(k => delete held[k]);
   Object.keys(burned).forEach(k => delete burned[k]);
+  Object.keys(burnedItems).forEach(k => delete burnedItems[k]);
   try {
     const info = wx.getStorageInfoSync();
     (info.keys || []).forEach(k => {
@@ -286,6 +299,8 @@ function applyCloud(bundle) {
   const letters = {};
   (bundle.letters || []).forEach(row => {
     if (!row.date) return;
+    // 焚毁后若有一趟更早发出的 refresh 回来，云端快照里可能还带着这封信。不要合回来。
+    if (burned[row.date]) return;
     const prev = data.letters[row.date];
     const next = {
       _id: row._id,
@@ -306,9 +321,13 @@ function applyCloud(bundle) {
     if (burned[d]) return;
     if (!letters[d] && (held[d] || data.letters[d])) letters[d] = data.letters[d];
   });
-  Object.keys(letters).forEach(d => { delete burned[d]; });
+  // 只有云端已经看不到这封信，才放下标记。快照里还在就继续挡。
+  Object.keys(burned).forEach(d => {
+    const still = (bundle.letters || []).some(r => r.date === d);
+    if (!still) delete burned[d];
+  });
   data.letters = letters;
-  data.todos = (bundle.todos || []).map(row => ({
+  data.todos = (bundle.todos || []).filter(row => !burnedItems[row && row.source_date]).map(row => ({
     _id: row._id,
     id: row.id,
     text: row.text || '',
@@ -321,7 +340,7 @@ function applyCloud(bundle) {
     source_date: row.source_date || '',
     created: row.created || '',
   }));
-  data.ideas = (bundle.ideas || []).map(row => ({
+  data.ideas = (bundle.ideas || []).filter(row => !burnedItems[row && row.source_date]).map(row => ({
     _id: row._id,
     id: row.id,
     text: row.text || '',
@@ -330,6 +349,11 @@ function applyCloud(bundle) {
     created: row.created || '',
     dropped_at: row.dropped_at || '',
   }));
+  Object.keys(burnedItems).forEach(d => {
+    const still = (bundle.todos || []).some(r => r && r.source_date === d)
+      || (bundle.ideas || []).some(r => r && r.source_date === d);
+    if (!still) delete burnedItems[d];
+  });
   data.habits = (bundle.habits || []).map(row => ({
     _id: row._id,
     id: row.id,
@@ -382,7 +406,7 @@ async function refresh() {
 
 module.exports = {
   get, subscribe, boot, refresh, setOnline, clearWarn, hold, unhold,
-  upsertLetter, markOpened, applyBurn, upsertTodo, removeTodo, removeIdea, upsertIdea, upsertHabit, setLog,
+  upsertLetter, clearBurn, markOpened, applyBurn, upsertTodo, removeTodo, removeIdea, upsertIdea, upsertHabit, setLog,
   setReplying, getReplying,
   patchSettings, skipBackfill, setWriteTarget, takeWriteTarget, noteCloudId, resetLocal,
 };

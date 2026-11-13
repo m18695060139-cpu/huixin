@@ -188,8 +188,30 @@ Page({
         return;
       }
       const self = this;
+      // 先让栈里还在的 tab 页（信箱/今天）马上按本机新状态重绘，避免 switchTab 后
+      // 因 onShow 没触发而继续显示烧掉的信。网页版没有这层问题：它是同一份 DOM 立刻 render。
+      try {
+        (getCurrentPages() || []).forEach(function (p) {
+          if (p && p !== self && typeof p.paint === 'function') {
+            p._active = true;
+            p.paint();
+          }
+        });
+      } catch (err) { /* 忽略，switchTab 后还会再画一次 */ }
       this.setData({ 'burn.show': false, 'burn.busy': false, 'burn.holding': false }, function () {
-        wx.switchTab({ url: '/pages/mailbox/mailbox' });
+        wx.switchTab({
+          url: '/pages/mailbox/mailbox',
+          success: function () {
+            try {
+              const pages = getCurrentPages() || [];
+              const top = pages[pages.length - 1];
+              if (top && typeof top.paint === 'function') {
+                top._active = true;
+                top.paint();
+              }
+            } catch (err) { /* 信箱若已因订阅画过，这里失败也无妨 */ }
+          },
+        });
       });
     } catch (e) {
       this.setData({ 'burn.busy': false, 'burn.show': true, 'burn.holding': false });

@@ -9,12 +9,13 @@ Page({
   data: { memoryOffset: 0 },
   onShow() {
     this.hideShare();
+    this._active = true;
     this._just = this._just || {};
-    this.unsub = state.subscribe(() => this.paint());
+    if (!this.unsub) this.unsub = state.subscribe(() => this.paint());
     this.paint();
   },
-  onHide() { if (this.unsub) this.unsub(); },
-  onUnload() { if (this.unsub) this.unsub(); },
+  onHide() { this._active = false; },
+  onUnload() { this._active = false; if (this.unsub) { this.unsub(); this.unsub = null; } },
   onPullDownRefresh() {
     state.refresh().finally(() => wx.stopPullDownRefresh());
   },
@@ -26,6 +27,7 @@ Page({
       replying: replyingDate ? { date: replyingDate } : null,
     });
     this.setData(view);
+    if (!this._active) return;
     this.setTab(0, true);
   },
   tabShouldShow() { return true; },

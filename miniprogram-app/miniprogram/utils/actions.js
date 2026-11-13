@@ -51,6 +51,8 @@ function clearDraft(date) {
 
 async function saveLetter(date, fields, opts) {
   opts = opts || {};
+  // 同一天再写新信：先放下焚毁标记。已经在飞的旧保存在焚毁前就走过这里，不会把旧信写回来。
+  if (state.clearBurn) state.clearBurn(date);
   const prev = (state.get().letters || {})[date] || {};
   const next = {
     text: fields.text != null ? fields.text : (prev.text || ''),
