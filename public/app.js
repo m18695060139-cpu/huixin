@@ -888,6 +888,8 @@
   function closeSheet() {
     if (V.burn && V.burn.phase === 'fire') return;
     if (V.burn && V.burn.phase === 'confirm') { V.burn = null; render(); return; }
+    const top = V.sheets[V.sheets.length - 1];
+    if (top && top.type === 'settings') { closeSettings(); return; }
     V.sheets.pop(); V.droppedIdeas = undefined; if (!V.sheets.length) { V.openGroups = null; V.olderTodos = undefined; } render();
   }
   function viewSheet(s) {
@@ -895,10 +897,23 @@
     const burning = V.burn && (s.type === 'letter' || s.type === 'reply') && V.burn.date === s.date && V.burn.phase !== 'confirm';
     const anim = s.fresh && !burning ? ' enter' : '';
     s.fresh = false;   // 只在刚打开时升起，之后刷新内容不再重播动画
-    const bar = burning ? '' : `<div class="sheet-bar"><div><span class="sp"></span><span class="t">${titles[s.type] || ''}</span><button class="x" data-act="close" aria-label="关闭">${ICON.x}</button></div></div>`;
+    let bar;
+    if (burning) bar = '';
+    else if (s.type === 'settings') {
+      const page = V.setPage || '';
+      const title = SET_TITLES[page] || '设置';
+      const back = page
+        ? `<button class="st-back" type="button" data-act="set-back" aria-label="返回设置">${ICON.left}<span class="st-back-t">设置</span></button>`
+        : '';
+      const close = page ? '' : `<button class="x" data-act="close" aria-label="关闭">${ICON.x}</button>`;
+      bar = `<div class="sheet-bar set-bar"><div>${back}<span class="t">${esc(title)}</span>${close}</div></div>`;
+    } else {
+      bar = `<div class="sheet-bar"><div><span class="sp"></span><span class="t">${titles[s.type] || ''}</span><button class="x" data-act="close" aria-label="关闭">${ICON.x}</button></div></div>`;
+    }
+    const pageClass = s.type === 'settings' ? 'page st-page' : 'page';
     return `<div class="sheet-dim" data-act="close" aria-hidden="true"></div><div class="sheet${anim}${burning ? ' burning' : ''}" role="dialog" aria-modal="true">
       ${bar}
-      <div class="page">${sheetBody(s)}</div></div>`;
+      <div class="${pageClass}">${sheetBody(s)}</div></div>`;
   }
   function sheetBody(s) {
     const t = today();
@@ -1007,92 +1022,362 @@
         <div style="display:flex;gap:10px;margin-top:26px;flex-wrap:wrap"><button class="btn" type="submit">保存</button>
         ${s.id ? `<button class="btn ghost" type="button" data-act="idea-todo" data-v="${x.id}">转成待办</button><button class="btn ghost" type="button" data-act="idea-drop" data-v="${x.id}">放下</button>` : ''}</div></form>`;
     }
-    if (s.type === 'settings') {
-      const cur = S.settings.theme || 'auto';
-      const themes = THEMES.map(th => `<button class="theme-opt" data-act="theme" data-v="${th.id}" aria-pressed="${cur === th.id}">
-        <span class="swatch" style="background:${th.id === 'auto' ? 'linear-gradient(90deg,#F2F2F7 50%,#000 50%)' : th.sw[0]}"><i style="background:${th.sw[2]};width:60%"></i><i style="background:${th.sw[1]};width:85%"></i></span>${th.name}</button>`).join('');
-      const habits = S.habits.map(h => `<div class="row"><input class="input" style="background:none;padding:0;min-height:48px" value="${esc(h.name)}" data-habit-name="${h.id}" aria-label="习惯名称"><button class="lk" style="color:var(--danger)" data-act="habit-del" data-v="${h.id}">删除</button></div>`).join('');
-      const dm = deliverMode();
-      const opt = (v, t1, t2) => `<button class="opt" data-act="deliver" data-v="${v}" aria-pressed="${dm === v}"><span>${t1}<small>${t2}</small></span><span class="tick">${ICON.tick}</span></button>`;
-      return `
-        <div class="field"><label for="set-name">回信怎么称呼你</label><input class="input" id="set-name" value="${esc(S.user.name || '')}" placeholder="比如：非云"></div>
-        <div class="field"><span class="lab">回信什么时候送到</span><div class="group opts">
-          ${opt('morning', '明早 6:00 拆信', '今晚寄出的信，回信封存到第二天早上；补写的信马上送到')}
-          ${opt('now', '寄出后马上', '写完就能看到回信')}</div></div>
-        ${aiSettings()}
-        <div class="field"><span class="lab">外观</span><div class="themes">${themes}</div></div>
-        <div class="field"><span class="lab">写信时顺手打卡的习惯</span><div class="group">${habits || '<div class="empty" style="padding:14px">还没有习惯</div>'}</div>
-          <form id="habit-form" style="display:flex;gap:8px"><input class="input" id="habit-new" placeholder="新习惯，比如：运动 30 分钟" aria-label="新习惯"><button class="btn sm" style="height:48px" type="submit">添加</button></form></div>
-        <div class="field"><label for="set-q">回信写信时会想着的问题（一行一个）</label><textarea class="input" id="set-q" rows="8">${esc((S.settings.questions || []).join('\n'))}</textarea>
-          <button class="btn sm ghost" style="align-self:flex-start" data-act="save-q">保存问题</button></div>
-        ${keySettings()}
-        <div class="field"><span class="lab">账号</span><div class="muted small" style="padding:0 4px">当前登录：${esc(S.user.username)}</div>
-          <button class="btn sm ghost" style="align-self:flex-start" data-act="logout">退出登录</button></div>
-        <p class="note" style="margin-top:40px;text-align:center">回信 Re: · 今晚写给明早的自己</p>`;
-    }
+    if (s.type === 'settings') return settingsBody();
     return '';
   }
 
+  // ───────────── 设置（iOS 分组列表 + 二级页） ─────────────
+  const SET_TITLES = {
+    name: '称呼', deliver: '回信送达', ai: 'AI 回信', appearance: '外观',
+    habits: '习惯', questions: '回信问题', api: 'API 密钥',
+  };
+  const AI_HELP = '接上之后，你的回信和周信都用你自己的 AI 写，花的是你自己的额度。Key 加密保存在服务器上，网页里只显示后 4 位。DeepSeek、智谱、通义千问、Kimi、硅基流动等大多数服务商都能这样接入；模型名以服务商控制台为准。自己的 AI 出错时，会自动改用免费模型，不会漏掉回信。';
+  const KEY_RISK = '有了这串密钥，就能读到你全部的信、待办、点子和习惯。只交给你信任的 agent，别发给别人；担心泄露就点作废。接口只能读，不能改。';
+  const KEY_HIDDEN = '你的密钥（只在生成时显示过，忘了就重新生成）';
 
-  // ───────────── 设置 · AI 回信 ─────────────
-  // V.ai：{ loading, data（服务器上的配置，不含 Key）, form（正在填的）, msg, busy }
-  async function loadAI() {
+  function settingsOpen() {
+    return !!(V.sheets.length && V.sheets[V.sheets.length - 1].type === 'settings');
+  }
+  function dropSettingsHistory() {
+    V.setPage = '';
+    V.setAnim = '';
+    if (location.hash.startsWith('#settings')) history.replaceState({}, '', location.pathname + location.search);
+  }
+  function setUrl(page) { return page ? '#settings/' + page : '#settings'; }
+
+  let setHistLock = false;
+
+  function openSettings() {
+    if (settingsOpen()) return;
     V.ai = { loading: true };
+    V.key = { loading: true };
+    V.setPage = '';
+    V.setAnim = '';
+    openSheet({ type: 'settings' });
+    history.pushState({ hx: 'set', page: '' }, '', setUrl(''));
+    loadAI();
+    loadKey();
+  }
+  function goSetPage(page) {
+    if (!SET_TITLES[page]) return;
+    flushSetPage();
+    V.setPage = page;
+    V.setAnim = 'push';
+    history.pushState({ hx: 'set', page }, '', setUrl(page));
+    render();
+  }
+  function backSetPage() {
+    if (history.state && history.state.hx === 'set' && history.state.page) history.back();
+    else applySetPage('', 'pop');
+  }
+  function applySetPage(page, anim) {
+    flushSetPage();
+    V.setPage = page || '';
+    V.setAnim = anim || '';
+    render();
+  }
+  function closeSettingsFromHistory() {
+    flushSetPage();
+    if (V.key) V.key.fresh = '';
+    V.setPage = '';
+    V.setAnim = '';
+    if (settingsOpen()) V.sheets.pop();
+    V.droppedIdeas = undefined;
+    if (!V.sheets.length) { V.openGroups = null; V.olderTodos = undefined; }
+    if (location.hash.startsWith('#settings')) history.replaceState({}, '', location.pathname + location.search);
+    render();
+  }
+  function closeSettings() {
+    flushSetPage();
+    if (V.key) V.key.fresh = '';
+    if (history.state && history.state.hx === 'set') {
+      setHistLock = 'close';
+      history.back();
+      return;
+    }
+    closeSettingsFromHistory();
+  }
+  window.addEventListener('popstate', () => {
+    if (setHistLock === 'close') {
+      if (history.state && history.state.hx === 'set') { history.back(); return; }
+      setHistLock = false;
+      closeSettingsFromHistory();
+      return;
+    }
+    if (!S) return;
+    const st = history.state;
+    if (st && st.hx === 'set') {
+      if (!settingsOpen()) {
+        V.setPage = st.page || '';
+        V.setAnim = '';
+        V.ai = V.ai || { loading: true };
+        V.key = V.key || { loading: true };
+        openSheet({ type: 'settings' });
+        loadAI();
+        loadKey();
+        return;
+      }
+      const was = V.setPage || '';
+      const next = st.page || '';
+      flushSetPage();
+      V.setPage = next;
+      V.setAnim = (!was && next) ? 'push' : (was && !next) ? 'pop' : '';
+      render();
+    } else if (settingsOpen()) {
+      closeSettingsFromHistory();
+    }
+  });
+
+  function flushSetPage() {
+    if (!S) return;
+    if (V.setPage === 'questions') {
+      const el = document.getElementById('set-q');
+      if (el) {
+        const qs = el.value.split('\n').map(s => s.trim()).filter(Boolean);
+        if (qs.length && qs.join('\n') !== (S.settings.questions || []).join('\n')) {
+          S.settings.questions = qs;
+          queue('PUT', '/settings', { questions: qs });
+          toCache();
+        }
+      }
+    }
+    if (V.setPage === 'name') {
+      const nm = document.getElementById('set-name');
+      if (nm) {
+        const name = nm.value.trim();
+        if (name !== (S.user.name || '')) {
+          S.user.name = name;
+          queue('PUT', '/settings', { name });
+          toCache();
+        }
+      }
+    }
+  }
+
+  function stSec(inner, head, foot) {
+    return `<div class="st-sec">${head ? `<div class="st-head">${head}</div>` : ''}<div class="st-group">${inner}</div>${foot ? `<div class="st-foot">${foot}</div>` : ''}</div>`;
+  }
+  function stRow({ act, v, title, value, grow, danger, chev, html }) {
+    const attrs = act ? `type="button" data-act="${act}"${v != null ? ` data-v="${esc(String(v))}"` : ''}` : 'type="button" disabled';
+    const cls = 'st-row' + (act ? '' : ' st-static') + (danger ? ' st-danger-row' : '');
+    return `<button class="${cls}" ${attrs}><span class="st-body">
+      <span class="st-t${grow || value == null ? ' st-grow' : ''}${danger ? ' st-danger' : ''}">${title}</span>
+      ${value != null ? `<span class="st-value">${esc(value)}</span>` : ''}
+      ${chev ? '<span class="st-chev" aria-hidden="true">' + ICON.chev + '</span>' : ''}
+      ${html || ''}
+    </span></button>`;
+  }
+
+  function themeName(id) {
+    const t = THEMES.find(x => x.id === (id || 'auto'));
+    return t ? t.name : '跟随系统';
+  }
+  function aiRowValue() {
+    const d = V.ai && V.ai.data;
+    if (!d || V.ai.loading) return V.ai && V.ai.error ? '未读取' : '读取中…';
+    if (d.configured) return ((d.providers[d.provider] || d.providers.custom).name) || '已接入';
+    return '免费模型';
+  }
+  function keyRowValue() {
+    const K = V.key || {};
+    if (K.loading) return '读取中…';
+    if (K.error || !K.data) return '未读取';
+    return K.data.exists ? '已生成' : '未生成';
+  }
+
+  function settingsBody() {
+    const page = V.setPage || '';
+    const anim = V.setAnim === 'push' ? ' st-push' : V.setAnim === 'pop' ? ' st-pop' : '';
+    V.setAnim = '';
+    const inner = page ? settingsSub(page) : settingsList();
+    return `<div class="st-view${anim}">${inner}</div>`;
+  }
+
+  function settingsList() {
+    const name = (S.user.name && String(S.user.name).trim()) || '未设置';
+    const deliver = deliverMode() === 'now' ? '寄出后马上' : '明早 6:00';
+    const habits = S.habits.filter(h => !h.archived);
+    const qs = (S.settings.questions || []).filter(x => String(x || '').trim());
+    return stSec(
+        stRow({ act: 'set-page', v: 'name', title: '称呼', value: name, chev: true })
+        + stRow({ act: 'set-page', v: 'deliver', title: '回信送达', value: deliver, chev: true })
+      )
+      + stSec(stRow({ act: 'set-page', v: 'ai', title: 'AI 回信', value: aiRowValue(), chev: true }))
+      + stSec(
+        stRow({ act: 'set-page', v: 'appearance', title: '外观', value: themeName(S.settings.theme), chev: true })
+        + stRow({ act: 'set-page', v: 'habits', title: '习惯', value: habits.length ? (habits.length + ' 个') : '未添加', chev: true })
+        + stRow({ act: 'set-page', v: 'questions', title: '回信问题', value: qs.length ? (qs.length + ' 个') : '未设置', chev: true })
+      )
+      + stSec(stRow({ act: 'set-page', v: 'api', title: 'API 密钥', value: keyRowValue(), chev: true }))
+      + stSec(
+        `<div class="st-row st-static"><span class="st-body">
+          <span class="st-ok" aria-hidden="true">${ICON.checkSm}</span>
+          <span class="st-t st-grow">已登录</span>
+          <span class="st-value">${esc(S.user.username || '')}</span>
+        </span></div>`
+        + stRow({ act: 'logout', title: '退出登录', grow: true }),
+        '账号'
+      )
+      + `<p class="st-tag">回信 Re: · 今晚写给明早的自己</p>`;
+  }
+
+  function settingsSub(page) {
+    if (page === 'name') return settingsName();
+    if (page === 'deliver') return settingsDeliver();
+    if (page === 'ai') return aiSettings();
+    if (page === 'appearance') return settingsAppearance();
+    if (page === 'habits') return settingsHabits();
+    if (page === 'questions') return settingsQuestions();
+    if (page === 'api') return keySettings();
+    return settingsList();
+  }
+
+  function settingsName() {
+    return stSec(
+      `<div class="st-row st-static"><span class="st-body">
+        <span class="st-t">称呼</span>
+        <input class="st-in" id="set-name" value="${esc(S.user.name || '')}" placeholder="比如：非云" maxlength="20" autocomplete="nickname">
+      </span></div>`,
+      '',
+      '回信怎么称呼你'
+    );
+  }
+
+  function settingsDeliver() {
+    const dm = deliverMode();
+    const opt = (v, t1, t2) => `<button class="st-row" type="button" data-act="deliver" data-v="${v}" aria-pressed="${dm === v}">
+      <span class="st-body">
+        <span class="st-main">
+          <span class="st-t st-grow">${t1}</span>
+          <span class="st-sub">${t2}</span>
+        </span>
+        ${dm === v ? `<span class="st-tick" aria-hidden="true">${ICON.tick}</span>` : ''}
+      </span></button>`;
+    return stSec(
+      opt('morning', '明早 6:00 拆信', '今晚寄出的信，回信封存到第二天早上；补写的信马上送到')
+      + opt('now', '寄出后马上', '写完就能看到回信'),
+      '回信什么时候送到'
+    );
+  }
+
+  function settingsAppearance() {
+    const cur = S.settings.theme || 'auto';
+    const items = THEMES.map(th => {
+      const on = cur === th.id;
+      const bg = th.id === 'auto' ? 'linear-gradient(90deg,#F2F2F7 50%,#000 50%)' : th.sw[0];
+      return `<button class="st-theme${on ? ' on' : ''}" type="button" data-act="theme" data-v="${th.id}" aria-pressed="${on}" aria-label="${esc(th.name)}">
+        <span class="st-ring"><span class="st-sw" style="background:${bg}"><i class="st-bar" style="background:${th.sw[2]};width:60%"></i><i class="st-bar" style="background:${th.sw[1]};width:85%"></i></span></span>
+        <span class="st-tn">${esc(th.name)}</span>
+      </button>`;
+    }).join('');
+    return stSec(`<div class="st-themes">${items}</div>`, '外观');
+  }
+
+  function settingsHabits() {
+    const habits = S.habits.filter(h => !h.archived);
+    const rows = habits.length
+      ? habits.map(h => `<div class="st-row st-static"><span class="st-body">
+          <input class="st-in st-left" value="${esc(h.name)}" data-habit-name="${h.id}" maxlength="30" aria-label="习惯名称">
+          <button class="st-act st-danger" type="button" data-act="habit-del" data-v="${h.id}">删除</button>
+        </span></div>`).join('')
+      : `<div class="st-row st-static"><span class="st-body"><span class="st-empty">还没有习惯</span></span></div>`;
+    const add = `<form id="habit-form" class="st-row st-static"><span class="st-body">
+        <input class="st-in st-left" id="habit-new" maxlength="30" placeholder="新习惯，比如：运动 30 分钟" aria-label="新习惯" autocomplete="off">
+        <button class="st-act st-accent" type="submit">添加</button>
+      </span></form>`;
+    return stSec(rows + add, '写信时顺手打卡的习惯');
+  }
+
+  function settingsQuestions() {
+    const text = (S.settings.questions || []).join('\n');
+    return stSec(
+      `<div class="st-row st-static"><span class="st-body st-area-body">
+        <textarea class="st-area" id="set-q" maxlength="1200">${esc(text)}</textarea>
+      </span></div>`
+      + stRow({ act: 'save-q', title: '保存问题', grow: true }),
+      '回信写信时会想着的问题（一行一个）'
+    );
+  }
+
+  // V.ai：{ loading, data（服务器上的配置，不含 Key）, form（正在填的）, pick（列表里勾的项，free 表示免费模型）, msg, busy }
+  async function loadAI() {
+    V.ai = Object.assign({}, V.ai, { loading: true });
     try {
       const d = await api('GET', '/ai-config');
-      const p = d.configured ? d.provider : 'deepseek';
-      const pre = d.providers[p] || {};
-      V.ai = { data: d, form: { provider: p, base_url: d.base_url || pre.base, model: d.model || pre.model, key: '' }, open: !d.configured };
+      const pick = d.configured ? d.provider : 'free';
+      const pre = d.providers[pick] || {};
+      V.ai = {
+        data: d,
+        pick,
+        form: { provider: d.configured ? d.provider : 'deepseek', base_url: d.base_url || pre.base || '', model: d.model || pre.model || '', key: '' },
+      };
     } catch (e) { V.ai = { error: e.message }; }
-    if (V.sheets.length && V.sheets[V.sheets.length - 1].type === 'settings') render();
+    if (settingsOpen()) render();
   }
   function aiSettings() {
     const A = V.ai || {};
-    if (A.loading) return `<div class="field"><span class="lab">AI 回信</span><div class="note" style="margin:0">读取中…</div></div>`;
-    if (A.error || !A.data) return `<div class="field"><span class="lab">AI 回信</span><div class="note" style="margin:0">${esc(A.error || '联网后可以设置')}</div></div>`;
-    const d = A.data, f = A.form, P = d.providers;
+    if (A.loading) return stSec(`<div class="st-row st-static"><span class="st-body"><span class="st-empty">读取中…</span></span></div>`);
+    if (A.error || !A.data) return stSec(`<div class="st-row st-static"><span class="st-body"><span class="st-empty">${esc(A.error || '联网后可以设置')}</span></span></div>`);
+    const d = A.data, f = A.form || {}, P = d.providers;
+    const pick = A.pick || (d.configured ? d.provider : 'free');
+    const showForm = pick !== 'free';
     const status = d.configured
-      ? `正在用你自己的 <b>${esc((P[d.provider] || P.custom).name)}</b> · ${esc(d.model)} · Key 尾号 ${esc(d.last4)}`
-      : `正在用 <b>Cloudflare 免费模型</b>：不用花钱，但每天有额度上限，写一封要等半分钟左右。`;
-    const opts = Object.entries(P).map(([k, v]) => `<option value="${k}" ${f.provider === k ? 'selected' : ''}>${esc(v.name)}</option>`).join('');
-    return `<div class="field"><span class="lab">AI 回信</span>
-      <div class="group" style="padding:14px;font-size:15px;line-height:1.6">${status}
-        ${d.configured ? `<div style="margin-top:6px"><button class="lk" style="color:var(--danger);padding:4px 0" data-act="ai-off">停用，改回免费模型</button></div>` : ''}</div>
-      <button class="lk" style="align-self:flex-start;padding-left:4px" data-act="ai-toggle">${A.open ? '收起' : (d.configured ? '修改 ›' : '接入自己的 AI ›')}</button>
-      ${A.open ? `<div style="display:flex;flex-direction:column;gap:10px">
-        <label class="lab" for="ai-provider">服务商</label>
-        <select class="input" id="ai-provider" data-ai="provider">${opts}</select>
-        <label class="lab" for="ai-base">接口地址</label>
-        <input class="input" id="ai-base" data-ai="base_url" value="${esc(f.base_url || '')}" placeholder="https://…/v1" inputmode="url" autocomplete="off" spellcheck="false">
-        <label class="lab" for="ai-model">模型名</label>
-        <input class="input" id="ai-model" data-ai="model" value="${esc(f.model || '')}" placeholder="比如 deepseek-chat" autocomplete="off" spellcheck="false">
-        <label class="lab" for="ai-key">API Key</label>
-        <input class="input" id="ai-key" data-ai="key" type="password" value="${esc(f.key || '')}" placeholder="${d.configured ? '已保存（尾号 ' + esc(d.last4) + '），不改就留空' : '粘贴服务商给你的 Key'}" autocomplete="off" spellcheck="false">
-        <div style="display:flex;gap:10px;margin-top:4px">
-          <button class="btn sm ghost" data-act="ai-test" ${A.busy ? 'disabled' : ''}>${A.busy === 'test' ? '测试中…' : '测试一下'}</button>
-          <button class="btn sm" data-act="ai-save" ${A.busy ? 'disabled' : ''}>${A.busy === 'save' ? '保存中…' : '保存'}</button>
-        </div>
-        ${A.msg ? `<div class="note" style="margin:0;color:${A.ok ? 'var(--ink)' : 'var(--danger)'}">${esc(A.msg)}</div>` : ''}
-        <p class="note" style="margin:0">接上之后，你的回信和周信都用你自己的 AI 写，花的是你自己的额度。Key 加密保存在服务器上，网页里只显示后 4 位。DeepSeek、智谱、通义千问、Kimi、硅基流动等大多数服务商都能这样接入；模型名以服务商控制台为准。自己的 AI 出错时，会自动改用免费模型，不会漏掉回信。</p>
-      </div>` : ''}
-    </div>`;
+      ? `<span class="st-t st-grow st-wrap">正在用你自己的 <b>${esc((P[d.provider] || P.custom).name)}</b></span>
+         <span class="st-sub">${esc(d.model)} · Key 尾号 ${esc(d.last4)}</span>`
+      : `<span class="st-t st-grow st-wrap">正在用 <b>Cloudflare 免费模型</b></span>
+         <span class="st-sub">不用花钱，但每天有额度上限，写一封要等半分钟左右。</span>`;
+    const head = stSec(`<div class="st-row st-static"><span class="st-body"><span class="st-main">${status}</span></span></div>`);
+    const providers = [{ id: 'free', name: 'Cloudflare 免费模型（默认）' }].concat(Object.entries(P).map(([id, v]) => ({ id, name: v.name })));
+    const list = providers.map(p => {
+      const on = (d.configured ? d.provider : 'free') === p.id;
+      const pending = pick === p.id && !on;
+      return `<button class="st-row" type="button" data-act="ai-provider" data-v="${esc(p.id)}">
+        <span class="st-body">
+          <span class="st-t st-grow st-wrap">${esc(p.name)}</span>
+          ${pending ? '<span class="st-pending">将使用</span>' : ''}
+          ${on ? `<span class="st-tick" aria-hidden="true">${ICON.tick}</span>` : ''}
+        </span></button>`;
+    }).join('');
+    let html = head + stSec(list, '服务商', AI_HELP);
+    if (showForm) {
+      const keyPh = (d.configured && pick === d.provider)
+        ? ('已保存（尾号 ' + d.last4 + '），不改就留空')
+        : '粘贴服务商给你的 Key';
+      html += stSec(
+        `<div class="st-row st-static"><span class="st-body st-col"><span class="st-lab">接口地址</span>
+          <input class="st-in st-left" id="ai-base" data-ai="base_url" value="${esc(f.base_url || '')}" placeholder="https://…/v1" inputmode="url" autocomplete="off" spellcheck="false"></span></div>`
+        + `<div class="st-row st-static"><span class="st-body st-col"><span class="st-lab">模型名</span>
+          <input class="st-in st-left" id="ai-model" data-ai="model" value="${esc(f.model || '')}" placeholder="比如 deepseek-chat" autocomplete="off" spellcheck="false"></span></div>`
+        + `<div class="st-row st-static"><span class="st-body st-col"><span class="st-lab">API Key</span>
+          <input class="st-in st-left" id="ai-key" data-ai="key" type="password" value="${esc(f.key || '')}" placeholder="${esc(keyPh)}" autocomplete="off" spellcheck="false"></span></div>`
+      );
+      html += stSec(
+        stRow({ act: 'ai-test', title: A.busy === 'test' ? '测试中…' : '测试一下', grow: true })
+        + stRow({ act: 'ai-save', title: A.busy === 'save' ? '保存中…' : '保存', grow: true }),
+        '',
+        A.msg ? `<span class="${A.ok ? 'st-msg-ok' : 'st-danger'}">${esc(A.msg)}</span>` : ''
+      );
+    }
+    if (d.configured) {
+      html += stSec(stRow({ act: 'ai-off', title: '停用，改回免费模型', grow: true, danger: true }));
+    }
+    return `<div class="${A.busy ? 'st-busy' : ''}">${html}</div>`;
   }
 
-  // ───────────── 设置 · API 密钥（只读接口） ─────────────
-  // V.key：{ loading, data: { exists, hint, created_at, last_used_at }, fresh（刚生成的完整密钥，只显示这一次）, busy, error }
-  const KEY_RISK = '有了这串密钥，就能读到你全部的信、待办、点子和习惯。只交给你信任的 agent，别发给别人；担心泄露就点作废。接口只能读，不能改。';
+  // V.key：{ loading, data, fresh（刚生成的完整密钥，只显示这一次）, busy, error }
   async function loadKey() {
-    V.key = { loading: true };
-    try { V.key = { data: await api('GET', '/api-key') }; } catch (e) { V.key = { error: e.message }; }
-    if (V.sheets.length && V.sheets[V.sheets.length - 1].type === 'settings') render();
+    V.key = Object.assign({}, V.key, { loading: true });
+    try { V.key = { data: await api('GET', '/api-key'), fresh: (V.key && V.key.fresh) || '' }; }
+    catch (e) { V.key = { error: e.message }; }
+    if (settingsOpen()) render();
   }
-  // ISO 时间 → 北京时间「11月11日 12:30」
   function bjTime(iso) {
-    const d = new Date(new Date(iso).getTime() + 8 * 3600e3).toISOString();
+    if (!iso) return '';
+    const t = new Date(iso).getTime();
+    if (isNaN(t)) return '';
+    const d = new Date(t + 8 * 3600e3).toISOString();
     return cn(d.slice(0, 10)) + ' ' + d.slice(11, 16);
   }
-  // 给 agent 的一整段说明：地址、请求头（带上密钥）、参数、示例、返回什么。一个按钮整段复制
-  const KEY_HIDDEN = '你的密钥（只在生成时显示过，忘了就重新生成）';
   function keyDoc(key) {
     const url = location.origin + '/api/v1/export';
     const since = today().slice(0, 8) + '01';
@@ -1106,27 +1391,38 @@
   }
   function keySettings() {
     const K = V.key || {};
-    const wrap = inner => `<div class="field"><span class="lab">API 密钥</span>${inner}</div>`;
-    const risk = `<div class="keyrisk">${KEY_RISK}</div>`;
-    if (K.loading) return wrap(`<div class="group"><div class="empty" style="padding:14px">读取中…</div></div>`);
-    if (K.error || !K.data) return wrap(`<div class="group"><div class="empty" style="padding:14px">${esc(K.error || '联网后可以设置')}</div></div>`);
+    if (K.loading) return stSec(`<div class="st-row st-static"><span class="st-body"><span class="st-empty">读取中…</span></span></div>`);
+    if (K.error || !K.data) return stSec(`<div class="st-row st-static"><span class="st-body"><span class="st-empty">${esc(K.error || '联网后可以设置')}</span></span></div>`);
     const d = K.data;
-    let rows;
     if (!d.exists) {
-      rows = `<div class="row"><span class="row-main"><span>还没有密钥</span><span class="sub">生成后，你信任的 agent 或工具可以用它读取你的数据</span></span></div>
-        ${risk}
-        <div class="row foot"><button class="lk" data-act="key-new" ${K.busy ? 'disabled' : ''}>${K.busy ? '生成中…' : '生成密钥'}</button></div>`;
-    } else {
-      rows = `<div class="row"><span class="row-main"><span>密钥 ${esc(d.hint)}…</span><span class="sub">${esc(bjTime(d.created_at))} 生成 · ${d.last_used_at ? '最近使用 ' + esc(bjTime(d.last_used_at)) : '还没用过'}</span></span></div>
-        ${risk}
-        <div class="keydoc-wrap">
-          <pre class="keybox" id="key-doc">${esc(keyDoc(K.fresh))}</pre>
-          <div class="keydoc-foot"><button class="btn sm" data-act="key-copy">${K.fresh ? '复制' : '复制用法'}</button>
-          <span class="keyhint">${K.fresh ? '只显示这一次，先复制好。' : '把密钥那行换成你保存的密钥。'}</span></div></div>
-        <div class="row foot"><button class="lk" data-act="key-regen" ${K.busy ? 'disabled' : ''}>${K.busy ? '生成中…' : '重新生成'}</button>
-        <button class="lk" style="color:var(--danger)" data-act="key-revoke" ${K.busy ? 'disabled' : ''}>作废</button></div>`;
+      return stSec(
+        `<div class="st-row st-static"><span class="st-body"><span class="st-main">
+          <span class="st-t st-grow">还没有密钥</span>
+          <span class="st-sub">生成后，你信任的 agent 或工具可以用它读取你的数据</span>
+        </span></span></div>`,
+        '',
+        KEY_RISK
+      ) + stSec(stRow({ act: 'key-new', title: K.busy ? '生成中…' : '生成密钥', grow: true }));
     }
-    return wrap(`<div class="group">${rows}</div>`);
+    return stSec(
+        `<div class="st-row st-static"><span class="st-body"><span class="st-main">
+          <span class="st-t st-grow">密钥 ${esc(d.hint)}…</span>
+          <span class="st-sub">${esc(bjTime(d.created_at))} 生成 · ${d.last_used_at ? '最近使用 ' + esc(bjTime(d.last_used_at)) : '还没用过'}</span>
+        </span></span></div>`,
+        '',
+        KEY_RISK
+      )
+      + stSec(
+        `<div class="st-row st-static"><span class="st-body st-key-body">
+          <pre class="st-key" id="key-doc">${esc(keyDoc(K.fresh))}</pre>
+          <span class="st-key-foot">
+            <button class="st-copy" type="button" data-act="key-copy">${K.fresh ? '复制' : '复制用法'}</button>
+            <span class="st-t st-grow st-risk">${K.fresh ? '只显示这一次，先复制好。' : '把密钥那行换成你保存的密钥。'}</span>
+          </span>
+        </span></div>`
+      )
+      + stSec(stRow({ act: 'key-regen', title: K.busy ? '生成中…' : '重新生成', grow: true }))
+      + stSec(stRow({ act: 'key-revoke', title: '作废', grow: true, danger: true }));
   }
 
   // ───────────── 渲染后的绑定（输入框、表单） ─────────────
@@ -1426,10 +1722,15 @@
     switch (act) {
       case 'tab':
         if (V.tab === 'write' && v !== 'write') { V.editing = false; if (rec) rec.stop(); }
+        if (settingsOpen()) flushSetPage();
+        dropSettingsHistory();
         V.tab = v; V.sheets = []; V.sent = null;
         if (v === 'write') V.writeDate = V.writeDate || letterDay();
         render(); break;
-      case 'write-day': V.tab = 'write'; V.writeDate = v; V.editing = !hasText(v); V.replyErr = ''; V.sheets = []; V.sent = null; render(); break;
+      case 'write-day':
+        if (settingsOpen()) flushSetPage();
+        dropSettingsHistory();
+        V.tab = 'write'; V.writeDate = v; V.editing = !hasText(v); V.replyErr = ''; V.sheets = []; V.sent = null; render(); break;
       case 'day': {
         const n = addDays(V.writeDate, Number(v));
         if (n > letterDay()) return;
@@ -1574,7 +1875,9 @@
         } catch (err) { toast(err.message); }
         break;
       }
-      case 'settings': V.ai = { loading: true }; V.key = { loading: true }; openSheet({ type: 'settings' }); loadAI(); loadKey(); break;
+      case 'settings': openSettings(); break;
+      case 'set-page': goSetPage(v); break;
+      case 'set-back': backSetPage(); break;
       case 'key-new': case 'key-regen': {
         if (act === 'key-regen' && !confirm('重新生成密钥？旧密钥会立刻作废，用它的 agent 或工具要换成新的。')) return;
         V.key.busy = true; render();
@@ -1599,7 +1902,24 @@
       case 'deliver':
         S.settings.deliver = v; queue('PUT', '/settings', { deliver: v }); toCache(); render();
         toast(v === 'now' ? '之后寄出的信，马上就能看到回信' : '之后今晚寄出的信，回信明早 6:00 送到'); break;
-      case 'ai-toggle': V.ai.open = !V.ai.open; V.ai.msg = ''; render(); break;
+      case 'ai-provider': {
+        const A = V.ai || {};
+        if (!A.data || A.busy) break;
+        if (v === 'free') {
+          if (A.data.configured) { /* 走下面的 ai-off 确认 */ document.querySelector('[data-act="ai-off"]').click(); break; }
+          A.pick = 'free'; A.msg = ''; render(); break;
+        }
+        const pre = A.data.providers[v] || {};
+        const form = Object.assign({}, A.form, { provider: v, key: (A.form && A.form.key) || '' });
+        if (A.data.configured && A.data.provider === v) {
+          form.base_url = A.data.base_url || pre.base || '';
+          form.model = A.data.model || pre.model || '';
+        } else if (v !== 'custom') {
+          form.base_url = pre.base || '';
+          form.model = pre.model || '';
+        }
+        A.pick = v; A.form = form; A.msg = ''; render(); break;
+      }
       case 'ai-test': case 'ai-save': {
         const isTest = act === 'ai-test';
         V.ai.busy = isTest ? 'test' : 'save'; V.ai.msg = ''; render();
@@ -1610,7 +1930,7 @@
             V.ai.msg = r.ok ? `接通了，用时 ${(r.ms / 1000).toFixed(1)} 秒，它回复：「${r.reply}」` : '没接通：' + r.error;
           } else {
             const d = await api('PUT', '/ai-config', V.ai.form);
-            V.ai.data = d; V.ai.form.key = ''; V.ai.open = false; V.ai.ok = true; V.ai.msg = '';
+            V.ai.data = d; V.ai.form.key = ''; V.ai.pick = d.provider; V.ai.ok = true; V.ai.msg = '';
             toast('已保存，之后的回信用你自己的 AI 写');
           }
         } catch (e2) { V.ai.ok = false; V.ai.msg = e2.message; }
@@ -1618,7 +1938,12 @@
       }
       case 'ai-off': {
         if (!confirm('停用自己的 AI，改回免费模型？保存的 Key 会被删除。')) return;
-        try { V.ai.data = await api('DELETE', '/ai-config'); toast('已改回免费模型'); } catch (e2) { toast(e2.message); }
+        try {
+          V.ai.data = await api('DELETE', '/ai-config');
+          V.ai.pick = 'free';
+          V.ai.form = { provider: 'deepseek', base_url: '', model: '', key: '' };
+          toast('已改回免费模型');
+        } catch (e2) { toast(e2.message); }
         render(); break;
       }
       case 'burn-ask':
@@ -1639,15 +1964,17 @@
       case 'save-q': {
         const qs = $('#set-q').value.split('\n').map(s => s.trim()).filter(Boolean);
         if (!qs.length) return toast('至少留一个问题');
-        S.settings.questions = qs; queue('PUT', '/settings', { questions: qs }); toCache(); toast('已保存，下一封回信开始生效'); break;
+        S.settings.questions = qs; queue('PUT', '/settings', { questions: qs }); toCache(); toast('已保存。下一封信的提示会换成这些。'); break;
       }
       case 'habit-del':
-        if (!confirm('删除这个习惯？以前的打卡记录会一起隐藏。')) return;
+        if (!confirm('删除这个习惯？以后的打卡里不再出现。以前的记录还留着。')) return;
         queue('PUT', '/habits/' + v, { archived: true });
         S.habits = S.habits.filter(h => h.id !== v); toCache(); render(); break;
       case 'logout':
         try { await api('POST', '/logout'); } catch (err) { /* ignore */ }
         store.del('hx_outbox'); store.del('hx_opened2'); outbox = []; opened = new Set();
+        dropSettingsHistory();
+        V.sheets = [];
         showLogin(); break;
     }
   });
