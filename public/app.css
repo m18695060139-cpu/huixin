@@ -642,7 +642,7 @@ textarea.input { line-height: 1.6; resize: vertical; }
 .sheet-bar .st-back:active { transform: none; opacity: .55; }
 .sheet-bar .st-back svg { flex: none; }
 .sheet-bar .st-back-t { color: var(--ink); font-size: 17px; }
-.sheet-bar.set-bar .x { position: absolute; right: 16px; }
+.sheet-bar.set-bar .x { position: absolute; left: 16px; right: auto; }
 
 .st-sec { margin-top: 28px; display: flex; flex-direction: column; }
 .st-sec:first-child { margin-top: 16px; }

@@ -917,9 +917,9 @@
         ? `<button class="st-back" type="button" data-act="set-back" aria-label="返回设置">${ICON.left}<span class="st-back-t">设置</span></button>`
         : '';
       const close = page ? '' : `<button class="x" data-act="close" aria-label="关闭">${ICON.x}</button>`;
-      bar = `<div class="sheet-bar set-bar"><div>${back}<span class="t">${esc(title)}</span>${close}</div></div>`;
+      bar = `<div class="sheet-bar set-bar"><div>${close}${back}<span class="t">${esc(title)}</span></div></div>`;
     } else {
-      bar = `<div class="sheet-bar"><div><span class="sp"></span><span class="t">${titles[s.type] || ''}</span><button class="x" data-act="close" aria-label="关闭">${ICON.x}</button></div></div>`;
+      bar = `<div class="sheet-bar"><div><button class="x" data-act="close" aria-label="关闭">${ICON.x}</button><span class="t">${titles[s.type] || ''}</span><span class="sp"></span></div></div>`;
     }
     const pageClass = s.type === 'settings' ? 'page st-page' : 'page';
     return `<div class="sheet-dim" data-act="close" aria-hidden="true"></div><div class="sheet${anim}${burning ? ' burning' : ''}" role="dialog" aria-modal="true">
