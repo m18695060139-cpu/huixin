@@ -1,7 +1,7 @@
 const behavior = require('../../behaviors/page');
 const state = require('../../utils/state');
 const model = require('../../utils/model');
-const { AI_ENABLED } = require('../../config');
+const ai = require('../../utils/ai');
 const { letterDay } = require('../../utils/date');
 const nav = require('../../utils/nav');
 const actions = require('../../utils/actions');
@@ -31,16 +31,17 @@ Page({
     view.loading = !!this.data.replyLoading;
     view.fail = this.data.replyFail || '';
     view.mineOpen = !!this.data.mineOpen;
-    view.showAi = !!AI_ENABLED;
+    view.showAi = ai.on();
     this.setData({ letter: view });
-    if (AI_ENABLED && view.canAsk && !this.data.replyLoading && !this.data.replyFail && !this._started) {
+    if (ai.on() && view.canAsk && !this.data.replyLoading && !this.data.replyFail && !this._started) {
       this._started = true;
       this.askReply();
     }
   },
   async askReply() {
-    if (!AI_ENABLED || !wx.cloud) {
-      this.data.replyFail = '回信还没接上。你写的信还在。';
+    if (!ai.on() || !wx.cloud) {
+      this.data.replyFail = ai.on() ? '回信还没接上。你写的信还在。' : '';
+      if (!ai.on()) return;
       this.setData({ replyFail: this.data.replyFail });
       this.paint();
       return;
@@ -101,6 +102,30 @@ Page({
         data: { date: this.data.date, feedback: { block: 'lenses', value: v } },
       }).catch(() => {});
     }
+  },
+  goAI() { wx.navigateTo({ url: '/pages/settings-ai/settings-ai' }); },
+  // 举报 AI 回信：选原因，记到云端，开发者核查。
+  onReport() {
+    const cur = (state.get().letters || {})[this.data.date];
+    if (!cur || !cur.reply) return;
+    if (cur.reply.report && cur.reply.report.reason) { this.toast('已经收到你的举报，我们会尽快核查。'); return; }
+    const self = this;
+    wx.showActionSheet({
+      itemList: ai.REPORT_REASONS,
+      success(res) {
+        const reason = ai.REPORT_REASONS[res.tapIndex];
+        if (!reason) return;
+        const reply = Object.assign({}, cur.reply, { report: { reason: reason, at: new Date().toISOString() } });
+        state.upsertLetter(self.data.date, { reply: reply });
+        self.paint();
+        if (!wx.cloud) { self.toast('收到，谢谢。我们会尽快核查这封回信。'); return; }
+        wx.cloud.callFunction({
+          name: 'reply',
+          data: { date: self.data.date, feedback: { block: 'report', reason: reason } },
+        }).then(() => self.toast('收到，谢谢。我们会尽快核查这封回信。'))
+          .catch(() => self.toast('网络不太好，举报没送出，稍后再试。'));
+      },
+    });
   },
   back() { wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/today/today' }) }); },
   goToday() { wx.switchTab({ url: '/pages/today/today' }); },

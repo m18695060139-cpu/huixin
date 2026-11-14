@@ -1,6 +1,7 @@
 const behavior = require('../../behaviors/page');
 const state = require('../../utils/state');
 const date = require('../../utils/date');
+const ai = require('../../utils/ai');
 
 const LENS = [
   ['health', '健康', '#FF2D55'],
@@ -37,7 +38,7 @@ Page({
   onUnload() { if (this.unsub) this.unsub(); },
   tabShouldShow() { return false; },
   paint() {
-    const row = (state.get().digests || []).find(d => d.kind === this.kind && d.key === this.key);
+    const row = (state.get().digests || []).find(d => d.kind === this.kind && d.key === this.key && !(d.content && d.content.pending_check));
     if (!row) {
       this.setData({ missing: true });
       return;
@@ -75,6 +76,7 @@ Page({
   back() { wx.navigateBack({ fail: () => wx.switchTab({ url: '/pages/mailbox/mailbox' }) }); },
   async rewrite() {
     if (this.data.busy || !wx.cloud) return;
+    if (!ai.on()) { wx.navigateTo({ url: '/pages/settings-ai/settings-ai' }); return; }
     this.setData({ busy: true });
     wx.showLoading({ title: '正在重写', mask: true });
     try {

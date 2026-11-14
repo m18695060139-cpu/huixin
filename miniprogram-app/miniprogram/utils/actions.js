@@ -289,12 +289,14 @@ async function saveSettings(patch) {
   if ('name' in patch) payload.name = s.name || '';
   if ('deliver' in patch) payload.deliver = s.deliver === 'now' ? 'now' : 'morning';
   if ('questions' in patch) payload.questions = s.questions || [];
+  if ('ai_reply' in patch) payload.ai_reply = s.ai_reply === true;
   const r = await push('settings', 'upsert', payload, 'settings');
   if (r && r.code === 'risky') {
     state.patchSettings({
       theme: prev.theme,
       name: prev.name,
       deliver: prev.deliver,
+      ai_reply: prev.ai_reply === true,
       questions: prev.questions,
     });
     return r;

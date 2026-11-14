@@ -22,7 +22,7 @@ async function checkText(openid, content) {
       if (suggest === 'review') review = true;
     } catch (e) {
       console.error('msgSecCheck', e && (e.errMsg || e.message || e));
-      return { suggest: 'error' };
+      return { suggest: 'error', errCode: (e && (e.errCode || e.errcode)) || -1 };
     }
   }
   return { suggest: review ? 'review' : 'pass' };

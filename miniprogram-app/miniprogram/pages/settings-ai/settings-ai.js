@@ -1,11 +1,15 @@
 const behavior = require('../../behaviors/settings');
 const ss = require('../../utils/setting-status');
+const state = require('../../utils/state');
+const actions = require('../../utils/actions');
+const ai = require('../../utils/ai');
 
 Page({
   behaviors: [behavior],
   data: {
     ai: { loading: true },
     aiHelp: ss.AI_HELP,
+    aiOn: false,
   },
   onLoad() {
     const cached = ss.readAICache();
@@ -15,7 +19,35 @@ Page({
   },
   onShow() {
     this.bootSettings();
+    this.setData({ aiOn: ai.on() });
     this.loadAI();
+  },
+  // 智能回信总开关。默认关闭；打开前先说明会把信交给 AI，用户确认才打开。
+  onToggle(e) {
+    const want = !!(e && e.detail && e.detail.value);
+    if (this._toggling) return;
+    if (!want) { this.applyToggle(false); return; }
+    this.setData({ aiOn: false });
+    wx.showModal({
+      title: '打开智能回信？',
+      content: ai.AI_CONSENT,
+      confirmText: '打开',
+      cancelText: '先不用',
+      success: (res) => { if (res.confirm) this.applyToggle(true); },
+    });
+  },
+  async applyToggle(on) {
+    this._toggling = true;
+    this.setData({ aiOn: on });
+    const r = await actions.saveSettings({ ai_reply: on });
+    this._toggling = false;
+    if (r && r.ok === false) {
+      state.patchSettings({ ai_reply: !on });
+      this.setData({ aiOn: !on });
+      this.toast(r.message || '没改成，请稍后再试');
+      return;
+    }
+    this.toast(on ? '已打开。之后寄出的信会收到回信。' : '已关闭。之后寄出的信不会交给 AI。');
   },
   loadAI() {
     const cached = ss.readAICache();

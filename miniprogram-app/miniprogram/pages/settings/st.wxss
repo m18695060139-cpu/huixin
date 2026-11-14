@@ -118,3 +118,9 @@ button.st-back::after { display: none; }
 
 .st-wrap { white-space: normal; overflow: visible; text-overflow: unset; }
 .st-pending { flex: none; font-size: 25rpx; color: var(--sub); }
+
+/* 原生 button 当成一行用（意见反馈 open-type="feedback"） */
+.st-btn { display: block; box-sizing: border-box; width: 100% !important; margin: 0 !important; padding: 0 0 0 30.769rpx !important; border-radius: 0; text-align: left; line-height: normal; font-size: inherit; font-weight: 400; color: var(--text); background-color: var(--card); }
+.st-btn .st-t { text-align: left; }
+.st-btn::after { border: none; }
+.st-switch { flex: none; transform: scale(.9); transform-origin: right center; }

@@ -12,7 +12,7 @@ const burnedItems = {};
 
 function blank() {
   return {
-    settings: { theme: 'auto', questions: DEFAULT_QUESTIONS.slice(), name: '', deliver: 'morning' },
+    settings: { theme: 'auto', questions: DEFAULT_QUESTIONS.slice(), name: '', deliver: 'morning', ai_reply: false },
     letters: {},
     todos: [],
     ideas: [],
@@ -381,6 +381,7 @@ function applyCloud(bundle) {
       theme: s.theme || data.settings.theme || 'auto',
       name: s.name || '',
       deliver: s.deliver === 'now' ? 'now' : 'morning',
+      ai_reply: s.ai_reply === true,
       questions: (Array.isArray(s.questions) && s.questions.length) ? s.questions : data.settings.questions,
     };
   }

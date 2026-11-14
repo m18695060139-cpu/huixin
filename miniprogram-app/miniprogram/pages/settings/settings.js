@@ -3,6 +3,9 @@ const state = require('../../utils/state');
 const actions = require('../../utils/actions');
 const { THEMES } = require('../../utils/theme');
 const ss = require('../../utils/setting-status');
+const ai = require('../../utils/ai');
+
+function aiValue() { return ai.on() ? ss.aiRowValue() : '已关闭'; }
 
 function themeName(id) {
   const t = THEMES.filter(x => x.id === id)[0];
@@ -15,7 +18,7 @@ Page({
     nameValue: '未设置',
     deliverValue: '明早 6:00',
     themeValue: '跟随系统',
-    aiValue: '混元（默认）',
+    aiValue: '已关闭',
     aiOn: !!ss.AI_ENABLED,
     keyValue: '未生成',
     habitValue: '未添加',
@@ -40,7 +43,7 @@ Page({
       deliverValue: s.deliver === 'now' ? '寄出后马上' : '明早 6:00',
       themeValue: themeName(s.theme || 'auto'),
       aiOn: !!ss.AI_ENABLED,
-      aiValue: ss.aiRowValue(),
+      aiValue: aiValue(),
       keyValue: ss.keyRowValue(),
       habitValue: habits.length ? (habits.length + ' 个') : '未添加',
       questionValue: qs.length ? (qs.length + ' 个') : '未设置',
@@ -54,7 +57,7 @@ Page({
     jobs.push(ss.refreshKeyIfStale());
     Promise.all(jobs).then(() => {
       self.setData({
-        aiValue: ss.aiRowValue(),
+        aiValue: aiValue(),
         keyValue: ss.keyRowValue(),
       });
     }).catch(() => {});

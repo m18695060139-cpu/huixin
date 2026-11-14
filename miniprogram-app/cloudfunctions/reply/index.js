@@ -1,7 +1,7 @@
 // 寄出或拆开时写回信。优先用用户自己接的 OpenAI 兼容接口，调不通再改用混元。
 // 提示词只在这个函数里。周信、季信、年信在 cloudfunctions/digest。
 const cloud = require('wx-server-sdk');
-const { guard } = require('./sec');
+const { guard, guardAI } = require('./sec');
 const { HUNYUAN_MODEL, HUNYUAN_FALLBACK, DEFAULT_QUESTIONS, buildMessages, normalizeReply } = require('./prompt');
 const { askWithUserAI } = require('./userai');
 
@@ -10,6 +10,28 @@ cloud.init({
   timeout: 60000,
 });
 const db = cloud.database();
+
+const REPORT_REASONS = ['内容不实或有误导', '内容不当或令人不适', '涉及违法违规', '其他问题'];
+
+// 举报 AI 回信：记在这封回信上，同时留一份到 ai_reports 方便开发者核查。集合不存在就先建。
+async function saveReport(openid, letter, reason, note) {
+  const row = {
+    _openid: openid,
+    date: letter.date,
+    reason: reason,
+    note: String(note || '').slice(0, 200),
+    summary: String((letter.reply && letter.reply.summary) || '').slice(0, 2000),
+    engine: (letter.reply && letter.reply.engine) || '',
+    created_at: new Date().toISOString(),
+    status: 'open',
+  };
+  try {
+    await db.collection('ai_reports').add({ data: row });
+  } catch (e) {
+    try { await db.createCollection('ai_reports'); } catch (e2) { /* 已存在或无权限 */ }
+    try { await db.collection('ai_reports').add({ data: row }); } catch (e3) { console.error('ai_reports', e3 && e3.message); }
+  }
+}
 
 function fail(message, code) {
   return { ok: false, code: code || 'ai', message: message };
@@ -122,6 +144,13 @@ exports.main = async (event) => {
       const fbLetter = letter;
       if (!fbLetter || !fbLetter.reply) return fail('还没有回信', 'empty');
       const reply = fbLetter.reply;
+      if (event.feedback.block === 'report') {
+        const reason = REPORT_REASONS.indexOf(event.feedback.reason) >= 0 ? event.feedback.reason : '其他问题';
+        reply.report = { reason: reason, at: new Date().toISOString() };
+        await db.collection('letters').doc(fbLetter._id).update({ data: { reply: reply } });
+        await saveReport(OPENID, fbLetter, reason, event.feedback.note);
+        return { ok: true, reply: reply };
+      }
       const v = Number(event.feedback.value) || 0;
       reply.fb = v;
       await db.collection('letters').doc(fbLetter._id).update({ data: { reply: reply } });
@@ -133,6 +162,13 @@ exports.main = async (event) => {
     }
     if (!letter || !String(letter.text || '').trim()) return fail('这封信还是空的', 'empty');
     const settings = await findOne('settings', OPENID, {}) || {};
+    // 智能回信默认关闭：用户没在设置里打开，就不把信交给大模型。
+    if (settings.ai_reply !== true) return fail('智能回信还没打开。到「设置 → 智能回信」打开后再试。你写的信还在。', 'off');
+    // 输入：save 保存时已经查过（risky 存不进来）；当时检查没连上的，这里再查一次。
+    if (letter.sec_unchecked) {
+      const inSec = await guard(OPENID, [letter.text]);
+      if (!inSec.ok) return fail('这封信里有内容没通过安全检查，这次不写回信。你写的信还在。', 'risky');
+    }
 
     const todos = await listOwn('todos', OPENID, 100);
     const ideas = await listOwn('ideas', OPENID, 100);
@@ -159,8 +195,12 @@ exports.main = async (event) => {
     const parts = [made.summary].concat(made.tasks.map(t => t.text), made.ideas.map(t => t.text), [
       made.lenses.health, made.lenses.energy, made.lenses.career, made.lenses.relation,
     ]);
-    const sec = await guard(OPENID, parts);
-    if (!sec.ok) return fail('回信这次没能留下，稍后再拆一次。你写的信还在。', 'risky');
+    // AI 输出：risky / review / 检查失败都不展示。
+    const sec = await guardAI(OPENID, parts);
+    if (!sec.ok) {
+      console.error('AI 回信未通过内容检查', sec.suggest, sec.errCode || '');
+      return Object.assign({ secErr: sec.errCode || 0 }, fail(sec.code === 'unchecked' ? '内容安全检查暂时没连上，这次先不显示回信，稍后再试。你写的信还在。' : '回信这次没能留下，稍后再拆一次。你写的信还在。', sec.code));
+    }
 
     const haveT = {};
     openTodos.concat(todos.filter(t => t.dropped_at)).forEach(t => { haveT[norm(t.text)] = true; });
@@ -210,6 +250,7 @@ exports.main = async (event) => {
       todos: madeTodos.map(t => ({ id: t.id, text: t.text, due: t.due || '' })),
       ideas: madeIdeas.map(t => ({ id: t.id, text: t.text })),
       engine: asked.engine || '',
+      ai: true,
     };
     if (asked.ownError) reply.ownError = asked.ownError;
     const patch = {

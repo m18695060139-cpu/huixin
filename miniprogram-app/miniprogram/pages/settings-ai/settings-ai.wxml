@@ -1,6 +1,20 @@
 <view class="screen theme-{{theme}}" style="--safe-top: {{statusBar}}px; --safe-bottom: {{safeBottom}}px;">
-  <st-nav title="AI 回信" back="设置" bind:back="back"></st-nav>
+  <st-nav title="智能回信" back="设置" bind:back="back"></st-nav>
   <view class="page st-page" style="padding-top: {{navBar}}px; padding-bottom: calc(env(safe-area-inset-bottom) + 80px);">
+
+    <view class="st-sec">
+      <view class="st-group">
+        <view class="st-row">
+          <view class="st-body">
+            <text class="st-t st-grow">智能回信</text>
+            <switch class="st-switch" checked="{{aiOn}}" color="#34C759" bindchange="onToggle" aria-label="智能回信" />
+          </view>
+        </view>
+      </view>
+      <text class="st-foot">打开后，寄出的信会交给 AI（腾讯混元，经微信云开发调用）写一封回信，并整理出待办和点子；每周一早上送一封周信。内容由 AI 生成，仅供参考。生成前后都会做内容安全检查。默认关闭，随时可以关掉。</text>
+    </view>
+
+    <block wx:if="{{aiOn}}">
 
     <view class="st-sec">
       <view class="st-group">
@@ -82,6 +96,11 @@
         </view>
       </view>
     </view>
+
+    <view class="st-sec">
+      <text class="st-foot">回信内容有问题，可以在回信底部点「举报」，或在「设置 → 意见反馈与投诉」告诉我们。</text>
+    </view>
+    </block>
 
   </view>
   <toast id="toast" />

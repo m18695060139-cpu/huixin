@@ -875,3 +875,11 @@ button.btn.ghost[disabled] {
   color: var(--text) !important;
   opacity: .35 !important;
 }
+
+/* 智能回信：AI 生成标识、举报、未开启提示 */
+.ai-foot { display: flex; align-items: center; justify-content: space-between; gap: 15.385rpx; margin-top: 15.385rpx; font-size: 23.077rpx; color: var(--sub); }
+.ai-tag { color: var(--sub); }
+.ai-report { color: var(--sub); text-decoration: underline; padding: 7.692rpx 0 7.692rpx 15.385rpx; }
+.ai-off { display: flex; flex-direction: column; gap: 15.385rpx; }
+.ai-off-t { font-size: 28.846rpx; font-weight: 600; color: var(--ink); }
+.ai-off-s { font-size: 25rpx; line-height: 1.6; color: var(--sub); }

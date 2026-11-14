@@ -12,7 +12,9 @@ const AI_PROVIDERS = {
   openrouter: { name: 'OpenRouter', base: 'https://openrouter.ai/api/v1', model: 'deepseek/deepseek-chat' },
   custom: { name: '自定义', base: '', model: '' },
 };
-const AI_HELP = '接上之后，你的回信和周信都用你自己的 AI 写，花的是你自己的额度。Key 加密保存在服务器上，小程序里只显示后 4 位。DeepSeek、智谱、通义千问、Kimi、硅基流动等大多数服务商都能这样接入；模型名以服务商控制台为准。自己的 AI 出错时，会自动改用混元，不会漏掉回信。';
+const AI_HELP = '也可以改用你自己在 DeepSeek、智谱、通义千问、Kimi、硅基流动等国内服务商的账号，花的是你自己的额度。Key 加密保存在服务器上，小程序里只显示后 4 位；模型名以服务商控制台为准。不管用哪个模型，回信都会先过内容安全检查。自己的 AI 出错时，会自动改用混元。';
+// 小程序里不列出境外聚合和自定义地址；已经接上的仍照常显示。
+const MP_HIDDEN = ['openrouter', 'custom'];
 const AI_IDS = Object.keys(AI_PROVIDERS);
 
 const KEY_RISK = '有了这串密钥，就能读到你全部的信、待办、点子和习惯。只交给你信任的 agent，别发给别人；担心泄露就点作废。接口只能读，不能改。';
@@ -53,7 +55,8 @@ function aiView(d, form, extra) {
     on: inUseId === 'hunyuan',
     pending: false,
   };
-  const providers = [hunyuan].concat(list.map(x => Object.assign({}, x, {
+  const shown = list.filter(x => MP_HIDDEN.indexOf(x.id) < 0 || (configured && (d.provider || 'custom') === x.id));
+  const providers = [hunyuan].concat(shown.map(x => Object.assign({}, x, {
     on: inUseId === x.id,
     pending: selectedId === x.id && inUseId !== x.id,
   })));

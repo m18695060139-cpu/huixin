@@ -117,11 +117,16 @@ async function saveLetter(openid, payload) {
   }
   let review = !!cur.sec_review;
   let unchecked = !!cur.sec_unchecked;
-  if ('text' in payload) {
+  // 草稿自动保存很频繁：只在寄出（或已寄出的信改正文）时查，省 msgSecCheck 额度（未上架时每天只有 100 次）。
+  // 正文没变就不再查。没查过的草稿标 sec_unchecked，reply 交给模型前会再查一次。
+  const textChanged = ('text' in payload) && String(text) !== String(cur.text || '');
+  if (textChanged && alreadySent) {
     const g = await guard(openid, [text]);
     if (!g.ok) return g;
     review = !!g.review;
     unchecked = !!g.unchecked;
+  } else if (textChanged) {
+    unchecked = true;
   }
   const data = {
     date: payload.date,
@@ -249,9 +254,15 @@ async function saveSettings(openid, payload) {
     name: ('name' in payload) ? clip(payload.name, 20).trim() : (cur.name || ''),
     questions: Array.isArray(cur.questions) ? cur.questions : [],
     deliver: cur.deliver === 'now' ? 'now' : 'morning',
+    ai_reply: cur.ai_reply === true,
     updated_at: new Date().toISOString(),
   };
   if (payload.deliver === 'now' || payload.deliver === 'morning') data.deliver = payload.deliver;
+  // 智能回信默认关闭，只有用户在设置里自己打开（并看过说明）才为 true。记下打开 / 关闭的时间。
+  if ('ai_reply' in payload) {
+    data.ai_reply = payload.ai_reply === true;
+    if (data.ai_reply !== (cur.ai_reply === true)) data.ai_reply_at = new Date().toISOString();
+  }
   if ('name' in payload) parts.push(data.name);
   if (Array.isArray(payload.questions)) {
     const qs = payload.questions.map(s => clip(s, 120).trim()).filter(Boolean).slice(0, 10);

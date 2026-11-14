@@ -1,7 +1,7 @@
 // 周信 / 季信 / 年信。每天北京时间 6:00 触发：周一送上周，季初送上季，元旦送去年。
 // 提示词与网页版 src/ai.js 的 DIGEST_SYSTEM 一致。也可以由小程序手动让它现在写。
 const cloud = require('wx-server-sdk');
-const { guard } = require('./sec');
+const { guardAI } = require('./sec');
 const { askWithUserAI } = require('./userai');
 
 cloud.init({ env: 'huixin-d1g2tdmkz68dc5a5d', timeout: 60000 });
@@ -114,7 +114,7 @@ function inRange(start, end) {
   return _.gte(start).and(_.lte(end));
 }
 
-async function makeDigest(openid, kind, key) {
+async function makeDigest(openid, kind, key, timer) {
   if (kind === 'week') key = weekKey(isDate(key) ? key : cstToday());
   if (kind === 'quarter' && !/^\d{4}-Q[1-4]$/.test(key)) key = quarterKey(cstToday());
   if (kind === 'year' && !/^\d{4}$/.test(key)) key = cstToday().slice(0, 4);
@@ -127,6 +127,8 @@ async function makeDigest(openid, kind, key) {
   if (!letters.length) return null;
   const settingsRes = await db.collection('settings').where({ _openid: openid }).limit(1).get();
   const settings = (settingsRes.data && settingsRes.data[0]) || {};
+  // 智能回信默认关闭：没打开的人不写周信季信年信。
+  if (settings.ai_reply !== true) { const off = new Error('智能回信还没打开'); off.code = 'off'; throw off; }
   const done = (await listWhere('todos', { _openid: openid, done_at: inRange(start, end) })).filter(t => t.done);
   const dropped = (await listWhere('todos', { _openid: openid, dropped_at: inRange(start, end) })).filter(t => t.dropped_at);
   const pending = (await listWhere('todos', { _openid: openid, updated_at: _.gte(start).and(_.lt(nextDay)) })).filter(t => !t.done && !t.dropped_at && t.note && String(t.updated_at || '').slice(0, 10) >= start && String(t.updated_at || '').slice(0, 10) <= end);
@@ -165,11 +167,15 @@ async function makeDigest(openid, kind, key) {
   ];
   const asked = await askWithUserAI(db, openid, messages, ask, { maxTokens: kind === 'week' ? 3000 : 4500, temperature: 0.6, timeoutMs: 15000 });
   const content = extractJSON(asked.text);
-  const sec = await guard(cloud.getWXContext().OPENID || openid, [content.letter, content.title, content.energy_note, content.next].concat(content.forgotten || [], content.themes || []));
-  if (!sec.ok) throw new Error('内容没能保存');
+  const sec = await guardAI(cloud.getWXContext().OPENID || openid, [content.letter, content.title, content.energy_note, content.next].concat(content.forgotten || [], content.themes || []));
+  // 定时任务凌晨跑，用户近两小时没打开小程序时 msgSecCheck 会报 61010。
+  // 这时先存下但标记 pending_check，不展示；用户打开信箱时再查，过了才显示。
+  if (!sec.ok && !(timer && sec.code === 'unchecked')) throw new Error('内容没能保存');
+  if (!sec.ok) content.pending_check = true;
   const energies = letters.filter(l => l.energy);
   const avg = energies.length ? Math.round(energies.reduce((s, l) => s + Number(l.energy), 0) / energies.length * 10) / 10 : null;
   content.engine = asked.engine || '';
+  content.ai = true;
   if (asked.ownError) content.ownError = asked.ownError;
   content.stats = { letters: letters.length, days: days, energyAvg: avg, todosDone: done.length };
   content.range = [start, end];
@@ -180,6 +186,25 @@ async function makeDigest(openid, kind, key) {
   if (existing) await db.collection('digests').doc(existing._id).update({ data: { content: content, created_at: now } });
   else await db.collection('digests').add({ data: data });
   return { kind: kind, key: key, created_at: now, content: content };
+}
+
+// 补查定时写好、还没过内容安全的总结信：通过就显示，不通过就删掉。
+async function recheck(openid) {
+  const rows = await listWhere('digests', { _openid: openid, 'content.pending_check': true });
+  let shown = 0;
+  let dropped = 0;
+  for (let i = 0; i < rows.length; i++) {
+    const c = rows[i].content || {};
+    const sec = await guardAI(openid, [c.letter, c.title, c.energy_note, c.next].concat(c.forgotten || [], c.themes || []));
+    if (sec.ok) {
+      await db.collection('digests').doc(rows[i]._id).update({ data: { 'content.pending_check': false } });
+      shown++;
+    } else if (sec.code !== 'unchecked') {
+      await db.collection('digests').doc(rows[i]._id).remove();
+      dropped++;
+    }
+  }
+  return { ok: true, checked: rows.length, shown: shown, dropped: dropped };
 }
 
 async function distinctOpenids(coll) {
@@ -209,8 +234,8 @@ async function deliverDue(today) {
   const ids = await openids();
   for (let i = 0; i < ids.length; i++) {
     for (let j = 0; j < jobs.length; j++) {
-      try { await makeDigest(ids[i], jobs[j][0], jobs[j][1]); }
-      catch (e) { console.error('digest', ids[i], jobs[j], e && e.message); }
+      try { await makeDigest(ids[i], jobs[j][0], jobs[j][1], true); }
+      catch (e) { if (!(e && e.code === 'off')) console.error('digest', ids[i], jobs[j], e && e.message); }
     }
   }
   return { ok: true, users: ids.length, jobs: jobs };
@@ -221,6 +246,7 @@ exports.main = async (event) => {
     if (event && (event.Type === 'Timer' || event.TriggerName)) return await deliverDue(cstToday());
     const { OPENID } = cloud.getWXContext();
     if (!OPENID) return { ok: false, message: '没有微信身份' };
+    if (event && event.action === 'recheck') return await recheck(OPENID);
     const kind = event && event.kind;
     if (['week', 'quarter', 'year'].indexOf(kind) < 0) return { ok: false, message: '类型不对' };
     const digest = await makeDigest(OPENID, kind, event.key || '');
@@ -229,6 +255,7 @@ exports.main = async (event) => {
   } catch (e) {
     console.error(e);
     const msg = String(e && e.message || '');
+    if (e && e.code === 'off') return { ok: false, code: 'off', message: '智能回信还没打开。到「设置 → 智能回信」打开后再试。' };
     if (/你自己的 AI 没接通/.test(msg)) return { ok: false, message: msg };
     return { ok: false, message: /quota|额度|429/.test(msg) ? '今天的免费额度用完了，明天再试。' : '这封总结信没写成，稍后再试。' };
   }

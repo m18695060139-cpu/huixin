@@ -2,6 +2,12 @@
 
 const date = require('./date');
 const { INK, SEP, CARD } = require('./theme');
+const { AI_ENABLED } = require('../config');
+
+// 智能回信默认关闭，用户在设置里打开后才为真。
+function aiOn(S) {
+  return !!AI_ENABLED && !!(S && S.settings && S.settings.ai_reply === true);
+}
 
 function letterOf(S, d) {
   return (S.letters && S.letters[d]) || null;
@@ -328,7 +334,7 @@ function writeMeta(S, day, now) {
     hasReply: !!(l.reply && l.reply.summary),
     opened: !!l.opened,
     sendLabel: l.sent_at ? '重新寄出' : '寄出',
-    note: tonight ? '回信明早 6:00 送到 · 送到前都可以拿回来改' : '寄出后马上回信',
+    note: !aiOn(S) ? '智能回信未开启 · 寄出后信会收进信箱' : (tonight ? '回信明早 6:00 送到 · 送到前都可以拿回来改' : '寄出后马上回信'),
     tonight: tonight,
     habits: habitItems(S, day),
     showHabits: activeHabits(S).length > 0 && day >= date.addDays(t, -6),
@@ -482,7 +488,7 @@ function mailboxModel(S, now, ui) {
     }
     more = last > oldest;
     const thisWk = date.weekKey(t);
-    const digests = S.digests || [];
+    const digests = (S.digests || []).filter(d => !(d.content && d.content.pending_check));
     groups = groups.map(g => {
       const found = digests.find(d => d.kind === 'week' && d.key === g.wk);
       return {
@@ -508,12 +514,12 @@ function mailboxModel(S, now, ui) {
     empty: !dates.length,
     more: more,
     writeDate: date.letterDay(now),
-    kindDigests: (S.digests || []).filter(d => d.kind === ((ui.tab === 'week' || ui.tab === 'quarter' || ui.tab === 'year') ? ui.tab : '')).map(digestCard),
-    kindHead: kindHead((ui.tab === 'week' || ui.tab === 'quarter' || ui.tab === 'year') ? ui.tab : '', t),
+    kindDigests: (S.digests || []).filter(d => !(d.content && d.content.pending_check)).filter(d => d.kind === ((ui.tab === 'week' || ui.tab === 'quarter' || ui.tab === 'year') ? ui.tab : '')).map(digestCard),
+    kindHead: kindHead((ui.tab === 'week' || ui.tab === 'quarter' || ui.tab === 'year') ? ui.tab : '', t, aiOn(S)),
   };
 }
 
-function kindHead(tab, t) {
+function kindHead(tab, t, on) {
   const names = {
     week: ['周信', '每周一早上 6 点', '本周'],
     quarter: ['季信', '每季度第一天早上 6 点', '这一季'],
@@ -525,8 +531,8 @@ function kindHead(tab, t) {
   if (tab === 'week') key = date.weekKey(t);
   else if (tab === 'quarter') key = t.slice(0, 4) + '-Q' + (Math.floor((Number(t.slice(5, 7)) - 1) / 3) + 1);
   return {
-    note: n[0] + '会在' + n[1] + '自动送达。也可以现在就让回信先写一封' + n[2] + '到目前为止的。',
-    gen: '现在写' + n[2] + '的' + n[0] + ' ›',
+    note: on ? (n[0] + '会在' + n[1] + '自动送达。也可以现在就让回信先写一封' + n[2] + '到目前为止的。') : ('打开「智能回信」后，' + n[0] + '会在' + n[1] + '自动送达。'),
+    gen: on ? ('现在写' + n[2] + '的' + n[0] + ' ›') : '去打开智能回信 ›',
     empty: '还没有' + n[0] + '。',
     kind: tab,
     key: key,
@@ -560,13 +566,14 @@ function letterModel(S, day, now) {
     sealed: sealed,
     opened: opened,
     sent: !!l.sent_at,
-    note: sealed ? ('回信已经写好，封存到 ' + date.cn(date.addDays(day, 1)) + ' 早上 6:00。') : ((!reply && l.sent_at) ? '这封信还没有回信。' : ''),
+    note: sealed ? ('回信已经写好，封存到 ' + date.cn(date.addDays(day, 1)) + ' 早上 6:00。') : ((!reply && l.sent_at && aiOn(S)) ? '这封信还没有回信。' : ''),
+    aiOff: !aiOn(S),
     mood: l.mood || '',
     energy: l.energy || 0,
     chars: String(l.text || '').trim().length,
     hasReply: !!reply,
     showGo: !!(reply && day >= yday),
-    canAsk: !!(l.sent_at && !hideBody && !sealed && !reply),
+    canAsk: !!(aiOn(S) && l.sent_at && !hideBody && !sealed && !reply),
     reply: reply,
   };
 }
@@ -621,6 +628,7 @@ function replyBlock(S, l, t) {
     engine: r.engine || '',
     ownError: r.ownError || '',
     fb: r.fb || 0,
+    reported: !!(r.report && r.report.reason),
   };
 }
 

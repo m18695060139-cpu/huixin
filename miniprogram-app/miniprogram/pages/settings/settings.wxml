@@ -26,7 +26,7 @@
       <view class="st-group">
         <view class="st-row" hover-class="st-hover" bindtap="goAI">
           <view class="st-body">
-            <text class="st-t">AI 回信</text>
+            <text class="st-t">智能回信</text>
             <text class="st-value">{{aiValue}}</text>
             <view class="i i-chev st-chev"></view>
           </view>
@@ -90,6 +90,12 @@
             <view class="i i-chev st-chev"></view>
           </view>
         </view>
+        <button class="st-row st-btn" open-type="feedback" hover-class="st-hover">
+          <view class="st-body">
+            <text class="st-t st-grow">意见反馈与投诉</text>
+            <view class="i i-chev st-chev"></view>
+          </view>
+        </button>
       </view>
       <text class="st-foot">打开就自动登录了，内容只给你自己看</text>
     </view>

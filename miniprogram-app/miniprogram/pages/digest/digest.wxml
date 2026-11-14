@@ -22,6 +22,7 @@
       </view>
       <view class="card reply-letter">
         <text wx:for="{{paras}}" wx:key="*this" class="reply-p">{{item}}</text>
+        <view class="ai-foot" wx:if="{{!imported}}"><text class="ai-tag">内容由 AI 生成，仅供参考</text></view>
       </view>
       <block wx:if="{{energyNote}}">
         <view class="gh"><text class="h2">精力的规律</text></view>

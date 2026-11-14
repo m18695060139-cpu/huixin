@@ -35,8 +35,12 @@
             <text class="sign-b">回信</text>
             <text class="when">{{letter.reply.when}}{{letter.reply.engine ? ' · ' + letter.reply.engine : ''}}</text>
           </view>
+          <view class="ai-foot">
+            <text class="ai-tag">内容由 AI 生成，仅供参考</text>
+            <text class="ai-report" bindtap="onReport">{{letter.reply.reported ? '已举报' : '举报'}}</text>
+          </view>
         </view>
-        <text class="note" wx:if="{{letter.reply.ownError}}">你自己的 AI 这次没接通（{{letter.reply.ownError}}），这封先用免费模型写的。可以去「设置 → AI 回信」检查一下。</text>
+        <text class="note" wx:if="{{letter.reply.ownError}}">你自己的 AI 这次没接通（{{letter.reply.ownError}}），这封先用免费模型写的。可以去「设置 → 智能回信」检查一下。</text>
 
         <block wx:if="{{letter.reply.todos.length || letter.reply.ideas.length}}">
           <view class="gh"><text class="h2">附件</text><text class="gh-s">从你的信里整理出来的</text></view>
@@ -93,6 +97,11 @@
       </block>
 
       <block wx:else>
+        <view wx:if="{{letter.aiOff && letter.sent && !letter.sealed}}" class="card pad mt ai-off">
+          <text class="ai-off-t">智能回信未开启</text>
+          <text class="ai-off-s">打开后，AI 会读这封信，写一封回信，并整理出待办和点子。内容由 AI 生成，仅供参考。</text>
+          <button class="btn sm" hover-class="tap-on" style="align-self:flex-start;" bindtap="goAI">去设置里打开</button>
+        </view>
         <view wx:if="{{letter.loading}}" class="card mt">
           <view class="waiting">正在拆信、整理待办和点子…</view>
         </view>

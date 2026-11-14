@@ -4,6 +4,7 @@ const actions = require('../../utils/actions');
 const model = require('../../utils/model');
 const chrome = require('../../utils/chrome');
 const nav = require('../../utils/nav');
+const ai = require('../../utils/ai');
 
 Page({
   behaviors: [behavior],
@@ -15,6 +16,22 @@ Page({
     // 从信箱打开信再 switchTab 回来时，部分基础库不会再调 onShow（认为还是当前 tab）。
     if (!this.unsub) this.unsub = state.subscribe(() => this.paint());
     this.paint();
+    this.recheckDigests();
+  },
+  // 凌晨定时写好的总结信，若当时内容安全没查成，会先藏着；用户打开信箱时补查，过了才显示。
+  recheckDigests() {
+    if (!ai.on() || !wx.cloud || this._rechecking) return;
+    const pending = (state.get().digests || []).some(d => d.content && d.content.pending_check);
+    if (!pending) return;
+    this._rechecking = true;
+    wx.cloud.callFunction({ name: 'digest', data: { action: 'recheck' } })
+      .then(res => {
+        const r = (res && res.result) || {};
+        if (r.ok && (r.shown || r.dropped)) return state.refresh();
+        return null;
+      })
+      .catch(() => {})
+      .then(() => { this._rechecking = false; });
   },
   onHide() { this._active = false; },
   onUnload() { this._active = false; if (this.unsub) { this.unsub(); this.unsub = null; } },
@@ -65,6 +82,7 @@ Page({
     wx.navigateTo({ url: '/pages/digest/digest?kind=' + kind + '&key=' + encodeURIComponent(key) });
   },
   async genDigest(e) {
+    if (!ai.on()) { wx.navigateTo({ url: '/pages/settings-ai/settings-ai' }); return; }
     if (this._gen) return;
     if (!wx.cloud) { this.toast('云端还没连上'); return; }
     const kind = e.currentTarget.dataset.kind;
@@ -75,7 +93,7 @@ Page({
       const res = await wx.cloud.callFunction({ name: 'digest', data: { kind: kind, key: key } });
       const body = (res && res.result) || {};
       wx.hideLoading();
-      if (!body.ok) { this.toast(body.message || '没写成'); return; }
+      if (!body.ok) { this.toast(body.message || '没写成'); this._gen = false; return; }
       await state.refresh();
       this.toast('写好了');
     } catch (err) {

@@ -4,6 +4,7 @@ const actions = require('../../utils/actions');
 const model = require('../../utils/model');
 const { letterDay, addDays, hm } = require('../../utils/date');
 const { AI_ENABLED } = require('../../config');
+const ai = require('../../utils/ai');
 const nav = require('../../utils/nav');
 
 Page({
@@ -226,7 +227,8 @@ Page({
       warn: '',
       saveState: '已寄出',
       sentShow: !!tonight,
-      sentBusy: !!AI_ENABLED,
+      sentBusy: ai.on(),
+      sentAi: ai.on(),
       sentReady: false,
       sentFail: false,
       sentTime: hm(new Date()),
@@ -260,7 +262,7 @@ Page({
     // 只是不要再改寄出屏的状态（下面用 sendGen 挡住），不能把整理也取消掉。
     if (r && r.local && this.data.date === date) this.setData({ saveState: '存在本机' });
     let ok = false;
-    if (AI_ENABLED && wx.cloud) {
+    if (ai.on() && wx.cloud) {
       state.setReplying(date);
       try {
         const res = await this.callReplySure(date);
@@ -339,7 +341,9 @@ Page({
     this.loadDay(this.data.date, false);
   },
   goToday() { wx.switchTab({ url: '/pages/today/today' }); },
+  goAI() { wx.navigateTo({ url: '/pages/settings-ai/settings-ai' }); },
   retryReply() {
+    if (!ai.on()) { this.goAI(); return; }
     const date = this.data.date;
     const tonight = this.data.meta && this.data.meta.tonight;
     this._sendGen = (this._sendGen || 0) + 1;
