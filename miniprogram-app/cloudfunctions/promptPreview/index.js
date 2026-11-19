@@ -36,16 +36,26 @@ async function generate(messages, modelName, temperature) {
   return txt;
 }
 
-function askHunyuan(temperature) {
-  return async function (messages) {
-    try {
-      return { text: await generate(messages, HUNYUAN_MODEL, temperature), model: HUNYUAN_MODEL };
-    } catch (e) {
-      const msg = String(e && (e.message || e.errMsg) || e);
-      if (/quota|额度|token|429|exhaust/i.test(msg)) throw e;
-      return { text: await generate(messages, HUNYUAN_FALLBACK, temperature), model: HUNYUAN_FALLBACK };
-    }
-  };
+function quotaError(e) {
+  return /quota|额度|token|429|exhaust/i.test(String(e && (e.message || e.errMsg) || e));
+}
+
+// 两边必须同一模型。一边 hy3 成功、另一边掉到 hy3-preview 时，整次作废并两边改用同一个回退模型重试。
+async function generatePair(oldMessages, newMessages, temperature) {
+  try {
+    const texts = await Promise.all([
+      generate(oldMessages, HUNYUAN_MODEL, temperature),
+      generate(newMessages, HUNYUAN_MODEL, temperature),
+    ]);
+    return { model: HUNYUAN_MODEL, texts: texts };
+  } catch (e) {
+    if (quotaError(e)) throw e;
+    const texts = await Promise.all([
+      generate(oldMessages, HUNYUAN_FALLBACK, temperature),
+      generate(newMessages, HUNYUAN_FALLBACK, temperature),
+    ]);
+    return { model: HUNYUAN_FALLBACK, texts: texts };
+  }
 }
 
 function parseJSON(s) {
@@ -78,15 +88,12 @@ function allowed(openid) {
   return list.indexOf(openid) >= 0;
 }
 
-async function oneSide(messages, openid, kind, opts) {
-  const asked = await askHunyuan(opts.temperature)(messages);
-  const body = kind === 'reply' ? normalizeReply(asked.text) : extractJSON(asked.text);
+async function finishSide(text, model, openid, kind) {
+  const body = kind === 'reply' ? normalizeReply(text) : extractJSON(text);
   const parts = kind === 'reply' ? replyParts(body) : digestParts(body);
   const sec = await guardAI(openid, parts);
-  if (!sec.ok) {
-    return { blocked: true, code: sec.code, engine: asked.engine || '' };
-  }
-  return { blocked: false, engine: asked.engine || '', body: body };
+  if (!sec.ok) return { blocked: true, code: sec.code, engine: '混元 ' + model };
+  return { blocked: false, engine: '混元 ' + model, body: body };
 }
 
 exports.main = async (event) => {
@@ -114,13 +121,18 @@ exports.main = async (event) => {
     const opts = pair.kind === 'reply'
       ? { maxTokens: 4000, temperature: 0.5, timeoutMs: 15000 }
       : { maxTokens: pair.id === 'week' ? 3000 : 4500, temperature: 0.6, timeoutMs: 15000 };
+    const generated = await generatePair(pair.oldMessages, pair.newMessages, opts.temperature);
     const both = await Promise.all([
-      oneSide(pair.oldMessages, openid, pair.kind, opts),
-      oneSide(pair.newMessages, openid, pair.kind, opts),
+      finishSide(generated.texts[0], generated.model, openid, pair.kind),
+      finishSide(generated.texts[1], generated.model, openid, pair.kind),
     ]);
+    const comparable = both[0].engine === both[1].engine;
+    if (!comparable) return fail('两边用的模型不一致，这次对比作废。', 'model');
     return {
       ok: true,
       saved: false,
+      comparable: true,
+      model: generated.model,
       fixture: pair.id,
       kind: pair.kind,
       old: both[0],
