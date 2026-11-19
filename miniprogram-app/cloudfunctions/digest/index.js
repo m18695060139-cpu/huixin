@@ -1,8 +1,9 @@
 // 周信 / 季信 / 年信。每天北京时间 6:00 触发：周一送上周，季初送上季，元旦送去年。
-// 提示词与网页版 src/ai.js 的 DIGEST_SYSTEM 一致。也可以由小程序手动让它现在写。
+// 提示词在 prompt-source.js，由仓库 prompts/digest-source.js 生成。也可以由小程序手动让它现在写。
 const cloud = require('wx-server-sdk');
 const { guardAI } = require('./sec');
 const { askWithUserAI } = require('./userai');
+const { DIGEST_SYSTEM } = require('./prompt-source');
 
 cloud.init({ env: 'huixin-d1g2tdmkz68dc5a5d', timeout: 60000 });
 const db = cloud.database();
@@ -10,30 +11,6 @@ const _ = db.command;
 
 const HUNYUAN_MODEL = 'hy3';
 const HUNYUAN_FALLBACK = 'hy3-preview';
-
-const DIGEST_SYSTEM = {
-  week: `你收到一个人这一周每天写给自己的信（或信的摘要）、精力分、完成的待办、习惯打卡和还没动的点子。替他写一封"周信"。
-只输出 JSON：{"title":"…","letter":"…","energy_note":"…","forgotten":["…"],"next":"…"}
-规则：
-1. title：这一周的一句话标题，12 字以内，具体，不要"充实的一周"这种空话。
-2. letter：周信正文，第二人称"你"，250 字以内。先说这周实际做成了什么、精力主要花在哪，再说这周的状态起伏。素材太少就直说"这周的信不多，看不出趋势"，不要硬编。不说教、不喊口号、不堆排比。
-3. energy_note：一句话说这周精力的规律（比如哪个时段低、被什么消耗），没规律就 ""。
-4. forgotten：这周信里提过、但看起来没跟进的事或点子，最多 3 条，没有就 []。已经在【放下的待办】里的不算没跟进，那是他自己决定的。
-   待办后面括号里的备注是他自己写的话：在 letter 里可以引用，放下的事可以简单提一句他放下了什么、为什么，不评判。
-5. next：下周最值得做的一件事，15-30 字，必须能在信里找到依据，找不到就 ""。
-只输出 JSON。`,
-  quarter: `你收到一个人这一季度每天写给自己的信的摘要、精力分和完成情况。他有一套"人生系统"：健康打底 → 精力当引擎 → 驱动"事业成就"和"关系连接"两条燃料线 → 两条线的正反馈再滋养健康和精力。每季度梳理一次，四块各出一条小规划，并行推进。替他写一封"季信"。
-只输出 JSON：{"title":"…","letter":"…","lenses":{"health":"…","energy":"…","career":"…","relation":"…"},"plans":{"health":"…","energy":"…","career":"…","relation":"…"}}
-规则：
-1. title：这一季的一句话标题，12 字以内。
-2. letter：季信正文，第二人称，350 字以内，说清这一季的主线、转折和整体状态，只用信里有依据的事实。
-3. lenses：四块各一段 60 字以内的梳理：现阶段怎么样 + 卡在哪。
-4. plans：四块下个季度各一条小规划，具体、可执行、30 字以内，必须从梳理里来。
-只输出 JSON。`,
-  year: `你收到一个人这一年每天写给自己的信的摘要和他的季信。替他写一封"年信"。
-只输出 JSON：{"title":"…","letter":"…","themes":["…"],"lenses":{"health":"…","energy":"…","career":"…","relation":"…"}}
-规则：title 一句话 12 字以内；letter 第二人称 500 字以内，这一年的主线、做成的事、变化；themes 3-5 个这一年反复出现的主题词；lenses 健康/精力/事业/关系四块各一句年度回看。只用有依据的事实，不说教。只输出 JSON。`,
-};
 
 function isDate(s) { return /^\d{4}-\d{2}-\d{2}$/.test(String(s || '')); }
 function addDays(s, n) {
