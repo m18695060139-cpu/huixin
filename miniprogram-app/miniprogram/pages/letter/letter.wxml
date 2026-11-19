@@ -64,8 +64,8 @@
           </view>
         </block>
 
-        <view class="card stats mt" wx:if="{{letter.reply.energy}}">
-          <view class="stat"><text>精力</text><text class="b">{{letter.reply.energy}}<text class="unit"> / 5</text></text></view>
+        <view class="card stats mt" wx:if="{{letter.reply.energy || letter.reply.mood || letter.reply.highlight}}">
+          <view class="stat"><text>精力</text><text class="b">{{letter.reply.energy || '—'}}<text class="unit" wx:if="{{letter.reply.energy}}"> / 5</text></text></view>
           <view class="stat"><text>情绪</text><text class="b">{{letter.reply.mood || '—'}}</text></view>
           <view class="stat"><text>高光</text><text class="b">{{letter.reply.highlight || '—'}}</text></view>
         </view>
