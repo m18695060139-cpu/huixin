@@ -6,6 +6,16 @@ const { letterDay, addDays, hm } = require('../../utils/date');
 const { AI_ENABLED } = require('../../config');
 const ai = require('../../utils/ai');
 const nav = require('../../utils/nav');
+const box = require('./editor-box');
+
+function currentWindow() {
+  let win = null;
+  try { if (wx.getWindowInfo) win = wx.getWindowInfo(); } catch (e) { win = null; }
+  if (!win || !win.windowHeight) {
+    try { win = wx.getSystemInfoSync ? wx.getSystemInfoSync() : win; } catch (e) { /* 旧接口也没有 */ }
+  }
+  return box.windowSize(win);
+}
 
 Page({
   behaviors: [behavior],
@@ -29,6 +39,9 @@ Page({
     placeholder: '今天过得怎么样？做了什么、想到什么、哪里卡住了，随便写。\n\n写完点「寄出」，回信会帮你整理好其余的一切。',
     aiOn: !!AI_ENABLED,
     tidy: { show: false, preview: false, busy: false, result: '', canAll: false, used: false },
+    letterMax: box.LETTER_MAX_CHARS,
+    cursorSpacing: box.CURSOR_SPACING_PX,
+    editorStyle: '',
   },
   onLoad(query) {
     this._qDate = (query && query.date) || '';
@@ -50,6 +63,7 @@ Page({
     }
     if (this.unsub) this.unsub();
     this.unsub = state.subscribe(() => this.paintAround());
+    this.fitEditorBox();
   },
   onHide() {
     this._pageHidden = true;
@@ -75,7 +89,8 @@ Page({
     const saved = meta.text || '';
     const draftText = draft && draft.text != null ? draft.text : null;
     // 空草稿不能盖掉已经存过的正文。关掉空信时曾经把 text:'' 写进草稿，再打开就变成一封空信。
-    const text = (draftText != null && (String(draftText).trim() || !String(saved).trim())) ? draftText : saved;
+    const picked = (draftText != null && (String(draftText).trim() || !String(saved).trim())) ? draftText : saved;
+    const text = box.clampLetter(picked);
     if (draftText != null && !String(draftText).trim() && String(saved).trim()) {
       actions.clearDraft(day);
     }
@@ -112,6 +127,7 @@ Page({
     });
     this._dictated = null;
     this._tidyBackup = null;
+    this.fitEditorBox();
     this.setTab(1, false);
   },
   paintAround() {
@@ -135,24 +151,74 @@ Page({
     }
     this.setData(patch);
   },
-  onFocus() {
+  onFocus(e) {
     // 聚焦就藏起自定义提示字。iOS 拼音组合时不会触发 bindinput，
     // 若只靠 empty，组合中的字会叠在灰色提示上。
     if (!this.data.focused) this.setData({ focused: true });
+    const h = e && e.detail && Number(e.detail.height);
+    if (h > 0) this.noteKeyboard(h);
   },
   onBlur(e) {
-    const text = (e.detail && e.detail.value != null) ? e.detail.value : (this._text || '');
+    const raw = (e.detail && e.detail.value != null) ? e.detail.value : (this._text || '');
+    const text = box.clampLetter(raw);
     this._text = text;
+    this._kbHeight = 0;
     this.setData({ focused: false, empty: !text, canSend: !!String(text).trim() });
+    this.fitEditorBox();
+  },
+  onKeyboard(e) {
+    // 同一高度会连着触发几次，官方说明相同高度应忽略。
+    const h = e && e.detail ? Number(e.detail.height) : 0;
+    this.noteKeyboard(h > 0 ? h : 0);
+  },
+  noteKeyboard(height) {
+    const h = height > 0 ? height : 0;
+    if (h === this._kbHeight) return;
+    this._kbHeight = h;
+    this.fitEditorBox();
+  },
+  fitEditorBox() {
+    const win = currentWindow();
+    const kb = this._kbHeight || 0;
+    const gap = this.data.cursorSpacing || box.CURSOR_SPACING_PX;
+    const apply = (style) => {
+      if (style !== this.data.editorStyle) this.setData({ editorStyle: style });
+    };
+    if (!kb) {
+      apply(box.closedStyle(win.windowHeight));
+      return;
+    }
+    const finish = (top) => {
+      const px = box.openEditorPx({
+        editorTop: top,
+        windowHeight: win.windowHeight,
+        keyboardHeight: kb,
+        gapPx: gap,
+      });
+      apply('height:' + px + 'px');
+    };
+    let query = null;
+    try { query = wx.createSelectorQuery ? wx.createSelectorQuery() : null; } catch (e) { query = null; }
+    if (!query || !query.select || !query.exec) { finish(0); return; }
+    query.select('.editor').boundingClientRect();
+    query.exec((res) => {
+      const rect = res && res[0];
+      finish(rect && rect.top > 0 ? rect.top : 0);
+    });
   },
   onInput(e) {
     // 不回写 text：输入时 setData 输入框的值会打断安卓输入法、光标乱跳。
+    // 只有超过云端能存的长度时才把多出来的字收回来。
     // empty 在失焦后用来决定要不要再显示提示字；聚焦时提示字已经藏起来了。
-    this._text = e.detail.value;
+    const incoming = e.detail.value;
+    const text = box.clampLetter(incoming);
+    this._text = text;
+    if (e.detail && e.detail.cursor != null) this._cursor = e.detail.cursor;
     const date = this.data.date;
     const patch = { canSend: !!String(this._text).trim(), saveState: '保存中', warn: '' };
     const empty = !this._text;
     if (empty !== this.data.empty) patch.empty = empty;
+    if (text !== incoming) patch.text = text;
     const tidy = this.data.tidy;
     if (tidy && tidy.show && (tidy.used || tidy.preview || tidy.busy || this._tidyUsed)) {
       // 用过整理后再改字，「撤销」会盖掉刚打的字；整理还在飞时回来的结果也对不上。
@@ -172,9 +238,9 @@ Page({
     state.clearWarn();
     actions.writeDraft(date, { text: this._text, mood: this.data.mood, energy: this.data.energy });
     clearTimeout(this._saveT);
-    const text = this._text;
+    const snapshot = this._text;
     const self = this;
-    this._saveT = setTimeout(() => self.autosave(date, text), 1200);
+    this._saveT = setTimeout(() => self.autosave(date, snapshot), 1200);
   },
   async autosave(date, text) {
     if (date !== this.data.date) return;
@@ -197,13 +263,14 @@ Page({
   onChip(e) {
     const q = e.currentTarget.dataset.q || '';
     const cur = this._text || '';
-    const text = cur.replace(/\s*$/, '') + (cur.trim() ? '\n' : '') + q;
+    const text = box.clampLetter(cur.replace(/\s*$/, '') + (cur.trim() ? '\n' : '') + q);
     this._text = text;
     this.setData({ text: text, empty: !text, canSend: !!text.trim(), saveState: '保存中' });
     this.onInput({ detail: { value: text } });
   },
   async onSend() {
-    const text = this._text || '';
+    const text = box.clampLetter(this._text || '');
+    this._text = text;
     if (!text.trim() || this._sending) return;
     this._sending = true;
     this.invalidateTidy();
@@ -213,6 +280,7 @@ Page({
     const tonight = this.data.meta.tonight;
     const date = this.data.date;
     this._replying = date;
+    this._kbHeight = 0;
     try { wx.hideKeyboard(); } catch (e) { /* 没有键盘就不必管 */ }
     // 跟网页版一样：先出寄出屏，云端保存在后台做。
     // saveLetter 会先同步写好本机 sent_at 和正文，再 await 云函数；界面不必等那一两秒。
@@ -373,9 +441,11 @@ Page({
     this._taking = true;
     this._sendGen = (this._sendGen || 0) + 1;
     state.setReplying('');
-    const text = this._text || this.data.meta.text || '';
+    const text = box.clampLetter(this._text || (this.data.meta && this.data.meta.text) || '');
     this._text = text;
+    this._kbHeight = 0;
     this.setData({ sentShow: false, editing: true, text: text, empty: !text, canSend: !!text.trim() });
+    this.fitEditorBox();
     this.setTab(1, false);
     this.restoreChrome();
     this._taking = false;
@@ -421,8 +491,9 @@ Page({
     clearTimeout(this._saveT);
     const date = this.data.date;
     if (!date) return;
-    const text = this._text;
-    const trimmed = String(text == null ? '' : text).trim();
+    const text = box.clampLetter(this._text);
+    this._text = text;
+    const trimmed = String(text || '').trim();
     const prev = (state.get().letters || {})[date] || {};
     const hadText = String(prev.text || '').trim();
     const sent = !!prev.sent_at;
@@ -433,7 +504,7 @@ Page({
     } else {
       actions.writeDraft(date, { text: text, mood: this.data.mood, energy: this.data.energy });
     }
-    this.autosave(date, text == null ? '' : text);
+    this.autosave(date, text);
   },
   invalidateTidy() {
     this._tidyGen = (this._tidyGen || 0) + 1;
@@ -455,6 +526,7 @@ Page({
   },
 
   queueDraft(text) {
+    text = box.clampLetter(text);
     const date = this.data.date;
     actions.writeDraft(date, { text: text, mood: this.data.mood, energy: this.data.energy });
     clearTimeout(this._saveT);
@@ -525,7 +597,7 @@ Page({
     const result = (this.data.tidy && this.data.tidy.result) || '';
     if (!range || !result) return;
     const before = range.before != null ? range.before : (this._text || '');
-    const next = before.slice(0, range.start) + result + before.slice(range.end);
+    const next = box.clampLetter(before.slice(0, range.start) + result + before.slice(range.end));
     this._tidyBackup = before;
     this._tidyUsed = true;
     this._text = next;

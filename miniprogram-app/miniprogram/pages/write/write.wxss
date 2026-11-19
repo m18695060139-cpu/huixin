@@ -1,4 +1,8 @@
 .editor-wrap { position: relative; }
+/* 高度由 editor-box.js 按 40vh 写成像素。auto-height 会把原生框撑过一屏，
+   页面滑不动，光标进到键盘和固定寄出栏后面。信纸不要跟着全局 .card 裁切。 */
+.editor { height: 40vh; }
+.card.paper { overflow: visible; }
 .editor-ph {
   position: absolute; left: 0; top: 0; right: 0;
   color: var(--ring); font-family: var(--letter-font); font-size: 32.692rpx; line-height: 1.9;
