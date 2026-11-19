@@ -7,6 +7,7 @@
     "pages/digest/digest",
     "pages/lists/lists",
     "pages/settings/settings",
+    "pages/prompt-preview/prompt-preview",
     "pages/settings-ai/settings-ai",
     "pages/settings-api/settings-api",
     "pages/settings-name/settings-name",

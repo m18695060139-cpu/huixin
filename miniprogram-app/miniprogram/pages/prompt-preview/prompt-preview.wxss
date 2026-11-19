@@ -1,0 +1,5 @@
+.note { display: block; color: var(--sub); font-size: 26rpx; line-height: 1.6; margin: 24rpx 0; }
+.row { display: flex; justify-content: space-between; padding: 28rpx 0; border-bottom: 1rpx solid var(--sep); font-size: 32rpx; }
+.h { display: block; margin-top: 36rpx; font-weight: 600; }
+.body { display: block; margin-top: 12rpx; white-space: pre-wrap; line-height: 1.7; }
+.err { display: block; margin-top: 24rpx; color: var(--ink); }

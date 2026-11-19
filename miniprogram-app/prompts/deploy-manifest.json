@@ -1,0 +1,13 @@
+{
+  "clientVersionToPass": "0.1.42",
+  "doNotUpload": ["reply", "digest", "login", "save", "wipe", "importFromWeb", "demoSeed", "tidy", "aiConfig"],
+  "createBeforeUpload": [
+    {
+      "name": "promptPreview",
+      "timeoutSeconds": 60,
+      "triggers": [],
+      "runtime": "Node.js",
+      "note": "miniprogram-ci 的 cloud.uploadFunction 没有公开的新建参数。函数不存在时会 ResourceNotFound。先在已登录正式 AppID 的开发者工具里新建同名云函数，再上传代码。超时 60 秒、不要加定时触发器，要在云开发控制台里看一眼。"
+    }
+  ]
+}

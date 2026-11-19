@@ -31,6 +31,13 @@
             <view class="i i-chev st-chev"></view>
           </view>
         </view>
+        <view class="st-row" hover-class="st-hover" bindtap="goPreview">
+          <view class="st-body">
+            <text class="st-t">对比说法</text>
+            <text class="st-value">测试，不保存</text>
+            <view class="i i-chev st-chev"></view>
+          </view>
+        </view>
       </view>
     </view>
 
