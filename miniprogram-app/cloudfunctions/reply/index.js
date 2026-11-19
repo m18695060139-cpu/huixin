@@ -1,8 +1,8 @@
 // 寄出或拆开时写回信。优先用用户自己接的 OpenAI 兼容接口，调不通再改用混元。
-// 提示词只在这个函数里。周信、季信、年信在 cloudfunctions/digest。
+// 日回信提示词在 prompt-source.js。周信、季信、年信仍在 cloudfunctions/digest，这次不改。
 const cloud = require('wx-server-sdk');
 const { guard, guardAI } = require('./sec');
-const { HUNYUAN_MODEL, HUNYUAN_FALLBACK, DEFAULT_QUESTIONS, buildMessages, normalizeReply } = require('./prompt');
+const { HUNYUAN_MODEL, HUNYUAN_FALLBACK, DEFAULT_QUESTIONS, buildMessages, normalizeReply, dueForTask } = require('./prompt');
 const { askWithUserAI } = require('./userai');
 
 cloud.init({
@@ -218,7 +218,7 @@ exports.main = async (event) => {
       if (!key || haveT[key]) continue;
       haveT[key] = true;
       const id = uid('t');
-      const due = addDays(date, task.dueDays);
+      const due = dueForTask(date, task.dueDays, addDays);
       const doc = {
         id: id, text: task.text, due: due, note: '', done: false, done_at: '', dropped_at: '',
         archived: false, source_date: date, created: date, updated_at: new Date().toISOString(), _openid: OPENID,
