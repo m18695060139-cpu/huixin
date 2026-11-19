@@ -44,6 +44,11 @@ test('preview function does not write letters, todos, or digests and has no time
   assert.match(indexSrc, /saved: false/);
   assert.match(indexSrc, /ai_reply !== true/);
   assert.match(indexSrc, /guardAI/);
+  assert.match(indexSrc, /PROMPT_PREVIEW_OPENIDS/);
+  assert.match(indexSrc, /Promise\.all\(\[/);
+  assert.doesNotMatch(indexSrc, /require\('\.\/secret'\)|require\('\.\/userai'\)|require\('\.\/openai'\)/);
+  assert.equal(fs.existsSync(path.join(fnDir, 'secret.js')), false);
+  assert.doesNotMatch(indexSrc, /for\s*\([^)]*REPLY_IDS/);
   assert.match(replyIndex, /cached: true/);
   assert.match(replyIndex, /collection\('letters'\)/);
 });

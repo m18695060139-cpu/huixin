@@ -40,7 +40,8 @@ Page({
     }).then(function (res) {
       const body = (res && res.result) || {};
       if (!body.ok) {
-        self.setData({ busy: false, error: body.message || '没比成' });
+        const who = body.code === 'unconfigured' && body.yourOpenId ? ('\n你的身份：' + body.yourOpenId) : '';
+        self.setData({ busy: false, error: (body.message || '没比成') + who });
         return;
       }
       if (body.saved !== false) {

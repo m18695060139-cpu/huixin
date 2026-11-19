@@ -1,7 +1,6 @@
 // 只给体验版对比新旧说法。不读别人的信，不写信件、待办、点子或总结。没有定时器。
 const cloud = require('wx-server-sdk');
 const { guard, guardAI } = require('./sec');
-const { askWithUserAI } = require('./userai');
 const { pairFor } = require('./preview');
 const { normalizeReply } = require('./reply-source');
 
@@ -74,8 +73,13 @@ function digestParts(content) {
   return [content.letter, content.title, content.energy_note, content.next].concat(content.forgotten || [], content.themes || []);
 }
 
+function allowed(openid) {
+  const list = String(process.env.PROMPT_PREVIEW_OPENIDS || '').split(',').map(s => s.trim()).filter(Boolean);
+  return list.indexOf(openid) >= 0;
+}
+
 async function oneSide(messages, openid, kind, opts) {
-  const asked = await askWithUserAI(db, openid, messages, askHunyuan(opts.temperature), opts);
+  const asked = await askHunyuan(opts.temperature)(messages);
   const body = kind === 'reply' ? normalizeReply(asked.text) : extractJSON(asked.text);
   const parts = kind === 'reply' ? replyParts(body) : digestParts(body);
   const sec = await guardAI(openid, parts);
@@ -89,6 +93,13 @@ exports.main = async (event) => {
   const ctx = cloud.getWXContext();
   const openid = ctx && ctx.OPENID;
   if (!openid) return fail('没有微信身份', 'auth');
+  if (!allowed(openid)) {
+    const configured = String(process.env.PROMPT_PREVIEW_OPENIDS || '').trim();
+    if (!configured) {
+      return Object.assign(fail('还没有允许试用的身份。请在云函数环境变量 PROMPT_PREVIEW_OPENIDS 里填下面这一串，不要写进仓库。', 'unconfigured'), { yourOpenId: openid });
+    }
+    return fail('这个对比只给已允许的身份。', 'forbidden');
+  }
   const pair = pairFor(event || {});
   if (!pair) return fail('没有这个对比样本', 'bad');
   try {
