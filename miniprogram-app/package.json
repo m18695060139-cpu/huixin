@@ -5,6 +5,7 @@
   "description": "回信小记（微信小程序）。与仓库根目录的网页版相互独立。",
   "type": "commonjs",
   "scripts": {
+    "test": "node --test miniprogram/pages/write/write.test.js",
     "upload": "node scripts/upload.js"
   },
   "dependencies": {
