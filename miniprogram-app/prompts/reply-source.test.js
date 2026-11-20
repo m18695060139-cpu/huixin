@@ -24,7 +24,8 @@ test('generated copies match the central prompt files', () => {
 test('daily wording still keeps the published shape and defaults', () => {
   const s = reply.REPLY_SYSTEM;
   assert.match(s, /200 到 350 字/);
-  assert.match(s, /最后一句点一下今天的整体状态/);
+  assert.match(s, /信里自己写了精力、情绪或节奏，最后一句才可以点一下/);
+  assert.match(s, /不要把 energy、mood 的默认值说成看到的事实/);
   assert.match(s, /完全没线索就给 3/);
   assert.match(s, /没有就小事 1-2、正常 3、大工程 7/);
   assert.match(s, /四个角度/);
