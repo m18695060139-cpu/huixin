@@ -2,9 +2,12 @@
   <st-nav title="对比说法" close="{{true}}" bind:close="onBack"></st-nav>
   <view class="page" style="padding-top: {{navBar}}px; padding-left: 32rpx; padding-right: 32rpx; padding-bottom: 80rpx;">
     <text class="note">用虚构样本比较现在线上的说法和新说法。不会改你的信、待办、点子或周信。需要已打开智能回信。</text>
-    <button class="copy" hover-class="tap-on" bindtap="onCopy" disabled="{{copying || busy}}">复制测试身份</button>
+    <button class="copy" hover-class="tap-on" bindtap="onCopy" disabled="{{copying || busy || secBusy}}">复制测试身份</button>
     <text class="hint">点一下，把这次登录的测试身份原样放进剪贴板。再到云函数环境变量里整段粘贴，不要照着屏幕抄。这一步不开始对比，也不列出已经允许的人。</text>
     <text class="hint" wx:if="{{copyNote}}">{{copyNote}}</text>
+    <button class="copy" hover-class="tap-on" bindtap="onSec" disabled="{{secBusy || copying || busy}}">检查内容接口</button>
+    <text class="hint">只送一句固定的合成文字，向内容接口查一次。不读信，不调用模型，不开始对比。</text>
+    <text class="hint" wx:if="{{secNote}}">{{secNote}}</text>
     <view class="row" wx:for="{{cases}}" wx:key="id" data-id="{{item.id}}" bindtap="onPick">
       <text>{{item.name}}</text>
       <text wx:if="{{busy && current === item.id}}">正在写…</text>

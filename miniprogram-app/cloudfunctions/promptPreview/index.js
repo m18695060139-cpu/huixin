@@ -1,6 +1,6 @@
 // 只给体验版对比新旧说法。不读别人的信，不写信件、待办、点子或总结。没有定时器。
 const cloud = require('wx-server-sdk');
-const { guard, guardAI } = require('./sec');
+const { guard, guardAI, checkText, classifySec, publicErrCode } = require('./sec');
 const { pairFor } = require('./preview');
 const { normalizeReply } = require('./reply-source');
 
@@ -88,11 +88,39 @@ function allowed(openid) {
   return list.indexOf(openid) >= 0;
 }
 
+const SEC_PROBE = '合成检查。';
+
+function secMessage(status, errCode) {
+  if (status === 'accepted') return '内容接口可用。';
+  if (status === 'risky') return '内容接口返回了风险，没有通过。';
+  if (status === 'review') return '内容接口返回了复核，没有通过。';
+  if (errCode === 45009) return '内容接口额度用尽。';
+  if (errCode === -604101 || errCode === 604101) return '内容接口没有调用权限。';
+  return '内容接口没有连上。';
+}
+
+async function runSecProbe(openid) {
+  const judged = classifySec(await checkText(openid, SEC_PROBE));
+  const out = {
+    ok: judged.status === 'accepted',
+    diagnostic: 'sec',
+    saved: false,
+    status: judged.status,
+    message: secMessage(judged.status, judged.errCode),
+  };
+  if (judged.status === 'unchecked') out.errCode = judged.errCode;
+  return out;
+}
+
 async function finishSide(text, model, openid, kind) {
   const body = kind === 'reply' ? normalizeReply(text) : extractJSON(text);
   const parts = kind === 'reply' ? replyParts(body) : digestParts(body);
   const sec = await guardAI(openid, parts);
-  if (!sec.ok) return { blocked: true, code: sec.code, engine: '混元 ' + model };
+  if (!sec.ok) {
+    const out = { blocked: true, code: sec.code, engine: '混元 ' + model };
+    if (sec.code === 'unchecked') out.errCode = publicErrCode(sec.errCode);
+    return out;
+  }
   return { blocked: false, engine: '混元 ' + model, body: body };
 }
 
@@ -115,6 +143,7 @@ exports.main = async (event) => {
     }
     return fail('这个对比只给已允许的身份。', 'forbidden');
   }
+  if (event && event.action === 'seccheck') return runSecProbe(openid);
   const pair = pairFor(event || {});
   if (!pair) return fail('没有这个对比样本', 'bad');
   try {
@@ -125,6 +154,9 @@ exports.main = async (event) => {
     }
     const material = pair.oldMessages[1].content;
     const inputSec = await guard(openid, [material]);
+    if (!inputSec.ok && inputSec.code === 'unchecked') {
+      return Object.assign(fail('内容安全检查暂时没连上，这次不比较。', 'unchecked'), { errCode: publicErrCode(inputSec.errCode) });
+    }
     if (!inputSec.ok) return fail('这段材料没通过安全检查，这次不比较。', 'risky');
     const opts = pair.kind === 'reply'
       ? { maxTokens: 4000, temperature: 0.5, timeoutMs: 15000 }

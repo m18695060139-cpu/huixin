@@ -37,8 +37,11 @@ test('preview source is one pair on one model, with no secret and no timer', () 
   assert.match(indexSrc, /getWXContext\(\)/);
   assert.match(indexSrc, /event\.action === 'whoami'/);
   const whoAt = indexSrc.indexOf("event.action === 'whoami'");
+  const allowAt = indexSrc.indexOf('if (!allowed(openid))');
+  const secAt = indexSrc.indexOf("event.action === 'seccheck'");
   const dbAt = indexSrc.indexOf("collection('settings')");
-  assert.ok(whoAt >= 0 && dbAt > whoAt);
+  assert.ok(whoAt >= 0 && allowAt > whoAt && secAt > allowAt && dbAt > secAt);
+  assert.match(indexSrc, /内容安全检查暂时没连上/);
   assert.match(indexSrc, /PROMPT_PREVIEW_OPENIDS/);
   assert.match(indexSrc, /ai_reply !== true/);
   assert.match(indexSrc, /guardAI/);

@@ -14,7 +14,13 @@ const CASES = [
 
 function showOf(side, kind) {
   if (!side) return '';
-  if (side.blocked) return '没通过内容检查，不显示。';
+  if (side.blocked || side.code === 'unchecked' || side.code === 'risky' || side.code === 'review') {
+    if (side.code === 'unchecked') {
+      const n = typeof side.errCode === 'number' && Number.isFinite(side.errCode) ? side.errCode : null;
+      return n === null ? '内容接口没有连上，这次不显示。' : ('内容接口没有连上（' + n + '），这次不显示。');
+    }
+    return '没通过内容检查，不显示。';
+  }
   const body = side.body || {};
   if (kind === 'reply') {
     const tasks = (body.tasks || []).map(t => t.text + (t.dueDays ? '（' + t.dueDays + '天）' : '')).join('、');
@@ -22,6 +28,24 @@ function showOf(side, kind) {
   }
   const next = body.next ? '\n\n下周：' + body.next : '';
   return (body.letter || body.summary || '') + next;
+}
+
+function secNoteOf(body) {
+  if (!body || body.diagnostic !== 'sec') {
+    if (body && body.code === 'forbidden') return '这个对比只给已允许的身份。内容接口没有调用。';
+    if (body && body.code === 'unconfigured') return '还没有允许试用的身份。内容接口没有调用。';
+    return '这次没查成内容接口。';
+  }
+  const code = typeof body.errCode === 'number' && Number.isFinite(body.errCode) ? body.errCode : null;
+  if (body.status === 'accepted') return '内容接口可用。';
+  if (body.status === 'risky') return '内容接口返回了风险，没有通过。没有开始对比。';
+  if (body.status === 'review') return '内容接口返回了复核，没有通过。没有开始对比。';
+  if (body.status === 'unchecked') {
+    if (code === 45009) return '内容接口额度用尽（45009）。这次不比较。';
+    if (code === -604101 || code === 604101) return '内容接口没有调用权限（' + code + '）。这次不比较。';
+    return code === null ? '内容接口没有连上。这次不比较。' : ('内容接口没有连上（' + code + '）。这次不比较。');
+  }
+  return '这次没查成内容接口。';
 }
 
 Page({
@@ -34,6 +58,8 @@ Page({
     newText: '',
     error: '',
     copyNote: '',
+    secNote: '',
+    secBusy: false,
     theme: 'ink',
     navBar: 64,
   },
@@ -55,7 +81,7 @@ Page({
     wx.navigateBack({ fail: function () { wx.switchTab({ url: '/pages/settings/settings' }); } });
   },
   onCopy() {
-    if (this.data.copying || this.data.busy) return;
+    if (this.data.copying || this.data.busy || this.data.secBusy) return;
     this.dropIdentity();
     this.setData({ copying: true, copyNote: '' });
     const self = this;
@@ -94,9 +120,24 @@ Page({
       self.setData({ copying: false, copyNote: '这次没连上，身份没有复制。' });
     });
   },
+  onSec() {
+    if (this.data.secBusy || this.data.copying || this.data.busy) return;
+    this.setData({ secBusy: true, secNote: '' });
+    const self = this;
+    wx.cloud.callFunction({
+      name: 'promptPreview',
+      data: { action: 'seccheck' },
+      timeout: 15000,
+    }).then(function (res) {
+      const body = (res && res.result) || {};
+      self.setData({ secBusy: false, secNote: secNoteOf(body) });
+    }).catch(function () {
+      self.setData({ secBusy: false, secNote: '这次没连上，内容接口没有查成。' });
+    });
+  },
   onPick(e) {
     const id = e.currentTarget.dataset.id;
-    if (!id || this.data.busy || this.data.copying) return;
+    if (!id || this.data.busy || this.data.copying || this.data.secBusy) return;
     this.setData({ busy: true, current: id, oldText: '', newText: '', error: '' });
     const self = this;
     wx.cloud.callFunction({
@@ -105,12 +146,18 @@ Page({
       timeout: 60000,
     }).then(function (res) {
       const body = (res && res.result) || {};
+      if (body.diagnostic === 'sec') {
+        self.setData({ busy: false, error: '这次只检查了内容接口，没有开始对比。' });
+        return;
+      }
       if (body.diagnostic) {
         self.setData({ busy: false, error: '这次只取了身份，没有开始对比。' });
         return;
       }
       if (!body.ok) {
-        self.setData({ busy: false, error: body.message || '没比成' });
+        let msg = body.message || '没比成';
+        if (body.code === 'unchecked' && typeof body.errCode === 'number' && Number.isFinite(body.errCode)) msg += '（' + body.errCode + '）';
+        self.setData({ busy: false, error: msg });
         return;
       }
       if (body.saved !== false) {

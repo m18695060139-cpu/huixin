@@ -165,3 +165,113 @@ test('a diagnostic result on a comparison tap does not render the identity', asy
   assert.equal(page.data.oldText, '');
   assert.equal(JSON.stringify(page.data).indexOf(ID), -1);
 });
+
+test('opening the page and copying identity do not call the security probe', async () => {
+  const page = makePage();
+  page.onShow();
+  assert.equal(calls.length, 0);
+  page.onCopy();
+  await flush();
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].data, { action: 'whoami' });
+  assert.match(wxml, /检查内容接口/);
+});
+
+test('one tap checks the interface once and does not render a planted body', async () => {
+  nextResult = {
+    ok: false,
+    diagnostic: 'sec',
+    saved: false,
+    status: 'risky',
+    message: '内容接口返回了风险，没有通过。',
+    openid: ID,
+    old: { body: { summary: '不应出现' } },
+    new: { body: { summary: '也不应出现' } },
+  };
+  const page = makePage();
+  page.setData({ oldText: '原先的安全摘要' });
+  page.onSec();
+  await flush();
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].data, { action: 'seccheck' });
+  assert.equal(page.data.secNote, '内容接口返回了风险，没有通过。没有开始对比。');
+  assert.equal(page.data.oldText, '原先的安全摘要');
+  assert.equal(page.data.newText, '');
+  assert.equal(JSON.stringify(page.data).indexOf('不应出现'), -1);
+  assert.equal(JSON.stringify(page.data).indexOf(ID), -1);
+  await flush();
+  assert.equal(calls.length, 1);
+});
+
+test('a second tap while the check is still running does not send another call', async () => {
+  let release = null;
+  const prev = wx.cloud.callFunction;
+  wx.cloud.callFunction = function (opt) {
+    calls.push(opt);
+    return new Promise(function (resolve) {
+      release = function () { resolve({ result: nextResult }); };
+    });
+  };
+  nextResult = { ok: true, diagnostic: 'sec', saved: false, status: 'accepted', message: '内容接口可用。' };
+  const page = makePage();
+  page.onSec();
+  page.onSec();
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0].data, { action: 'seccheck' });
+  release();
+  await flush();
+  assert.equal(calls.length, 1);
+  assert.equal(page.data.secNote, '内容接口可用。');
+  wx.cloud.callFunction = prev;
+});
+
+test('review and interface errors stay distinct and a missing code is not a pass', async () => {
+  const page = makePage();
+  nextResult = { ok: false, diagnostic: 'sec', saved: false, status: 'review', message: '内容接口返回了复核，没有通过。' };
+  page.onSec();
+  await flush();
+  assert.equal(page.data.secNote, '内容接口返回了复核，没有通过。没有开始对比。');
+  nextResult = { ok: false, diagnostic: 'sec', saved: false, status: 'unchecked', errCode: 45009, message: '内容接口额度用尽。' };
+  page.onSec();
+  await flush();
+  assert.equal(page.data.secNote, '内容接口额度用尽（45009）。这次不比较。');
+  nextResult = { ok: false, diagnostic: 'sec', saved: false, status: 'unchecked', errCode: -604101, message: '内容接口没有调用权限。' };
+  page.onSec();
+  await flush();
+  assert.equal(page.data.secNote, '内容接口没有调用权限（-604101）。这次不比较。');
+  nextResult = { ok: false, diagnostic: 'sec', saved: false, status: 'unchecked', errCode: 0, message: '内容接口没有连上。' };
+  page.onSec();
+  await flush();
+  assert.equal(page.data.secNote, '内容接口没有连上（0）。这次不比较。');
+  assert.equal(page.data.secNote.indexOf('可用'), -1);
+  nextResult = { ok: false, diagnostic: 'sec', saved: false, status: 'unchecked', message: '内容接口没有连上。' };
+  page.onSec();
+  await flush();
+  assert.equal(page.data.secNote, '内容接口没有连上。这次不比较。');
+  assert.equal(calls.length, 5);
+});
+
+test('a blocked pair hides both texts and separates an interface failure from a risk result', async () => {
+  const page = makePage();
+  nextResult = {
+    ok: true,
+    saved: false,
+    kind: 'reply',
+    comparable: true,
+    model: 'hy3',
+    old: { blocked: true, code: 'unchecked', errCode: -604101, engine: '混元 hy3', body: { summary: '不应出现' } },
+    new: { blocked: true, code: 'risky', engine: '混元 hy3', body: { summary: '也不应出现' } },
+  };
+  page.onPick({ currentTarget: { dataset: { id: 'wish' } } });
+  await flush();
+  assert.equal(page.data.oldText, '内容接口没有连上（-604101），这次不显示。');
+  assert.equal(page.data.newText, '没通过内容检查，不显示。');
+  assert.equal(page.data.oldText.indexOf('不应出现'), -1);
+  assert.equal(page.data.newText.indexOf('也不应出现'), -1);
+  nextResult = { ok: false, code: 'unchecked', errCode: 45009, message: '内容安全检查暂时没连上，这次不比较。', saved: false };
+  page.onPick({ currentTarget: { dataset: { id: 'wish' } } });
+  await flush();
+  assert.equal(page.data.error, '内容安全检查暂时没连上，这次不比较。（45009）');
+  assert.equal(page.data.oldText, '');
+  assert.equal(page.data.newText, '');
+});

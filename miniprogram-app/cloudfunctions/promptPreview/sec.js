@@ -1,6 +1,21 @@
-// 和 save 云函数同一套内容安全：risky 不入库，接口故障不拦住。
+// 体验版副本。场景和版本与对比时相同。接口出错、没有明确结论时都不算通过。
+// 正式 save、reply、digest 的检查没有改。
 
 const cloud = require('wx-server-sdk');
+
+function publicErrCode(code) {
+  if (typeof code === 'number' && Number.isFinite(code)) return code;
+  if (typeof code === 'string' && /^-?\d+$/.test(code.trim())) return Number(code.trim());
+  return -1;
+}
+
+function classifySec(result) {
+  const suggest = result && result.suggest;
+  if (suggest === 'pass') return { status: 'accepted' };
+  if (suggest === 'risky') return { status: 'risky' };
+  if (suggest === 'review') return { status: 'review' };
+  return { status: 'unchecked', errCode: publicErrCode(result && result.errCode) };
+}
 
 async function checkText(openid, content) {
   const text = String(content || '').trim();
@@ -18,9 +33,14 @@ async function checkText(openid, content) {
       const suggest = res && res.result && res.result.suggest;
       if (suggest === 'risky') return { suggest: 'risky' };
       if (suggest === 'review') review = true;
+      else if (suggest !== 'pass') {
+        const code = res && (res.errCode != null ? res.errCode : res.errcode);
+        return { suggest: 'error', errCode: publicErrCode(code) };
+      }
     } catch (e) {
-      console.error('msgSecCheck', e && (e.errMsg || e.message || e));
-      return { suggest: 'error', errCode: (e && (e.errCode || e.errcode)) || String(e && (e.errMsg || e.message) || '').replace(/[A-Za-z0-9+/=]{24,}/g, '*').slice(0, 160) || -1 };
+      const code = e && (e.errCode != null ? e.errCode : e.errcode);
+      console.error('msgSecCheck', publicErrCode(code));
+      return { suggest: 'error', errCode: publicErrCode(code) };
     }
   }
   return { suggest: review ? 'review' : 'pass' };
@@ -30,8 +50,9 @@ async function guard(openid, parts) {
   let review = false;
   for (let i = 0; i < parts.length; i++) {
     const r = await checkText(openid, parts[i]);
-    if (r.suggest === 'risky') return { ok: false, code: 'risky' };
+    if (r.suggest === 'risky') return { ok: false, code: 'risky', suggest: 'risky' };
     if (r.suggest === 'review') review = true;
+    if (r.suggest === 'error') return { ok: false, code: 'unchecked', suggest: 'error', errCode: publicErrCode(r.errCode) };
   }
   return { ok: true, review: review };
 }
@@ -41,8 +62,12 @@ async function guard(openid, parts) {
 async function guardAI(openid, parts) {
   const text = (parts || []).map(x => String(x || '').trim()).filter(Boolean).join('\n');
   const r = await checkText(openid, text);
-  if (r.suggest !== 'pass') return { ok: false, code: r.suggest === 'error' ? 'unchecked' : 'risky', suggest: r.suggest, errCode: r.errCode || 0 };
+  if (r.suggest !== 'pass') {
+    const out = { ok: false, code: r.suggest === 'error' ? 'unchecked' : 'risky', suggest: r.suggest || 'error' };
+    if (out.code === 'unchecked') out.errCode = publicErrCode(r.errCode);
+    return out;
+  }
   return { ok: true };
 }
 
-module.exports = { guard, guardAI };
+module.exports = { guard, guardAI, checkText, classifySec, publicErrCode };
