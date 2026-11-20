@@ -7,6 +7,7 @@ const oldPrompt = require('./published-480f2da');
 const previewReply = require('../cloudfunctions/promptPreview/reply-source');
 const previewDigest = require('../cloudfunctions/promptPreview/digest-source');
 const previewOld = require('../cloudfunctions/promptPreview/published-480f2da');
+const preview = require('./preview');
 
 test('published baseline stays verbatim and the candidate copy is separate', () => {
   assert.equal(previewOld.REPLY_SYSTEM, oldPrompt.REPLY_SYSTEM);
@@ -41,6 +42,13 @@ test('daily candidate keeps schema and defaults, and does not narrate them', () 
   assert.equal(reply.normalizeReply({ summary: 'x', tasks: [{ text: '换掉阳台那盏灯' }] }).tasks[0].dueDays, 3);
 });
 
+test('the supplied week fixture still separates the April 2 energy score from mood', () => {
+  const pair = preview.pairFor({ fixture: 'week' });
+  const user = pair.newMessages[1].content;
+  assert.equal(pair.oldMessages[1].content, user);
+  assert.match(user, /2026-04-02 · 精力 1\/5 · 低落\n今天什么都不想做，饭也没吃。/);
+});
+
 test('period candidates keep fields and only narrow evidence, time and attribution', () => {
   const week = digest.DIGEST_SYSTEM.week;
   const quarter = digest.DIGEST_SYSTEM.quarter;
@@ -50,6 +58,8 @@ test('period candidates keep fields and only narrow evidence, time and attributi
   assert.match(week, /250 字以内/);
   assert.match(week, /这周的信不多，看不出趋势/);
   assert.match(week, /不要新编一件他没写过的事/);
+  assert.match(week, /只写这一个动作，句子要写完/);
+  assert.match(week, /不要用「并」再接购买、准备或其他第二个动作/);
   assert.match(week, /不要从「下班」或买东西推断上班消耗/);
   assert.match(week, /没有精力分、也没写被什么消耗，就 ""/);
   assert.match(quarter, /"plans":\{"health"/);
@@ -63,6 +73,10 @@ test('period candidates keep fields and only narrow evidence, time and attributi
   assert.match(year, /500 字以内/);
   assert.match(year, /季信提到/);
   assert.match(year, /没有日期的完成项不要安到另一封信的日期上/);
-  assert.match(year, /「想做但没排上」只是没排进日历，不要写成没做/);
+  assert.match(year, /没排进日历只说明日历上没有/);
+  assert.match(year, /不要判断做成还是没做成，也不要复述这条规定/);
+  assert.match(year, /结尾不要再加「停摆」这类整年判断/);
+  assert.doesNotMatch(year, /不要写成没做|不是没做/);
+  assert.doesNotMatch(quarter, /停摆/);
   assert.doesNotMatch(week + quarter + year, /阿宁|橘子|夜跑|一月月报/);
 });

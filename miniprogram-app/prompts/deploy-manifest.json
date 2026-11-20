@@ -7,7 +7,7 @@
       "timeoutSeconds": 60,
       "triggers": [],
       "runtime": "Node.js",
-      "note": "miniprogram-ci 的 cloud.uploadFunction 没有公开的新建参数。函数不存在时会 ResourceNotFound。先在已登录正式 AppID 的开发者工具里新建同名云函数，再上传代码。超时 60 秒、不要加定时触发器。环境变量 PROMPT_PREVIEW_OPENIDS 只填本人测试身份，逗号分隔，不要写进仓库。没配或对不上时拒绝对比，也不调用内容接口。页面「复制测试身份」只读本次调用者自己的身份。「检查内容接口」在名单通过后只查一次固定合成文字，不调用模型。新说法只改了证据边界、默认值不要写进正文、时间和出处；旧基线 published-480f2da 不变。仍不要上传 reply 和 digest。"
+      "note": "miniprogram-ci 的 cloud.uploadFunction 没有公开的新建参数。函数不存在时会 ResourceNotFound。先在已登录正式 AppID 的开发者工具里新建同名云函数，再上传代码。超时 60 秒、不要加定时触发器。环境变量 PROMPT_PREVIEW_OPENIDS 只填本人测试身份，逗号分隔，不要写进仓库。没配或对不上时拒绝对比，也不调用内容接口。页面「复制测试身份」只读本次调用者自己的身份。「检查内容接口」在名单通过后只查一次固定合成文字，不调用模型。新说法只改了证据边界：年信结尾不下整年判断，没排进日历不要写成做成或没做成；下周 next 仍是 15-30 字的一件事，不要为凑字再接第二个动作。旧基线 published-480f2da 不变。仍不要上传 reply 和 digest。"
     }
   ]
 }
