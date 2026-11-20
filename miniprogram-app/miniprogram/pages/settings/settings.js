@@ -65,6 +65,7 @@ Page({
   goName() { wx.navigateTo({ url: '/pages/settings-name/settings-name' }); },
   goDeliver() { wx.navigateTo({ url: '/pages/settings-deliver/settings-deliver' }); },
   goAI() { wx.navigateTo({ url: '/pages/settings-ai/settings-ai' }); },
+  goPreview() { wx.navigateTo({ url: '/pages/prompt-preview/prompt-preview' }); },
   goAppearance() { wx.navigateTo({ url: '/pages/settings-appearance/settings-appearance' }); },
   goHabits() { wx.navigateTo({ url: '/pages/settings-habits/settings-habits' }); },
   goQuestions() { wx.navigateTo({ url: '/pages/settings-questions/settings-questions' }); },

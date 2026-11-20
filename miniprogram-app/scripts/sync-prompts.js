@@ -6,6 +6,11 @@ const ROOT = path.join(__dirname, '..');
 const JOBS = [
   ['prompts/reply-source.js', 'cloudfunctions/reply/prompt-source.js'],
   ['prompts/digest-source.js', 'cloudfunctions/digest/prompt-source.js'],
+  ['prompts/published-480f2da.js', 'cloudfunctions/promptPreview/published-480f2da.js'],
+  ['prompts/reply-source.js', 'cloudfunctions/promptPreview/reply-source.js'],
+  ['prompts/digest-source.js', 'cloudfunctions/promptPreview/digest-source.js'],
+  ['prompts/fixtures.js', 'cloudfunctions/promptPreview/fixtures.js'],
+  ['prompts/preview.js', 'cloudfunctions/promptPreview/preview.js'],
 ];
 
 function banner(rel) {

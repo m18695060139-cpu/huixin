@@ -8,7 +8,8 @@
     "test": "node --test miniprogram/pages/write/write.test.js prompts/reply-source.test.js",
     "sync-prompts": "node scripts/sync-prompts.js",
     "upload": "node scripts/upload.js",
-    "upload:client": "node scripts/upload-client-only.js"
+    "upload:client": "node scripts/upload-client-only.js",
+    "upload:prompt-preview": "node scripts/upload-prompt-preview.js"
   },
   "dependencies": {
     "miniprogram-ci": "^2.1.26"
