@@ -1,4 +1,19 @@
 .note { display: block; color: var(--sub); font-size: 26rpx; line-height: 1.6; margin: 24rpx 0; }
+.hint { display: block; color: var(--sub); font-size: 26rpx; line-height: 1.6; margin-top: 12rpx; }
+.copy {
+  display: block;
+  width: 100%;
+  margin: 8rpx 0 0;
+  padding: 0;
+  height: 88rpx;
+  line-height: 88rpx;
+  font-size: 32rpx;
+  background: var(--card);
+  color: var(--text);
+  border-radius: 23.077rpx;
+  text-align: center;
+}
+.copy::after { border: none; }
 .row { display: flex; justify-content: space-between; padding: 28rpx 0; border-bottom: 1rpx solid var(--sep); font-size: 32rpx; }
 .h { display: block; margin-top: 36rpx; font-weight: 600; }
 .body { display: block; margin-top: 12rpx; white-space: pre-wrap; line-height: 1.7; }

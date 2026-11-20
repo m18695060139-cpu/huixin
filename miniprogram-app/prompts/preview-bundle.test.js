@@ -35,6 +35,10 @@ test('preview source is one pair on one model, with no secret and no timer', () 
   assert.match(indexSrc, /HUNYUAN_FALLBACK, temperature/);
   assert.match(indexSrc, /comparable: true/);
   assert.match(indexSrc, /getWXContext\(\)/);
+  assert.match(indexSrc, /event\.action === 'whoami'/);
+  const whoAt = indexSrc.indexOf("event.action === 'whoami'");
+  const dbAt = indexSrc.indexOf("collection('settings')");
+  assert.ok(whoAt >= 0 && dbAt > whoAt);
   assert.match(indexSrc, /PROMPT_PREVIEW_OPENIDS/);
   assert.match(indexSrc, /ai_reply !== true/);
   assert.match(indexSrc, /guardAI/);

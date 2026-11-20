@@ -97,9 +97,17 @@ async function finishSide(text, model, openid, kind) {
 }
 
 exports.main = async (event) => {
-  const ctx = cloud.getWXContext();
-  const openid = ctx && ctx.OPENID;
-  if (!openid) return fail('没有微信身份', 'auth');
+  const ctx = cloud.getWXContext() || {};
+  const openid = ctx.OPENID;
+  if (typeof openid !== 'string' || !openid) return fail('没有微信身份', 'auth');
+  // 只回报本次调用者自己的身份，方便原样贴进环境变量。
+  // 不读名单、不读库、不查内容、不调用模型，也不接受 event 里指定的别人。对比仍要先通过允许名单。
+  if (event && event.action === 'whoami') {
+    const out = { ok: true, diagnostic: true, saved: false, openid: openid };
+    if (typeof ctx.APPID === 'string' && ctx.APPID) out.appid = ctx.APPID;
+    if (typeof ctx.ENV === 'string' && ctx.ENV) out.env = ctx.ENV;
+    return out;
+  }
   if (!allowed(openid)) {
     const configured = String(process.env.PROMPT_PREVIEW_OPENIDS || '').trim();
     if (!configured) {

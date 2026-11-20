@@ -38,6 +38,7 @@ test('preview function does not write letters, todos, or digests and has no time
   assert.equal(config.triggers, undefined);
   assert.ok(digestConfig.triggers && digestConfig.triggers.length === 1);
   assert.match(indexSrc, /getWXContext\(\)/);
+  assert.match(indexSrc, /event\.action === 'whoami'/);
   assert.doesNotMatch(indexSrc, /event\.openid|event\.OPENID/);
   assert.doesNotMatch(indexSrc, /collection\('letters'\)|collection\('todos'\)|collection\('ideas'\)|collection\('digests'\)/);
   assert.doesNotMatch(indexSrc, /\.update\(|\.add\(|\.remove\(/);

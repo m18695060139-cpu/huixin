@@ -7,7 +7,7 @@
       "timeoutSeconds": 60,
       "triggers": [],
       "runtime": "Node.js",
-      "note": "miniprogram-ci 的 cloud.uploadFunction 没有公开的新建参数。函数不存在时会 ResourceNotFound。先在已登录正式 AppID 的开发者工具里新建同名云函数，再上传代码。超时 60 秒、不要加定时触发器。环境变量 PROMPT_PREVIEW_OPENIDS 填允许试用的身份，逗号分隔，不要写进仓库。没配这个变量时拒绝所有调用。"
+      "note": "miniprogram-ci 的 cloud.uploadFunction 没有公开的新建参数。函数不存在时会 ResourceNotFound。先在已登录正式 AppID 的开发者工具里新建同名云函数，再上传代码。超时 60 秒、不要加定时触发器。环境变量 PROMPT_PREVIEW_OPENIDS 只填本人测试身份，逗号分隔，不要写进仓库。没配或对不上时拒绝对比。页面「复制测试身份」只读本次调用者自己的身份，不看名单、不开始对比。"
     }
   ]
 }
